@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex">
 <meta name="color-scheme" content="light dark">
-<title>Модерация · New.работа</title>
+<title>Админка · New.работа</title>
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
@@ -135,106 +135,284 @@ td.n{font-family:var(--f-mono);white-space:nowrap}
 @media (prefers-reduced-motion:no-preference){.card{transition:border-color .15s}.card:hover{border-color:var(--accent)}}
 </style>
 <style>
-.adm{padding-block:22px 48px;display:flex;flex-direction:column;gap:16px;max-width:820px}
-.adm h1{font-family:var(--f-display);font-weight:600;font-size:22px;margin:0}
+.adm{padding-block:20px 56px;display:flex;flex-direction:column;gap:18px;max-width:900px}
+.adm h1{font-family:var(--f-display);font-weight:600;font-size:clamp(20px,5vw,26px);margin:0;display:flex;gap:10px;align-items:center}
+.adm h1 img{height:34px;width:auto}
+.adm h2{font-family:var(--f-display);font-weight:600;font-size:17px;margin:0}
 .login{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;display:grid;gap:10px;max-width:420px}
-.tabs{display:flex;gap:6px;flex-wrap:wrap}
-.row-actions{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-.ok{background:var(--good);color:#fff}
 .bar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.nav{display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:12px}
+.nav .chip{font-weight:600}
+.badge{display:inline-block;min-width:20px;padding:0 6px;border-radius:999px;background:var(--danger);color:#fff;font-size:12px;line-height:20px;text-align:center;margin-left:4px}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media (max-width:640px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;cursor:pointer;text-align:left;font:inherit;color:inherit}
+.stat b{display:block;font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:28px;line-height:1.1}
+.stat span{color:var(--muted);font-size:13px}
+.stat.warn b{color:var(--danger)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:12px}
+.chart{display:flex;align-items:flex-end;gap:4px;height:120px;padding-top:8px}
+.chart .col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0;height:100%;justify-content:flex-end}
+.chart .b{width:100%;background:var(--accent);border-radius:4px 4px 0 0;min-height:2px}
+.chart .v{font-family:var(--f-mono);font-size:11px;color:var(--muted)}
+.chart .d{font-size:10px;color:var(--muted);white-space:nowrap}
+.tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.tools input{flex:1 1 200px}
+.row-actions{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;align-items:center}
+.btn-sm{padding:8px 14px;font-size:14px}
+.ok{background:var(--good);color:#fff}
+.t-pin{background:var(--accent);color:var(--accent-ink);font-weight:600}
 .card .desc{display:block!important;-webkit-line-clamp:unset!important}
 .card .contact{display:flex!important}
+.set{display:grid;gap:14px}
+.set .field textarea{min-height:70px}
+.sw{display:flex;gap:10px;align-items:flex-start}
+.sw input{margin-top:4px;width:18px;height:18px}
+.sw small{display:block;color:var(--muted)}
+.help{font-size:13px;color:var(--muted);margin:0}
+code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-radius:6px;font-size:13px}
 </style>
 </head>
 <body>
 <div class="wrap adm">
-  <div class="bar"><h1>Модерация New.работа</h1><button class="btn btn-ghost" id="logout" type="button" hidden>Выйти</button></div>
+  <div class="bar"><h1><img src="logo.png" alt="">Админка New.работа</h1>
+    <div class="tools"><a class="btn btn-ghost btn-sm" href="./" target="_blank" rel="noopener">Открыть сайт ↗</a><button class="btn btn-ghost btn-sm" id="logout" type="button" hidden>Выйти</button></div></div>
 
   <form class="login" id="login">
     <div class="field"><label for="email">Почта</label><input id="email" type="text" autocomplete="username" inputmode="email"></div>
     <div class="field"><label for="pass">Пароль</label><input id="pass" type="password" autocomplete="current-password" style="background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px"></div>
     <p class="err" id="loginErr" hidden></p>
-    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary" type="submit">Войти</button><button class="btn btn-ghost" type="button" id="signup">Создать аккаунт модератора</button></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary" type="submit">Войти</button></div>
   </form>
 
-  <section id="panel" hidden>
-    <div class="bar" style="margin-bottom:12px">
-      <div class="tabs" id="tabs">
-        <button class="chip" type="button" data-s="pending" aria-pressed="true">на проверке</button>
-        <button class="chip" type="button" data-s="approved" aria-pressed="false">на сайте</button>
-        <button class="chip" type="button" data-s="rejected" aria-pressed="false">отклонённые</button>
+  <p class="empty" id="notAdmin" hidden>Ты вошёл, но этот аккаунт не модератор.</p>
+
+  <div id="app" hidden>
+    <nav class="nav" id="nav">
+      <button class="chip" type="button" data-v="overview" aria-pressed="true">Обзор</button>
+      <button class="chip" type="button" data-v="vac" aria-pressed="false">Вакансии<span class="badge" id="pendBadge" hidden></span></button>
+      <button class="chip" type="button" data-v="settings" aria-pressed="false">Настройки сайта</button>
+    </nav>
+
+    <!-- ОБЗОР -->
+    <section id="v-overview" style="display:flex;flex-direction:column;gap:14px;margin-top:14px">
+      <div class="stats">
+        <button class="stat warn" type="button" data-go="pending"><b id="s-pending">–</b><span>ждут проверки</span></button>
+        <button class="stat" type="button" data-go="approved"><b id="s-approved">–</b><span>на сайте</span></button>
+        <button class="stat" type="button" data-go="rejected"><b id="s-rejected">–</b><span>отклонено</span></button>
+        <div class="stat" style="cursor:default"><b id="s-week">–</b><span>новых за 7 дней</span></div>
       </div>
-      <span class="status" id="status"></span>
-    </div>
-    <div class="list" id="list"></div>
-  </section>
+      <div class="panel"><h2>Заявки за 14 дней</h2><div class="chart" id="chart"></div></div>
+      <div class="panel"><div class="bar"><h2>Состояние сайта</h2><button class="link" type="button" data-v2="settings">Изменить</button></div><div id="health" class="help"></div></div>
+    </section>
+
+    <!-- ВАКАНСИИ -->
+    <section id="v-vac" hidden style="flex-direction:column;gap:12px;margin-top:14px">
+      <div class="tools">
+        <div class="group" id="tabs">
+          <button class="chip" type="button" data-s="pending" aria-pressed="true">на проверке</button>
+          <button class="chip" type="button" data-s="approved" aria-pressed="false">на сайте</button>
+          <button class="chip" type="button" data-s="rejected" aria-pressed="false">отклонённые</button>
+        </div>
+        <button class="btn btn-primary btn-sm" type="button" id="addVac">＋ Добавить вакансию</button>
+      </div>
+      <div class="tools"><input id="vq" type="search" placeholder="Поиск по названию, компании, городу, контакту"><span class="status" id="status"></span></div>
+      <div class="list" id="list"></div>
+    </section>
+
+    <!-- НАСТРОЙКИ -->
+    <section id="v-settings" hidden style="margin-top:14px">
+      <form class="panel set" id="setForm">
+        <h2>Настройки сайта</h2>
+        <label class="sw"><input type="checkbox" id="st-open"><span>Принимать новые вакансии<small>Если выключить, кнопка «Разместить вакансию» пропадёт, а база перестанет принимать заявки.</small></span></label>
+        <div class="field"><label for="st-tagline">Подзаголовок в шапке</label><textarea id="st-tagline" maxlength="200"></textarea></div>
+        <label class="sw"><input type="checkbox" id="st-banner-on"><span>Показывать объявление над вакансиями<small>Например: «Набираем вожатых на зимнюю смену» или «Сайт работает в тестовом режиме».</small></span></label>
+        <div class="field"><label for="st-banner">Текст объявления</label><textarea id="st-banner" maxlength="300"></textarea></div>
+        <div class="field"><label for="st-support">Контакт поддержки (в подвале сайта)</label><input id="st-support" type="text" maxlength="120" placeholder="Telegram-бот @NewRabotaBot"></div>
+        <div class="field"><label for="st-days">Скрывать вакансии старше, дней (0 — не скрывать)</label><input id="st-days" type="text" inputmode="numeric" maxlength="3"></div>
+        <p class="err" id="setErr" hidden></p>
+        <div><button class="btn btn-primary" type="submit" id="setSave">Сохранить</button></div>
+        <p class="help">Изменения видны на сайте сразу после обновления страницы.</p>
+      </form>
+      <div class="panel" style="margin-top:14px">
+        <h2>Модераторы</h2>
+        <p class="help">Новые аккаунты создаются в Supabase → Authentication → Users → Add user. Чтобы сделать человека модератором, выполни в SQL Editor:<br><code class="k">insert into admins (user_id) select id from auth.users where email = 'почта';</code></p>
+      </div>
+    </section>
+  </div>
 </div>
+
+<!-- редактор вакансии -->
+<div class="sheet" id="sheet" hidden>
+  <form class="form" id="edForm" novalidate>
+    <h2 id="edTitle">Вакансия</h2>
+    <div class="field full"><label for="e-title">Должность</label><input id="e-title" type="text" maxlength="80"></div>
+    <div class="field"><label for="e-company">Компания</label><input id="e-company" type="text" maxlength="60"></div>
+    <div class="field"><label for="e-city">Город</label><input id="e-city" type="text" maxlength="40" list="cities"></div>
+    <div class="field"><label for="e-type">Тип</label><select id="e-type"><option>Подработка</option><option>Стажировка</option><option>Частичная</option><option>Полная</option><option>Разовая</option></select></div>
+    <div class="field"><label for="e-age">Берём с</label><select id="e-age"><option value="14">14 лет</option><option value="16">16 лет</option><option value="18">18 лет</option></select></div>
+    <div class="field"><label for="e-pay">Оплата</label><input id="e-pay" type="text" maxlength="40"></div>
+    <div class="field"><label for="e-status">Статус</label><select id="e-status"><option value="approved">на сайте</option><option value="pending">на проверке</option><option value="rejected">отклонена</option></select></div>
+    <label class="check"><input type="checkbox" id="e-remote"> Можно удалённо</label>
+    <label class="check"><input type="checkbox" id="e-pinned"> Закрепить сверху</label>
+    <div class="field full"><label for="e-desc">Описание и график</label><textarea id="e-desc" maxlength="1200"></textarea></div>
+    <div class="field full"><label for="e-contact">Контакт для отклика</label><input id="e-contact" type="text" maxlength="120"></div>
+    <p class="err" id="edErr" hidden></p>
+    <div class="row"><button type="button" class="btn btn-ghost" id="edCancel">Отмена</button><button type="submit" class="btn btn-primary" id="edSave">Сохранить</button></div>
+  </form>
+</div>
+<datalist id="cities"><option value="Саратов"><option value="Энгельс"><option value="Балаково"><option value="Москва"><option value="Санкт-Петербург"><option value="Самара"><option value="Волгоград"><option value="Казань"></datalist>
 <div class="toast" id="toast" hidden></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
 <script>
 (function(){
-  const $=s=>document.querySelector(s);
+  const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
   const cfg=window.NR_CONFIG||{};
   const sb=window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseKey);
-  let tab="pending";
+  const st={view:"overview",tab:"pending",q:"",items:[],all:[],editId:null,settings:{}};
   function toast(t){const e=$("#toast");e.textContent=t;e.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>e.hidden=true,2600)}
   function el(tag,cls,text){const e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e}
-  function showErr(t){const e=$("#loginErr");e.textContent=t;e.hidden=false}
+  const norm=s=>(s||"").toString().toLowerCase().replace(/ё/g,"е");
 
+  // вход
+  function showErr(t){const e=$("#loginErr");e.textContent=t;e.hidden=false}
   $("#login").addEventListener("submit",async e=>{
-    e.preventDefault();$("#loginErr").hidden=true;if(!filled())return;
-    const {error}=await sb.auth.signInWithPassword({email:$("#email").value.trim(),password:$("#pass").value});
-    if(error)showErr("Не вышло войти: неверная почта или пароль, либо почта ещё не подтверждена.");else start();
+    e.preventDefault();$("#loginErr").hidden=true;
+    const em=$("#email").value.trim(),pw=$("#pass").value;
+    if(!em||!pw){showErr("Впиши почту и пароль.");return}
+    const {error}=await sb.auth.signInWithPassword({email:em,password:pw});
+    if(error)showErr("Не вышло войти: проверь почту и пароль.");else start();
   });
-  function filled(){const e=$("#email").value.trim(),p=$("#pass").value;if(!/^\S+@\S+\.\S+$/.test(e)){showErr("Впиши почту.");return false}if(p.length<6){showErr("Пароль должен быть не короче 6 символов.");return false}return true}
-  $("#signup").onclick=async()=>{
-    $("#loginErr").hidden=true;if(!filled())return;
-    const {error}=await sb.auth.signUp({email:$("#email").value.trim(),password:$("#pass").value});
-    if(error)showErr("Не получилось создать аккаунт: "+error.message);else showErr("Аккаунт создан. Подтверди почту по письму, затем выполни последнюю строку из schema.sql.");
-  };
   $("#logout").onclick=async()=>{await sb.auth.signOut();location.reload()};
-  document.querySelectorAll("#tabs .chip").forEach(b=>b.onclick=()=>{tab=b.dataset.s;document.querySelectorAll("#tabs .chip").forEach(x=>x.setAttribute("aria-pressed",x===b));load()});
 
   async function start(){
     const {data:{user}}=await sb.auth.getUser();
     if(!user)return;
+    $("#login").hidden=true;$("#logout").hidden=false;
     const {data:adm}=await sb.from("admins").select("user_id").eq("user_id",user.id).maybeSingle();
-    $("#login").hidden=true;$("#logout").hidden=false;$("#panel").hidden=false;
-    if(!adm){$("#list").textContent="";$("#list").append(el("div","empty","Ты вошёл, но ещё не модератор. Выполни в Supabase последнюю строку из schema.sql со своей почтой и обнови страницу."));return}
-    load();
+    if(!adm){$("#notAdmin").hidden=false;return}
+    $("#app").hidden=false;
+    await loadSettings();
+    go("overview");
   }
 
-  async function setStatus(id,status){
-    const {error}=await sb.from("vacancies").update({status}).eq("id",id);
-    toast(error?"Не получилось сохранить":status==="approved"?"Опубликовано на сайте":status==="rejected"?"Отклонено":"Возвращено на проверку");load();
+  // навигация
+  function go(v){
+    st.view=v;
+    $$("#nav .chip").forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===v));
+    $("#v-overview").hidden=v!=="overview";$("#v-vac").hidden=v!=="vac";$("#v-settings").hidden=v!=="settings";
+    if(v==="vac")$("#v-vac").style.display="flex";
+    if(v==="overview")loadOverview();
+    if(v==="vac")loadList();
+    if(v==="settings")fillSettings();
   }
-  async function del(id){const {error}=await sb.from("vacancies").delete().eq("id",id);toast(error?"Не получилось удалить":"Удалено");load()}
+  $$("#nav .chip").forEach(b=>b.onclick=()=>go(b.dataset.v));
+  $$("[data-v2]").forEach(b=>b.onclick=()=>go(b.dataset.v2));
+  $$(".stat[data-go]").forEach(b=>b.onclick=()=>{setTab(b.dataset.go);go("vac")});
+  function setTab(t){st.tab=t;$$("#tabs .chip").forEach(x=>x.setAttribute("aria-pressed",x.dataset.s===t))}
+  $$("#tabs .chip").forEach(b=>b.onclick=()=>{setTab(b.dataset.s);loadList()});
+  $("#vq").addEventListener("input",e=>{st.q=e.target.value;renderList()});
 
-  async function load(){
+  // обзор
+  async function loadOverview(){
+    const {data,error}=await sb.from("vacancies").select("id,status,created_at").order("created_at",{ascending:false}).limit(1000);
+    if(error){toast("Не удалось загрузить статистику");return}
+    st.all=data;
+    const c={pending:0,approved:0,rejected:0};data.forEach(v=>c[v.status]++);
+    $("#s-pending").textContent=c.pending;$("#s-approved").textContent=c.approved;$("#s-rejected").textContent=c.rejected;
+    const week=Date.now()-7*864e5;$("#s-week").textContent=data.filter(v=>new Date(v.created_at)>week).length;
+    const b=$("#pendBadge");b.textContent=c.pending;b.hidden=!c.pending;
+    // график
+    const days=[];for(let i=13;i>=0;i--){const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-i);days.push({d,n:0})}
+    data.forEach(v=>{const t=new Date(v.created_at);t.setHours(0,0,0,0);const x=days.find(k=>k.d.getTime()===t.getTime());if(x)x.n++});
+    const max=Math.max(1,...days.map(x=>x.n));const ch=$("#chart");ch.textContent="";
+    days.forEach((x,i)=>{const col=el("div","col");col.append(el("span","v",x.n||""));const bar=el("div","b");bar.style.height=(x.n/max*80)+"%";col.append(bar,el("span","d",i%2?"":x.d.getDate()+"."+String(x.d.getMonth()+1).padStart(2,"0")));ch.append(col)});
+    // здоровье
+    const s=st.settings,h=$("#health");h.textContent="";
+    const lines=[(s.submissions_open!==false?"✅ Приём вакансий открыт":"⛔ Приём вакансий закрыт"),(s.banner_on&&s.banner?"📢 Объявление показывается: «"+s.banner+"»":"Объявление выключено"),(s.support?"Поддержка: "+s.support:"Контакт поддержки не указан"),(+s.hide_after_days?"Вакансии старше "+s.hide_after_days+" дней скрываются":"Старые вакансии не скрываются")];
+    lines.forEach(t=>{const p=el("div",null,t);h.append(p)});
+  }
+
+  // список
+  async function loadList(){
     $("#status").textContent="Загружаю…";
-    const {data,error}=await sb.from("vacancies").select("*").eq("status",tab).order("created_at",{ascending:false}).limit(300);
-    const list=$("#list");list.textContent="";
+    const {data,error}=await sb.from("vacancies").select("*").eq("status",st.tab).order("pinned",{ascending:false}).order("created_at",{ascending:false}).limit(500);
     if(error){$("#status").textContent="Ошибка загрузки";return}
-    $("#status").textContent=data.length+" шт.";
-    if(!data.length){list.append(el("div","empty",tab==="pending"?"Новых вакансий на проверку нет.":"Здесь пусто."));return}
-    for(const v of data){
+    st.items=data;renderList();
+    if(st.tab==="pending"){const b=$("#pendBadge");b.textContent=data.length;b.hidden=!data.length}
+  }
+  function renderList(){
+    const q=norm(st.q).trim();
+    const items=q?st.items.filter(v=>norm([v.title,v.company,v.city,v.contact,v.description].join(" ")).includes(q)):st.items;
+    $("#status").textContent=items.length+" шт.";
+    const list=$("#list");list.textContent="";
+    if(!items.length){list.append(el("div","empty",st.tab==="pending"?"Новых вакансий на проверку нет.":"Здесь пусто."));return}
+    for(const v of items){
       const c=el("article","card open");
       const left=el("div");left.style.minWidth="0";
       left.append(el("h3",null,v.title),el("div","where",[v.company,v.remote?"удалённо":null,v.city].filter(Boolean).join(" · ")));
       c.append(left,el("div","pay",v.pay||"—"));
-      const tags=el("div","tags");tags.append(el("span","t t-age","с "+v.age_min+" лет"),el("span","t",v.type),el("span","date",new Date(v.created_at).toLocaleString("ru-RU")));c.append(tags);
+      const tags=el("div","tags");if(v.pinned)tags.append(el("span","t t-pin","📌 закреплена"));
+      tags.append(el("span","t t-age","с "+v.age_min+" лет"),el("span","t",v.type),el("span","date",new Date(v.created_at).toLocaleString("ru-RU",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})));c.append(tags);
       if(v.description)c.append(el("p","desc",v.description));
       const ct=el("div","contact");ct.append(el("span","lbl","Контакт"),el("code",null,v.contact));c.append(ct);
       const a=el("div","row-actions");
-      const mk=(t,cls,fn)=>{const b=el("button","btn "+cls,t);b.type="button";b.onclick=fn;a.append(b)};
-      if(tab!=="approved")mk("Опубликовать","ok",()=>setStatus(v.id,"approved"));
-      if(tab!=="rejected")mk("Отклонить","btn-ghost",()=>setStatus(v.id,"rejected"));
-      if(tab!=="pending")mk("На проверку","btn-ghost",()=>setStatus(v.id,"pending"));
-      const d=el("button","del","Удалить навсегда");d.type="button";d.onclick=()=>{if(d.dataset.sure)del(v.id);else{d.dataset.sure=1;d.textContent="Точно удалить?"}};a.append(d);
+      const mk=(t,cls,fn)=>{const b=el("button","btn btn-sm "+cls,t);b.type="button";b.onclick=fn;a.append(b)};
+      if(v.status!=="approved")mk("Опубликовать","ok",()=>patch(v.id,{status:"approved"},"Опубликовано"));
+      if(v.status!=="rejected")mk("Отклонить","btn-ghost",()=>patch(v.id,{status:"rejected"},"Отклонено"));
+      if(v.status!=="pending")mk("На проверку","btn-ghost",()=>patch(v.id,{status:"pending"},"Возвращено на проверку"));
+      mk("Изменить","btn-ghost",()=>openEd(v));
+      if(v.status==="approved")mk(v.pinned?"Открепить":"📌 Закрепить","btn-ghost",()=>patch(v.id,{pinned:!v.pinned},v.pinned?"Откреплено":"Закреплено"));
+      const d=el("button","del","Удалить");d.type="button";d.onclick=()=>{if(d.dataset.sure)del(v.id);else{d.dataset.sure=1;d.textContent="Точно удалить навсегда?";setTimeout(()=>{d.textContent="Удалить";delete d.dataset.sure},3500)}};a.append(d);
       c.append(a);list.append(c);
     }
   }
+  async function patch(id,data,msg){const {error}=await sb.from("vacancies").update(data).eq("id",id);toast(error?"Не получилось сохранить":msg);loadList()}
+  async function del(id){const {error}=await sb.from("vacancies").delete().eq("id",id);toast(error?"Не получилось удалить":"Удалено");loadList()}
+
+  // редактор
+  const sheet=$("#sheet");
+  function openEd(v){
+    st.editId=v?v.id:null;$("#edTitle").textContent=v?"Изменить вакансию":"Новая вакансия";
+    $("#e-title").value=v?.title||"";$("#e-company").value=v?.company||"";$("#e-city").value=v?.city||"";
+    $("#e-type").value=v?.type||"Подработка";$("#e-age").value=String(v?.age_min||16);$("#e-pay").value=v?.pay||"";
+    $("#e-status").value=v?.status||"approved";$("#e-remote").checked=!!v?.remote;$("#e-pinned").checked=!!v?.pinned;
+    $("#e-desc").value=v?.description||"";$("#e-contact").value=v?.contact||"";$("#edErr").hidden=true;sheet.hidden=false;
+  }
+  $("#addVac").onclick=()=>openEd(null);
+  $("#edCancel").onclick=()=>sheet.hidden=true;
+  sheet.addEventListener("click",e=>{if(e.target===sheet)sheet.hidden=true});
+  $("#edForm").addEventListener("submit",async e=>{
+    e.preventDefault();
+    const g=id=>$(id).value.trim();
+    const data={title:g("#e-title"),company:g("#e-company")||null,city:g("#e-city")||null,type:$("#e-type").value,age_min:+$("#e-age").value,pay:g("#e-pay")||null,status:$("#e-status").value,remote:$("#e-remote").checked,pinned:$("#e-pinned").checked,description:g("#e-desc")||null,contact:g("#e-contact")};
+    const err=$("#edErr");
+    if(data.title.length<2||data.contact.length<3){err.textContent="Заполни должность и контакт.";err.hidden=false;return}
+    $("#edSave").disabled=true;
+    const res=st.editId?await sb.from("vacancies").update(data).eq("id",st.editId):await sb.from("vacancies").insert(data);
+    $("#edSave").disabled=false;
+    if(res.error){err.textContent="Не получилось сохранить: "+res.error.message;err.hidden=false;return}
+    sheet.hidden=true;toast(st.editId?"Сохранено":"Вакансия добавлена");
+    if(!st.editId){setTab(data.status)}loadList();
+  });
+
+  // настройки
+  async function loadSettings(){const {data}=await sb.from("settings").select("data").eq("id",1).maybeSingle();st.settings=data?.data||{}}
+  function fillSettings(){
+    const s=st.settings;
+    $("#st-open").checked=s.submissions_open!==false;$("#st-tagline").value=s.tagline||"";$("#st-banner-on").checked=!!s.banner_on;
+    $("#st-banner").value=s.banner||"";$("#st-support").value=s.support||"";$("#st-days").value=s.hide_after_days??60;$("#setErr").hidden=true;
+  }
+  $("#setForm").addEventListener("submit",async e=>{
+    e.preventDefault();
+    const days=parseInt($("#st-days").value,10);
+    const data={submissions_open:$("#st-open").checked,tagline:$("#st-tagline").value.trim(),banner_on:$("#st-banner-on").checked,banner:$("#st-banner").value.trim(),support:$("#st-support").value.trim(),hide_after_days:isNaN(days)||days<0?0:days};
+    const {error}=await sb.from("settings").update({data,updated_at:new Date().toISOString()}).eq("id",1);
+    if(error){const er=$("#setErr");er.textContent="Не получилось сохранить. Выполнен ли SQL из migration-2-admin.sql?";er.hidden=false;return}
+    st.settings=data;toast("Настройки сохранены");
+  });
+
   start();
 })();
 </script>

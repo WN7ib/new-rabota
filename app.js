@@ -4,7 +4,7 @@
   const cfg=window.NR_CONFIG||{};
   const configured=cfg.supabaseUrl&&!/ВСТАВЬ/.test(cfg.supabaseUrl)&&cfg.supabaseKey&&!/ВСТАВЬ/.test(cfg.supabaseKey);
   const sb=configured&&window.supabase?window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseKey,{auth:{persistSession:false}}):null;
-  const state={items:[],q:"",city:"",remote:false,age:0,type:"",fav:false,favs:new Set(),open:new Set(),ready:false};
+  const state={settings:{},items:[],q:"",city:"",remote:false,age:0,type:"",fav:false,favs:new Set(),open:new Set(),ready:false};
   try{state.favs=new Set(JSON.parse(localStorage.getItem("nr-favs")||"[]"))}catch(e){}
   function saveFavs(){try{localStorage.setItem("nr-favs",JSON.stringify([...state.favs]))}catch(e){}}
 
@@ -15,7 +15,9 @@
 
   function filtered(){
     const q=norm(state.q), c=norm(state.city);
+    const days=+state.settings.hide_after_days||0, edge=days?Date.now()-days*864e5:0;
     return state.items.filter(v=>{
+      if(edge&&!v.pinned&&new Date(v.created_at).getTime()<edge)return false;
       if(state.fav&&!state.favs.has(v.id))return false;
       if(state.type&&v.type!==state.type)return false;
       if(state.age&&(+v.age_min||14)>state.age)return false;
@@ -23,7 +25,7 @@
       if(c&&!v.remote&&!norm(v.city).includes(c))return false;
       if(q){const hay=norm([v.title,v.company,v.description,v.city,v.type].join(" "));if(!q.split(/\s+/).every(w=>hay.includes(w)))return false}
       return true;
-    });
+    }).sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0));
   }
 
   function render(){
@@ -34,7 +36,7 @@
       const box=el("div","empty");
       if(!state.items.length){
         box.append(el("h3",null,"Вакансий пока нет"),el("p",null,"Здесь появятся предложения от работодателей. Знаешь кафе, магазин или проект, которому нужны люди? Размести первую вакансию, это займёт минуту."));
-        const b=el("button","btn btn-primary","＋ Разместить вакансию");b.type="button";b.onclick=openForm;box.append(b);
+        if(state.settings.submissions_open!==false){const b=el("button","btn btn-primary","＋ Разместить вакансию");b.type="button";b.onclick=openForm;box.append(b)}
       }else{
         box.append(el("h3",null,"Ничего не нашлось"),el("p",null,"Попробуй убрать часть фильтров или поискать в другом городе."));
         const b=el("button","btn btn-ghost","Сбросить фильтры");b.type="button";b.onclick=resetFilters;box.append(b);
@@ -47,6 +49,7 @@
       left.append(el("h3",null,v.title||"Без названия"),el("div","where",[v.company,v.remote&&!v.city?"Удалённо":v.city].filter(Boolean).join(" · ")));
       c.append(left,el("div","pay",v.pay||"по договорённости"));
       const tags=el("div","tags");
+      if(v.pinned)tags.append(el("span","t t-pin","📌 закреплена"));
       tags.append(el("span","t t-age","с "+(v.age_min||14)+" лет"),el("span","t",v.type||"Подработка"));
       if(v.remote)tags.append(el("span","t t-remote","удалённо"));
       tags.append(el("span","date",ago(v.created_at)));
@@ -112,15 +115,25 @@
     const btn=$("#submitForm");btn.disabled=true;btn.textContent="Отправляю…";
     const {error}=await sb.from("vacancies").insert(data);
     btn.disabled=false;btn.textContent="Отправить на проверку";
-    if(error){err.textContent="Не получилось отправить. Проверь интернет и попробуй ещё раз.";err.hidden=false;return}
+    if(error){err.textContent=state.settings.submissions_open===false?"Приём вакансий сейчас закрыт.":"Не получилось отправить. Проверь интернет и попробуй ещё раз.";err.hidden=false;return}
     try{localStorage.setItem("nr-last",Date.now())}catch(_){}
     closeForm();$("#vacForm").reset();toast("Отправлено. Вакансия появится после проверки");
   });
 
+  function applySettings(s){
+    state.settings=s||{};
+    if(s.tagline)$("#tagline").textContent=s.tagline;
+    const bn=$("#banner");if(s.banner_on&&s.banner){bn.textContent=s.banner;bn.hidden=false}else bn.hidden=true;
+    if(s.support)$("#support").textContent=" · Поддержка: "+s.support;
+    if(s.submissions_open===false)$("#openForm").hidden=true;
+  }
   async function load(){
     if(!sb){state.ready=true;render();refreshMeta("Сайт ещё не подключён к базе");return}
+    sb.from("settings").select("data").eq("id",1).maybeSingle().then(({data})=>{if(data&&data.data){applySettings(data.data);render();refreshMeta()}});
     const timer=setTimeout(()=>{if(!state.ready)refreshMeta("Не удаётся загрузить вакансии. Проверь интернет.")},10000);
-    const {data,error}=await sb.from("vacancies").select("id,created_at,title,company,city,type,age_min,pay,remote,description,contact").eq("status","approved").order("created_at",{ascending:false}).limit(500);
+    const cols="id,created_at,title,company,city,type,age_min,pay,remote,description,contact";
+    let {data,error}=await sb.from("vacancies").select(cols+",pinned").eq("status","approved").order("created_at",{ascending:false}).limit(500);
+    if(error)({data,error}=await sb.from("vacancies").select(cols).eq("status","approved").order("created_at",{ascending:false}).limit(500));
     clearTimeout(timer);state.ready=true;
     if(error){render();refreshMeta("Вакансии сейчас недоступны");return}
     state.items=data||[];render();refreshMeta();
