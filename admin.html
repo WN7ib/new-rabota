@@ -183,12 +183,13 @@ td.n{font-family:var(--f-mono);white-space:nowrap}
   function showErr(t){const e=$("#loginErr");e.textContent=t;e.hidden=false}
 
   $("#login").addEventListener("submit",async e=>{
-    e.preventDefault();$("#loginErr").hidden=true;
+    e.preventDefault();$("#loginErr").hidden=true;if(!filled())return;
     const {error}=await sb.auth.signInWithPassword({email:$("#email").value.trim(),password:$("#pass").value});
     if(error)showErr("Не вышло войти: неверная почта или пароль, либо почта ещё не подтверждена.");else start();
   });
+  function filled(){const e=$("#email").value.trim(),p=$("#pass").value;if(!/^\S+@\S+\.\S+$/.test(e)){showErr("Впиши почту.");return false}if(p.length<6){showErr("Пароль должен быть не короче 6 символов.");return false}return true}
   $("#signup").onclick=async()=>{
-    $("#loginErr").hidden=true;
+    $("#loginErr").hidden=true;if(!filled())return;
     const {error}=await sb.auth.signUp({email:$("#email").value.trim(),password:$("#pass").value});
     if(error)showErr("Не получилось создать аккаунт: "+error.message);else showErr("Аккаунт создан. Подтверди почту по письму, затем выполни последнюю строку из schema.sql.");
   };
