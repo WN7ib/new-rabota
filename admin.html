@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="color-scheme" content="light dark">
+<title>Модерация · New.работа</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: шапка-доска объявлений → поиск и фильтры → лента вакансий + колонка «права подростка» */
+/* Layout: шапка в градиенте логотипа → поиск и фильтры → лента вакансий + колонка «права подростка».
+   Палитра снята с логотипа: светлый голубой стержень (#8DB7E8) уходит в яркий синий торец (#2F86F5). */
+:root{
+  --bg:#EEF4FC; --surface:#FFFFFF; --ink:#10213D; --muted:#5A6F8E; --line:#D3E1F3;
+  --accent:#2F86F5; --accent-ink:#FFFFFF;
+  --mark:#DCEBFF; --mark-ink:#1A5FC4;
+  --hero-a:#8DB7E8; --hero-b:#2F86F5; --on-hero:#FFFFFF; --hero-btn:#FFFFFF; --hero-btn-ink:#1F6FE0;
+  --good:#0E8A5F; --danger:#C2362B; --chip:#E4EEFB;
+  --f-display:"Unbounded","Arial Black",system-ui,sans-serif;
+  --f-body:"Golos Text",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  --r:14px;
+  color-scheme:light dark;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0B1424; --surface:#122036; --ink:#E6EEFA; --muted:#93A7C4; --line:#223552;
+  --accent:#4E9BFA; --accent-ink:#06121F;
+  --mark:#1C3A66; --mark-ink:#CFE3FF;
+  --hero-a:#264A7A; --hero-b:#1F6FE0; --on-hero:#FFFFFF; --hero-btn:#0B1424; --hero-btn-ink:#FFFFFF;
+  --good:#3FC495; --danger:#FF7468; --chip:#1A2C47; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0B1424; --surface:#122036; --ink:#E6EEFA; --muted:#93A7C4; --line:#223552;
+  --accent:#4E9BFA; --accent-ink:#06121F;
+  --mark:#1C3A66; --mark-ink:#CFE3FF;
+  --hero-a:#264A7A; --hero-b:#1F6FE0; --on-hero:#FFFFFF; --hero-btn:#0B1424; --hero-btn-ink:#FFFFFF;
+  --good:#3FC495; --danger:#FF7468; --chip:#1A2C47; color-scheme:dark}
+
+*{box-sizing:border-box}
+html{background:var(--bg)}
+body{margin:0}
+.foot{border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+.foot .wrap{padding-block:18px 28px;display:flex;flex-wrap:wrap;gap:6px 18px;justify-content:space-between}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
+.wrap{max-width:1120px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+/* шапка */
+.top{background:linear-gradient(115deg,var(--hero-a) 0%,var(--hero-b) 78%);color:var(--on-hero)}
+.brand{display:flex;gap:14px;align-items:center}
+.brand img{width:auto;height:clamp(44px,8vw,60px);filter:drop-shadow(0 4px 10px rgb(0 40 120 / .25))}
+.brand-mark{display:flex}
+.top .wrap{padding-block:22px 26px;display:flex;flex-wrap:wrap;gap:16px 24px;align-items:flex-end;justify-content:space-between}
+.logo{font-family:var(--f-display);font-weight:800;font-size:clamp(28px,6vw,46px);line-height:1;letter-spacing:-.02em;margin:0}
+.logo .dot{color:rgb(255 255 255 / .55)}
+.tag{margin:8px 0 0;max-width:46ch;opacity:.92;text-wrap:balance}
+.btn{border:0;border-radius:999px;padding:12px 20px;font-weight:600;cursor:pointer;display:inline-flex;gap:8px;align-items:center}
+.btn-mark{background:var(--hero-btn);color:var(--hero-btn-ink);box-shadow:0 6px 18px rgb(0 40 120 / .2)}
+.btn-mark:hover{filter:brightness(1.05)}
+.btn-primary{background:var(--accent);color:var(--accent-ink)}
+.btn-ghost{background:transparent;border:1px solid var(--line);color:var(--ink)}
+
+/* поиск */
+.search{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);margin-top:-14px;padding:14px;display:grid;grid-template-columns:2fr 1.3fr auto;gap:10px;position:relative}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field label,.lbl{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+input[type=text],input[type=search],select,textarea{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%;min-width:0}
+textarea{resize:vertical;min-height:96px}
+.check{display:flex;align-items:center;gap:8px;align-self:end;padding:10px 4px;white-space:nowrap}
+@media (max-width:720px){.search{grid-template-columns:1fr}.check{align-self:start;padding:0}}
+
+.filters{display:flex;flex-wrap:wrap;gap:14px 22px;margin:18px 0 6px}
+.group{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.group .lbl{margin-right:4px}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 12px;font-size:14px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+
+main.wrap{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:24px;padding-block:8px 48px}
+@media (max-width:900px){main.wrap{grid-template-columns:1fr}}
+.meta{display:flex;justify-content:space-between;gap:12px;align-items:center;color:var(--muted);font-size:14px;margin:10px 0}
+.status{font-size:13px}
+
+/* карточки */
+.list{display:flex;flex-direction:column;gap:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 16px}
+.card h3{margin:0;font-size:18px;line-height:1.3;text-wrap:balance}
+.where{color:var(--muted);font-size:14px}
+.pay{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:16px;text-align:right;white-space:nowrap}
+.tags{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.t{font-size:12.5px;background:var(--chip);border-radius:6px;padding:3px 8px}
+.t-age{background:var(--mark);color:var(--mark-ink);font-weight:600}
+.t-remote{background:transparent;border:1px solid var(--good);color:var(--good)}
+.desc{grid-column:1/-1;margin:8px 0 0;color:var(--ink);white-space:pre-line;overflow-wrap:anywhere}
+.card:not(.open) .desc{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.contact{grid-column:1/-1;display:none;margin-top:10px;padding:10px 12px;border:1px dashed var(--line);border-radius:10px;gap:10px;align-items:center;flex-wrap:wrap}
+.card.open .contact{display:flex}
+.contact code{font-family:var(--f-mono);user-select:all;overflow-wrap:anywhere}
+.actions{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;align-items:center}
+.link{background:none;border:0;padding:4px 0;color:var(--accent);font-weight:600;cursor:pointer}
+.fav{background:none;border:1px solid var(--line);border-radius:999px;padding:4px 10px;cursor:pointer;font-size:13px}
+.fav[aria-pressed="true"]{background:var(--mark);color:var(--mark-ink);border-color:var(--accent)}
+.del{margin-left:auto;background:none;border:0;color:var(--danger);cursor:pointer;font-size:13px}
+.date{color:var(--muted);font-size:12.5px}
+
+.empty{background:var(--surface);border:1px dashed var(--line);border-radius:var(--r);padding:28px 22px;text-align:left}
+.empty h3{font-family:var(--f-display);font-weight:600;font-size:20px;margin:0 0 8px}
+.empty p{margin:0 0 14px;color:var(--muted);max-width:52ch}
+
+/* правая колонка */
+aside{display:flex;flex-direction:column;gap:14px;align-self:start}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px}
+.box h2{font-family:var(--f-display);font-weight:600;font-size:16px;margin:0 0 10px;text-wrap:balance}
+.box p,.box li{font-size:14px;color:var(--muted)}
+.box ul{padding-left:18px;margin:8px 0 0}
+table{width:100%;border-collapse:collapse;font-size:13.5px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:7px 4px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:600;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+td.n{font-family:var(--f-mono);white-space:nowrap}
+.src{font-size:12px;color:var(--muted);margin-top:8px}
+
+/* форма */
+.sheet{position:fixed;inset:0;background:rgb(8 12 28 / .55);display:flex;justify-content:center;align-items:flex-start;overflow:auto;z-index:20;padding:calc(24px + env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) calc(24px + env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px))}
+.form{background:var(--surface);border-radius:18px;width:100%;max-width:620px;padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form h2{grid-column:1/-1;font-family:var(--f-display);font-weight:600;font-size:20px;margin:0}
+.form .full{grid-column:1/-1}
+.form .hint{font-size:12.5px;color:var(--muted);margin:0}
+.form .row{grid-column:1/-1;display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+.err{grid-column:1/-1;color:var(--danger);font-size:14px;margin:0}
+@media (max-width:560px){.form{grid-template-columns:1fr}}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--surface);padding:10px 16px;border-radius:10px;z-index:30;font-size:14px}
+@media (prefers-reduced-motion:no-preference){.card{transition:border-color .15s}.card:hover{border-color:var(--accent)}}
+</style>
+<style>
+.adm{padding-block:22px 48px;display:flex;flex-direction:column;gap:16px;max-width:820px}
+.adm h1{font-family:var(--f-display);font-weight:600;font-size:22px;margin:0}
+.login{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;display:grid;gap:10px;max-width:420px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.row-actions{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.ok{background:var(--good);color:#fff}
+.bar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.card .desc{display:block!important;-webkit-line-clamp:unset!important}
+.card .contact{display:flex!important}
+</style>
+</head>
+<body>
+<div class="wrap adm">
+  <div class="bar"><h1>Модерация New.работа</h1><button class="btn btn-ghost" id="logout" type="button" hidden>Выйти</button></div>
+
+  <form class="login" id="login">
+    <div class="field"><label for="email">Почта</label><input id="email" type="text" autocomplete="username" inputmode="email"></div>
+    <div class="field"><label for="pass">Пароль</label><input id="pass" type="password" autocomplete="current-password" style="background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px"></div>
+    <p class="err" id="loginErr" hidden></p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary" type="submit">Войти</button><button class="btn btn-ghost" type="button" id="signup">Создать аккаунт модератора</button></div>
+  </form>
+
+  <section id="panel" hidden>
+    <div class="bar" style="margin-bottom:12px">
+      <div class="tabs" id="tabs">
+        <button class="chip" type="button" data-s="pending" aria-pressed="true">на проверке</button>
+        <button class="chip" type="button" data-s="approved" aria-pressed="false">на сайте</button>
+        <button class="chip" type="button" data-s="rejected" aria-pressed="false">отклонённые</button>
+      </div>
+      <span class="status" id="status"></span>
+    </div>
+    <div class="list" id="list"></div>
+  </section>
+</div>
+<div class="toast" id="toast" hidden></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script>
+(function(){
+  const $=s=>document.querySelector(s);
+  const cfg=window.NR_CONFIG||{};
+  const sb=window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseKey);
+  let tab="pending";
+  function toast(t){const e=$("#toast");e.textContent=t;e.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>e.hidden=true,2600)}
+  function el(tag,cls,text){const e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e}
+  function showErr(t){const e=$("#loginErr");e.textContent=t;e.hidden=false}
+
+  $("#login").addEventListener("submit",async e=>{
+    e.preventDefault();$("#loginErr").hidden=true;
+    const {error}=await sb.auth.signInWithPassword({email:$("#email").value.trim(),password:$("#pass").value});
+    if(error)showErr("Не вышло войти: неверная почта или пароль, либо почта ещё не подтверждена.");else start();
+  });
+  $("#signup").onclick=async()=>{
+    $("#loginErr").hidden=true;
+    const {error}=await sb.auth.signUp({email:$("#email").value.trim(),password:$("#pass").value});
+    if(error)showErr("Не получилось создать аккаунт: "+error.message);else showErr("Аккаунт создан. Подтверди почту по письму, затем выполни последнюю строку из schema.sql.");
+  };
+  $("#logout").onclick=async()=>{await sb.auth.signOut();location.reload()};
+  document.querySelectorAll("#tabs .chip").forEach(b=>b.onclick=()=>{tab=b.dataset.s;document.querySelectorAll("#tabs .chip").forEach(x=>x.setAttribute("aria-pressed",x===b));load()});
+
+  async function start(){
+    const {data:{user}}=await sb.auth.getUser();
+    if(!user)return;
+    const {data:adm}=await sb.from("admins").select("user_id").eq("user_id",user.id).maybeSingle();
+    $("#login").hidden=true;$("#logout").hidden=false;$("#panel").hidden=false;
+    if(!adm){$("#list").textContent="";$("#list").append(el("div","empty","Ты вошёл, но ещё не модератор. Выполни в Supabase последнюю строку из schema.sql со своей почтой и обнови страницу."));return}
+    load();
+  }
+
+  async function setStatus(id,status){
+    const {error}=await sb.from("vacancies").update({status}).eq("id",id);
+    toast(error?"Не получилось сохранить":status==="approved"?"Опубликовано на сайте":status==="rejected"?"Отклонено":"Возвращено на проверку");load();
+  }
+  async function del(id){const {error}=await sb.from("vacancies").delete().eq("id",id);toast(error?"Не получилось удалить":"Удалено");load()}
+
+  async function load(){
+    $("#status").textContent="Загружаю…";
+    const {data,error}=await sb.from("vacancies").select("*").eq("status",tab).order("created_at",{ascending:false}).limit(300);
+    const list=$("#list");list.textContent="";
+    if(error){$("#status").textContent="Ошибка загрузки";return}
+    $("#status").textContent=data.length+" шт.";
+    if(!data.length){list.append(el("div","empty",tab==="pending"?"Новых вакансий на проверку нет.":"Здесь пусто."));return}
+    for(const v of data){
+      const c=el("article","card open");
+      const left=el("div");left.style.minWidth="0";
+      left.append(el("h3",null,v.title),el("div","where",[v.company,v.remote?"удалённо":null,v.city].filter(Boolean).join(" · ")));
+      c.append(left,el("div","pay",v.pay||"—"));
+      const tags=el("div","tags");tags.append(el("span","t t-age","с "+v.age_min+" лет"),el("span","t",v.type),el("span","date",new Date(v.created_at).toLocaleString("ru-RU")));c.append(tags);
+      if(v.description)c.append(el("p","desc",v.description));
+      const ct=el("div","contact");ct.append(el("span","lbl","Контакт"),el("code",null,v.contact));c.append(ct);
+      const a=el("div","row-actions");
+      const mk=(t,cls,fn)=>{const b=el("button","btn "+cls,t);b.type="button";b.onclick=fn;a.append(b)};
+      if(tab!=="approved")mk("Опубликовать","ok",()=>setStatus(v.id,"approved"));
+      if(tab!=="rejected")mk("Отклонить","btn-ghost",()=>setStatus(v.id,"rejected"));
+      if(tab!=="pending")mk("На проверку","btn-ghost",()=>setStatus(v.id,"pending"));
+      const d=el("button","del","Удалить навсегда");d.type="button";d.onclick=()=>{if(d.dataset.sure)del(v.id);else{d.dataset.sure=1;d.textContent="Точно удалить?"}};a.append(d);
+      c.append(a);list.append(c);
+    }
+  }
+  start();
+})();
+</script>
+</body>
+</html>
