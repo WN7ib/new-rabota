@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Вакансия · New.работа</title>
+<meta name="description" content="Вакансия для молодёжи на New.работа: работа и подработка с 14 лет.">
+<meta name="theme-color" content="#2F86F5">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="mininav"><div class="wrap"><a class="home" href="./"><img src="logo.png" alt="">New.работа</a><a href="./">← Все вакансии</a></div></header>
+<main class="wrap page" id="page">
+  <p class="lead" id="loading">Загружаю вакансию…</p>
+</main>
+<footer class="foot"><div class="wrap"><span>© 2026 New.работа<span id="support"></span></span><span><a href="guide.html" style="color:var(--muted)">Гид подростку</a> · <a href="about.html" style="color:var(--muted)">О проекте</a></span></div></footer>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+(async function(){
+  const {sb, el} = NR; const page=document.getElementById("page");
+  const id=new URLSearchParams(location.search).get("id")||"";
+  function fail(t){ page.textContent=""; const b=el("div","empty"); b.append(el("h3",null,t)); const a=el("a","btn btn-primary","Смотреть все вакансии"); a.href="./"; b.append(a); page.append(b) }
+  if(!sb||!/^[0-9a-f-]{36}$/i.test(id)){fail("Вакансия не найдена");return}
+  const base="id,created_at,title,company,city,type,age_min,pay,remote,description,contact";
+  let {data,error}=await sb.from("vacancies").select(base+",verified,expires_at").eq("id",id).eq("status","approved").maybeSingle();
+  if(error)({data,error}=await sb.from("vacancies").select(base).eq("id",id).eq("status","approved").maybeSingle());
+  if(!data){fail("Вакансия снята с публикации или не найдена");return}
+  const v=data;
+  const expired=v.expires_at&&v.expires_at<NR.today();
+  document.title=v.title+(v.city?" — "+v.city:"")+" · New.работа";
+  const md=document.querySelector('meta[name=description]'); md.content=(v.title+". "+(v.pay||"")+". С "+v.age_min+" лет. "+(v.description||"")).slice(0,180);
+
+  page.textContent="";
+  const box=el("article","vac");
+  const tags=el("div","tags");
+  if(v.verified)tags.append(el("span","t t-ok","✓ работодатель проверен"));
+  tags.append(el("span","t t-age","с "+v.age_min+" лет"),el("span","t",v.type||"Подработка"));
+  if(v.remote)tags.append(el("span","t t-remote","удалённо"));
+  box.append(tags,el("h1",null,v.title));
+  if(v.company)box.append(el("div","where",v.company));
+  const kv=el("dl","kv");
+  const row=(k,val)=>{if(!val)return;kv.append(el("dt",null,k),el("dd",null,val))};
+  row("Оплата",v.pay||"по договорённости");
+  row("Где",[v.city,v.remote?"можно удалённо":null].filter(Boolean).join(", "));
+  row("Возраст","с "+v.age_min+" лет");
+  row("Актуально",expired?"срок истёк":v.expires_at?NR.expiryText(v.expires_at):null);
+  row("Опубликовано",new Date(v.created_at).toLocaleDateString("ru-RU",{day:"numeric",month:"long",year:"numeric"}));
+  box.append(kv);
+  if(v.description)box.append(el("p","desc",v.description));
+  const ct=el("div","contact");ct.style.display="flex";ct.append(el("span","lbl","Отклик"),el("code",null,v.contact));box.append(ct);
+  const act=el("div","actions");
+  if(!expired)act.append(NR.respondButton(v));
+  const share=el("button","fav","🔗 Скопировать ссылку");share.type="button";share.onclick=()=>NR.copy(location.href);
+  const rep=el("button","subtle","Пожаловаться");rep.type="button";rep.style.marginLeft="auto";rep.onclick=()=>NR.reportDialog(v);
+  act.append(share,rep);box.append(act);
+  if(v.age_min<16)box.append(el("p","hint","Если тебе 14–15: понадобится согласие родителя и органа опеки. Как его оформить — в гиде подростку."));
+  page.append(box);
+
+  // разметка для поисковиков (Google и Яндекс понимают JobPosting)
+  const ld={"@context":"https://schema.org","@type":"JobPosting",title:v.title,description:v.description||v.title,datePosted:v.created_at.slice(0,10),
+    employmentType:{"Полная":"FULL_TIME","Частичная":"PART_TIME","Подработка":"PART_TIME","Стажировка":"INTERN","Разовая":"TEMPORARY","Волонтёрство":"VOLUNTEER"}[v.type]||"OTHER",
+    hiringOrganization:{"@type":"Organization",name:v.company||"Работодатель New.работа"},
+    jobLocation:v.city?{"@type":"Place",address:{"@type":"PostalAddress",addressLocality:v.city,addressCountry:"RU"}}:undefined,
+    jobLocationType:v.remote?"TELECOMMUTE":undefined, applicantLocationRequirements:v.remote?{"@type":"Country",name:"Россия"}:undefined};
+  if(v.expires_at)ld.validThrough=v.expires_at+"T23:59:59+03:00";
+  const s=document.createElement("script");s.type="application/ld+json";s.textContent=JSON.stringify(ld);document.head.append(s);
+
+  // похожие
+  let q=sb.from("vacancies").select("id,title,pay,city,age_min,remote").eq("status","approved").neq("id",v.id).order("created_at",{ascending:false}).limit(4);
+  q=v.city?q.eq("city",v.city):q.eq("remote",true);
+  const {data:sim}=await q;
+  if(sim&&sim.length){const h=el("h2",null,v.city?"Ещё вакансии: "+v.city:"Ещё на удалёнке");page.append(h);const l=el("div","list");sim.forEach(x=>{const a=el("a","mini");a.href="vacancy.html?id="+x.id;a.append(el("b",null,x.title),el("span",null,[x.pay||"по договорённости","с "+x.age_min+" лет"].join(" · ")));l.append(a)});page.append(l)}
+})();
+</script>
+</body>
+</html>

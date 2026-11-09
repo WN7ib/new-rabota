@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>О проекте · New.работа</title>
+<meta name="description" content="New.работа — сайт вакансий для молодёжи от 14 лет. Кто делает, правила размещения вакансий и обработка персональных данных.">
+<meta name="theme-color" content="#2F86F5">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="mininav"><div class="wrap"><a class="home" href="./"><img src="logo.png" alt="">New.работа</a><a href="./">Вакансии →</a></div></header>
+<main class="wrap page">
+  <h1>О проекте</h1>
+  <p class="lead" id="aboutText">New.работа — бесплатный сайт вакансий для молодёжи от 14 лет: подработка, стажировки, проекты и волонтёрство по всей России и удалённо. Каждую вакансию перед публикацией проверяет модератор.</p>
+  <p><b>Кто делает:</b> <span id="owner">молодёжная команда New.работа, Саратов</span>.</p>
+  <p id="contactsP"><b>Связаться:</b> <span id="contacts">через бота поддержки или помощницу Newi на главной странице</span>.</p>
+  <p>На сайте работает <b>Newi</b> — ИИ-помощница проекта. Она подбирает вакансии, рассказывает о правах подростков и отвечает на вопросы. Ответы Newi — подсказки, а не юридическая консультация.</p>
+
+  <h2 id="rules">Правила размещения вакансий</h2>
+  <ol>
+    <li>Работа должна быть законной и соответствовать возрасту, указанному в вакансии. Для 14–17 лет — только то, что разрешает Трудовой кодекс (см. <a href="guide.html#law">гид</a>).</li>
+    <li>Нельзя брать с соискателя деньги: за обучение, форму, медкнижку, «бронь» или регистрацию.</li>
+    <li>Нельзя предлагать работу, связанную с переводом чужих денег, оформлением карт, «курьерскими документами», закладками, алкоголем, табаком и вейпами для несовершеннолетних.</li>
+    <li>Указывай реальную оплату, график и рабочий контакт.</li>
+    <li>Модератор может отклонить или снять вакансию без объяснения причин. Подозрительные вакансии могут быть переданы в правоохранительные органы.</li>
+    <li>Вакансия снимается сама, когда истекает выбранный срок.</li>
+  </ol>
+
+  <h2 id="privacy">Персональные данные</h2>
+  <p><b>Что мы храним:</b></p>
+  <ul>
+    <li>Текст вакансии и контакт для отклика, которые работодатель указал сам. Контакт публикуется вместе с вакансией, чтобы с работодателем могли связаться.</li>
+    <li>Вопросы помощнице Newi. Мы не спрашиваем имя: вопрос связан только со случайным номером, который хранится в твоём браузере.</li>
+    <li>Жалобы на вакансии, без данных о том, кто их отправил.</li>
+    <li>В браузере, только у тебя: избранное, выбранный город и переписку с Newi. Их можно удалить, очистив данные сайта.</li>
+    <li id="metrikaLi" hidden>Обезличенную статистику посещений через Яндекс.Метрику.</li>
+  </ul>
+  <p><b>Зачем:</b> чтобы публиковать вакансии, отвечать на вопросы и защищать пользователей от мошенников.</p>
+  <p><b>Кто обрабатывает:</b> <span id="operator">команда New.работа</span>. Данные хранятся в облачной базе данных.</p>
+  <p><b>Удаление:</b> чтобы снять свою вакансию или удалить данные, напиши нам — контакты выше. Сделаем в течение 10 рабочих дней.</p>
+  <p>Размещая вакансию, работодатель соглашается на публикацию указанного контакта и с правилами выше.</p>
+  <p style="margin-top:28px"><a class="btn btn-primary" href="./">Смотреть вакансии</a></p>
+</main>
+<footer class="foot"><div class="wrap"><span>© 2026 New.работа<span id="support"></span></span><span><a href="guide.html" style="color:var(--muted)">Гид подростку</a></span></div></footer>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+NR.settings().then(s=>{
+  const set=(id,v)=>{if(v)document.getElementById(id).textContent=v};
+  set("aboutText",s.about_text); set("owner",s.about_owner); set("operator",s.about_owner);
+  const c=[s.contact_email,s.support,s.bot_username?"бот @"+String(s.bot_username).replace(/^@/,""):null].filter(Boolean).join(" · ");
+  set("contacts",c);
+  if(s.metrika_id)document.getElementById("metrikaLi").hidden=false;
+});
+</script>
+</body>
+</html>

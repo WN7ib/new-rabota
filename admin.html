@@ -191,6 +191,8 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
     <nav class="nav" id="nav">
       <button class="chip" type="button" data-v="overview" aria-pressed="true">Обзор</button>
       <button class="chip" type="button" data-v="vac" aria-pressed="false">Вакансии<span class="badge" id="pendBadge" hidden></span></button>
+      <button class="chip" type="button" data-v="reports" aria-pressed="false">Жалобы<span class="badge" id="repBadge" hidden></span></button>
+      <button class="chip" type="button" data-v="chat" aria-pressed="false">Вопросы к Newi<span class="badge" id="chatBadge" hidden></span></button>
       <button class="chip" type="button" data-v="settings" aria-pressed="false">Настройки сайта</button>
     </nav>
 
@@ -199,10 +201,10 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
       <div class="stats">
         <button class="stat warn" type="button" data-go="pending"><b id="s-pending">–</b><span>ждут проверки</span></button>
         <button class="stat" type="button" data-go="approved"><b id="s-approved">–</b><span>на сайте</span></button>
-        <button class="stat" type="button" data-go="rejected"><b id="s-rejected">–</b><span>отклонено</span></button>
-        <div class="stat" style="cursor:default"><b id="s-week">–</b><span>новых за 7 дней</span></div>
+        <button class="stat warn" type="button" data-v3="reports"><b id="s-reports">–</b><span>новых жалоб</span></button>
+        <div class="stat" style="cursor:default"><b id="s-clicks">–</b><span>откликов всего</span></div>
       </div>
-      <div class="panel"><h2>Заявки за 14 дней</h2><div class="chart" id="chart"></div></div>
+      <div class="panel"><div class="bar"><h2>Заявки за 14 дней</h2><span class="status" id="s-week"></span></div><div class="chart" id="chart"></div></div>
       <div class="panel"><div class="bar"><h2>Состояние сайта</h2><button class="link" type="button" data-v2="settings">Изменить</button></div><div id="health" class="help"></div></div>
     </section>
 
@@ -220,6 +222,19 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
       <div class="list" id="list"></div>
     </section>
 
+    <!-- ЖАЛОБЫ -->
+    <section id="v-reports" hidden style="flex-direction:column;gap:12px;margin-top:14px">
+      <div class="tools"><div class="group" id="rtabs"><button class="chip" type="button" data-r="new" aria-pressed="true">новые</button><button class="chip" type="button" data-r="done" aria-pressed="false">разобранные</button></div><span class="status" id="rstatus"></span></div>
+      <div class="list" id="rlist"></div>
+    </section>
+
+    <!-- ВОПРОСЫ К NEWI -->
+    <section id="v-chat" hidden style="flex-direction:column;gap:12px;margin-top:14px">
+      <p class="help">Вопросы с сайта в режиме «С Newi». Отвечает Newi с телефона через мессенджер, а если она не знает ответа, вопрос остаётся здесь — можешь ответить сам.</p>
+      <div class="tools"><div class="group" id="ctabs"><button class="chip" type="button" data-c="open" aria-pressed="true">без ответа</button><button class="chip" type="button" data-c="all" aria-pressed="false">все</button></div><span class="status" id="cstatus"></span></div>
+      <div class="list" id="clist"></div>
+    </section>
+
     <!-- НАСТРОЙКИ -->
     <section id="v-settings" hidden style="margin-top:14px">
       <form class="panel set" id="setForm">
@@ -229,7 +244,13 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
         <label class="sw"><input type="checkbox" id="st-banner-on"><span>Показывать объявление над вакансиями<small>Например: «Набираем вожатых на зимнюю смену» или «Сайт работает в тестовом режиме».</small></span></label>
         <div class="field"><label for="st-banner">Текст объявления</label><textarea id="st-banner" maxlength="300"></textarea></div>
         <div class="field"><label for="st-support">Контакт поддержки (в подвале сайта)</label><input id="st-support" type="text" maxlength="120" placeholder="Telegram-бот @NewRabotaBot"></div>
-        <div class="field"><label for="st-days">Скрывать вакансии старше, дней (0 — не скрывать)</label><input id="st-days" type="text" inputmode="numeric" maxlength="3"></div>
+        <div class="field"><label for="st-days">Скрывать вакансии без срока старше, дней (0 — не скрывать)</label><input id="st-days" type="text" inputmode="numeric" maxlength="3"></div>
+        <label class="sw"><input type="checkbox" id="st-chat"><span>Newi отвечает на свободные вопросы на сайте<small>Отвечает Newi с твоего телефона через мессенджер. Если выключить, на сайте останутся только готовые ответы-кнопки.</small></span></label>
+        <div class="field"><label for="st-bot">Ник рабочего бота для подписки (без @)</label><input id="st-bot" type="text" maxlength="40" placeholder="NewRabotaBot"></div>
+        <div class="field"><label for="st-metrika">Номер счётчика Яндекс.Метрики</label><input id="st-metrika" type="text" inputmode="numeric" maxlength="12" placeholder="например 98765432"></div>
+        <div class="field"><label for="st-about">Текст «О проекте» (пусто — стандартный)</label><textarea id="st-about" maxlength="600"></textarea></div>
+        <div class="field"><label for="st-owner">Кто делает проект и обрабатывает данные</label><input id="st-owner" type="text" maxlength="120" placeholder="молодёжная команда New.работа, Саратов"></div>
+        <div class="field"><label for="st-email">Почта для связи</label><input id="st-email" type="text" maxlength="80" inputmode="email"></div>
         <p class="err" id="setErr" hidden></p>
         <div><button class="btn btn-primary" type="submit" id="setSave">Сохранить</button></div>
         <p class="help">Изменения видны на сайте сразу после обновления страницы.</p>
@@ -249,12 +270,14 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
     <div class="field full"><label for="e-title">Должность</label><input id="e-title" type="text" maxlength="80"></div>
     <div class="field"><label for="e-company">Компания</label><input id="e-company" type="text" maxlength="60"></div>
     <div class="field"><label for="e-city">Город</label><input id="e-city" type="text" maxlength="40" list="cities"></div>
-    <div class="field"><label for="e-type">Тип</label><select id="e-type"><option>Подработка</option><option>Стажировка</option><option>Частичная</option><option>Полная</option><option>Разовая</option></select></div>
+    <div class="field"><label for="e-type">Тип</label><select id="e-type"><option>Подработка</option><option>Стажировка</option><option>Частичная</option><option>Полная</option><option>Разовая</option><option>Проект</option><option>Волонтёрство</option></select></div>
     <div class="field"><label for="e-age">Берём с</label><select id="e-age"><option value="14">14 лет</option><option value="16">16 лет</option><option value="18">18 лет</option></select></div>
     <div class="field"><label for="e-pay">Оплата</label><input id="e-pay" type="text" maxlength="40"></div>
     <div class="field"><label for="e-status">Статус</label><select id="e-status"><option value="approved">на сайте</option><option value="pending">на проверке</option><option value="rejected">отклонена</option></select></div>
     <label class="check"><input type="checkbox" id="e-remote"> Можно удалённо</label>
     <label class="check"><input type="checkbox" id="e-pinned"> Закрепить сверху</label>
+    <label class="check"><input type="checkbox" id="e-verified"> ✓ Работодатель проверен</label>
+    <div class="field"><label for="e-exp">Актуально до (пусто — без срока)</label><input id="e-exp" type="date"></div>
     <div class="field full"><label for="e-desc">Описание и график</label><textarea id="e-desc" maxlength="1200"></textarea></div>
     <div class="field full"><label for="e-contact">Контакт для отклика</label><input id="e-contact" type="text" maxlength="120"></div>
     <p class="err" id="edErr" hidden></p>
@@ -301,8 +324,9 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
   function go(v){
     st.view=v;
     $$("#nav .chip").forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===v));
-    $("#v-overview").hidden=v!=="overview";$("#v-vac").hidden=v!=="vac";$("#v-settings").hidden=v!=="settings";
-    if(v==="vac")$("#v-vac").style.display="flex";
+    ["overview","vac","reports","chat","settings"].forEach(x=>{const e=$("#v-"+x);e.hidden=v!==x;if(x!=="overview"&&x!=="settings"&&v===x)e.style.display="flex"});
+    if(v==="reports")loadReports();
+    if(v==="chat")loadChat();
     if(v==="overview")loadOverview();
     if(v==="vac")loadList();
     if(v==="settings")fillSettings();
@@ -310,18 +334,22 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
   $$("#nav .chip").forEach(b=>b.onclick=()=>go(b.dataset.v));
   $$("[data-v2]").forEach(b=>b.onclick=()=>go(b.dataset.v2));
   $$(".stat[data-go]").forEach(b=>b.onclick=()=>{setTab(b.dataset.go);go("vac")});
+  $$("[data-v3]").forEach(b=>b.onclick=()=>go(b.dataset.v3));
   function setTab(t){st.tab=t;$$("#tabs .chip").forEach(x=>x.setAttribute("aria-pressed",x.dataset.s===t))}
   $$("#tabs .chip").forEach(b=>b.onclick=()=>{setTab(b.dataset.s);loadList()});
   $("#vq").addEventListener("input",e=>{st.q=e.target.value;renderList()});
 
   // обзор
   async function loadOverview(){
-    const {data,error}=await sb.from("vacancies").select("id,status,created_at").order("created_at",{ascending:false}).limit(1000);
+    let {data,error}=await sb.from("vacancies").select("id,status,created_at,clicks").order("created_at",{ascending:false}).limit(1000);
+    if(error)({data,error}=await sb.from("vacancies").select("id,status,created_at").order("created_at",{ascending:false}).limit(1000));
+    countBadges();
     if(error){toast("Не удалось загрузить статистику");return}
     st.all=data;
     const c={pending:0,approved:0,rejected:0};data.forEach(v=>c[v.status]++);
-    $("#s-pending").textContent=c.pending;$("#s-approved").textContent=c.approved;$("#s-rejected").textContent=c.rejected;
-    const week=Date.now()-7*864e5;$("#s-week").textContent=data.filter(v=>new Date(v.created_at)>week).length;
+    $("#s-pending").textContent=c.pending;$("#s-approved").textContent=c.approved;
+    $("#s-clicks").textContent=data.reduce((n,v)=>n+(v.clicks||0),0);
+    const week=Date.now()-7*864e5;$("#s-week").textContent="за 7 дней: "+data.filter(v=>new Date(v.created_at)>week).length;
     const b=$("#pendBadge");b.textContent=c.pending;b.hidden=!c.pending;
     // график
     const days=[];for(let i=13;i>=0;i--){const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-i);days.push({d,n:0})}
@@ -353,7 +381,9 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
       const left=el("div");left.style.minWidth="0";
       left.append(el("h3",null,v.title),el("div","where",[v.company,v.remote?"удалённо":null,v.city].filter(Boolean).join(" · ")));
       c.append(left,el("div","pay",v.pay||"—"));
-      const tags=el("div","tags");if(v.pinned)tags.append(el("span","t t-pin","📌 закреплена"));
+      const tags=el("div","tags");if(v.pinned)tags.append(el("span","t t-pin","📌 закреплена"));if(v.verified)tags.append(el("span","t t-ok","✓ проверен"));
+      if(v.expires_at)tags.append(el("span","t",(v.expires_at<today()?"⌛ истекла ":"до ")+new Date(v.expires_at).toLocaleDateString("ru-RU")));
+      if(v.clicks)tags.append(el("span","t","✉ откликов: "+v.clicks));
       tags.append(el("span","t t-age","с "+v.age_min+" лет"),el("span","t",v.type),el("span","date",new Date(v.created_at).toLocaleString("ru-RU",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})));c.append(tags);
       if(v.description)c.append(el("p","desc",v.description));
       const ct=el("div","contact");ct.append(el("span","lbl","Контакт"),el("code",null,v.contact));c.append(ct);
@@ -364,6 +394,8 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
       if(v.status!=="pending")mk("На проверку","btn-ghost",()=>patch(v.id,{status:"pending"},"Возвращено на проверку"));
       mk("Изменить","btn-ghost",()=>openEd(v));
       if(v.status==="approved")mk(v.pinned?"Открепить":"📌 Закрепить","btn-ghost",()=>patch(v.id,{pinned:!v.pinned},v.pinned?"Откреплено":"Закреплено"));
+      mk(v.verified?"Снять «проверен»":"✓ Проверен","btn-ghost",()=>patch(v.id,{verified:!v.verified},v.verified?"Отметка снята":"Отмечено: работодатель проверен"));
+      if(v.status==="approved"){const lk=el("a","btn btn-sm btn-ghost","Открыть ↗");lk.href="vacancy.html?id="+v.id;lk.target="_blank";lk.rel="noopener";lk.style.textDecoration="none";lk.style.color="inherit";lk.style.border="1px solid var(--line)";a.append(lk)}
       const d=el("button","del","Удалить");d.type="button";d.onclick=()=>{if(d.dataset.sure)del(v.id);else{d.dataset.sure=1;d.textContent="Точно удалить навсегда?";setTimeout(()=>{d.textContent="Удалить";delete d.dataset.sure},3500)}};a.append(d);
       c.append(a);list.append(c);
     }
@@ -378,6 +410,7 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
     $("#e-title").value=v?.title||"";$("#e-company").value=v?.company||"";$("#e-city").value=v?.city||"";
     $("#e-type").value=v?.type||"Подработка";$("#e-age").value=String(v?.age_min||16);$("#e-pay").value=v?.pay||"";
     $("#e-status").value=v?.status||"approved";$("#e-remote").checked=!!v?.remote;$("#e-pinned").checked=!!v?.pinned;
+    $("#e-verified").checked=!!v?.verified;$("#e-exp").value=v?.expires_at||"";
     $("#e-desc").value=v?.description||"";$("#e-contact").value=v?.contact||"";$("#edErr").hidden=true;sheet.hidden=false;
   }
   $("#addVac").onclick=()=>openEd(null);
@@ -386,7 +419,7 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
   $("#edForm").addEventListener("submit",async e=>{
     e.preventDefault();
     const g=id=>$(id).value.trim();
-    const data={title:g("#e-title"),company:g("#e-company")||null,city:g("#e-city")||null,type:$("#e-type").value,age_min:+$("#e-age").value,pay:g("#e-pay")||null,status:$("#e-status").value,remote:$("#e-remote").checked,pinned:$("#e-pinned").checked,description:g("#e-desc")||null,contact:g("#e-contact")};
+    const data={title:g("#e-title"),company:g("#e-company")||null,city:g("#e-city")||null,type:$("#e-type").value,age_min:+$("#e-age").value,pay:g("#e-pay")||null,status:$("#e-status").value,remote:$("#e-remote").checked,pinned:$("#e-pinned").checked,verified:$("#e-verified").checked,expires_at:$("#e-exp").value||null,description:g("#e-desc")||null,contact:g("#e-contact")};
     const err=$("#edErr");
     if(data.title.length<2||data.contact.length<3){err.textContent="Заполни должность и контакт.";err.hidden=false;return}
     $("#edSave").disabled=true;
@@ -397,17 +430,75 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
     if(!st.editId){setTab(data.status)}loadList();
   });
 
+  const today=()=>new Date().toISOString().slice(0,10);
+  async function countBadges(){
+    const r=await sb.from("reports").select("id",{count:"exact",head:true}).eq("status","new");
+    const n=r.count||0;$("#repBadge").textContent=n;$("#repBadge").hidden=!n;const sr=$("#s-reports");if(sr)sr.textContent=r.error?"–":n;
+    const c=await sb.from("site_chat").select("id",{count:"exact",head:true}).is("a",null);
+    const m=c.count||0;$("#chatBadge").textContent=m;$("#chatBadge").hidden=!m;
+  }
+
+  // жалобы
+  let rtab="new";
+  $$("#rtabs .chip").forEach(b=>b.onclick=()=>{rtab=b.dataset.r;$$("#rtabs .chip").forEach(x=>x.setAttribute("aria-pressed",x===b));loadReports()});
+  async function loadReports(){
+    $("#rstatus").textContent="Загружаю…";
+    const {data,error}=await sb.from("reports").select("id,created_at,reason,status,vacancy_id,vacancies(id,title,company,city,contact,status)").eq("status",rtab).order("created_at",{ascending:false}).limit(200);
+    const list=$("#rlist");list.textContent="";
+    if(error){$("#rstatus").textContent="Не загрузилось. Выполнен ли migration-3.sql?";return}
+    $("#rstatus").textContent=data.length+" шт.";
+    if(!data.length){list.append(el("div","empty",rtab==="new"?"Новых жалоб нет.":"Пусто."));return}
+    for(const r of data){
+      const v=r.vacancies||{};const c=el("article","card open");
+      const left=el("div");left.style.minWidth="0";left.append(el("h3",null,"⚠ "+(v.title||"вакансия удалена")),el("div","where",[v.company,v.city,v.status==="approved"?"на сайте":v.status==="rejected"?"снята":v.status].filter(Boolean).join(" · ")));
+      c.append(left,el("div","date",new Date(r.created_at).toLocaleString("ru-RU",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})));
+      c.append(el("p","desc",r.reason));
+      const a=el("div","row-actions");const mk=(t,cls,fn)=>{const b=el("button","btn btn-sm "+cls,t);b.type="button";b.onclick=fn;a.append(b)};
+      if(v.id&&v.status==="approved")mk("Снять вакансию","ok",async()=>{await sb.from("vacancies").update({status:"rejected"}).eq("id",v.id);await sb.from("reports").update({status:"done"}).eq("vacancy_id",v.id);toast("Вакансия снята, жалобы закрыты");loadReports();countBadges()});
+      if(r.status==="new")mk("Всё в порядке","btn-ghost",async()=>{await sb.from("reports").update({status:"done"}).eq("id",r.id);toast("Жалоба закрыта");loadReports();countBadges()});
+      if(v.id){const lk=el("a","btn btn-sm btn-ghost","Вакансия ↗");lk.href="vacancy.html?id="+v.id;lk.target="_blank";lk.rel="noopener";lk.style.cssText="text-decoration:none;color:inherit;border:1px solid var(--line)";a.append(lk)}
+      c.append(a);list.append(c);
+    }
+  }
+
+  // вопросы к Newi
+  let ctab="open";
+  $$("#ctabs .chip").forEach(b=>b.onclick=()=>{ctab=b.dataset.c;$$("#ctabs .chip").forEach(x=>x.setAttribute("aria-pressed",x===b));loadChat()});
+  async function loadChat(){
+    $("#cstatus").textContent="Загружаю…";
+    let q=sb.from("site_chat").select("id,created_at,q,a,answered_at,session").order("created_at",{ascending:false}).limit(150);
+    if(ctab==="open")q=q.is("a",null);
+    const {data,error}=await q;const list=$("#clist");list.textContent="";
+    if(error){$("#cstatus").textContent="Не загрузилось. Выполнен ли migration-3.sql?";return}
+    $("#cstatus").textContent=data.length+" шт.";
+    if(!data.length){list.append(el("div","empty",ctab==="open"?"Все вопросы отвечены.":"Вопросов пока нет."));return}
+    for(const m of data){
+      const c=el("article","card open");
+      const left=el("div");left.style.minWidth="0";left.append(el("h3",null,"❓ "+m.q),el("div","where","посетитель #"+m.session.slice(0,6)));
+      c.append(left,el("div","date",new Date(m.created_at).toLocaleString("ru-RU",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})));
+      if(m.a)c.append(el("p","desc","💬 "+m.a));
+      const a=el("div","row-actions");const inp=document.createElement("input");inp.type="text";inp.placeholder=m.a?"Исправить ответ":"Ответить самому";inp.style.flex="1 1 220px";
+      const b=el("button","btn btn-sm btn-primary","Отправить");b.type="button";
+      b.onclick=async()=>{const t=inp.value.trim();if(!t)return;const {error}=await sb.from("site_chat").update({a:t,answered_at:new Date().toISOString()}).eq("id",m.id);toast(error?"Не сохранилось":"Ответ отправлен посетителю");loadChat();countBadges()};
+      a.append(inp,b);c.append(a);list.append(c);
+    }
+  }
+
   // настройки
   async function loadSettings(){const {data}=await sb.from("settings").select("data").eq("id",1).maybeSingle();st.settings=data?.data||{}}
   function fillSettings(){
     const s=st.settings;
     $("#st-open").checked=s.submissions_open!==false;$("#st-tagline").value=s.tagline||"";$("#st-banner-on").checked=!!s.banner_on;
     $("#st-banner").value=s.banner||"";$("#st-support").value=s.support||"";$("#st-days").value=s.hide_after_days??60;$("#setErr").hidden=true;
+    $("#st-chat").checked=s.chat_on!==false;$("#st-bot").value=s.bot_username||"";$("#st-metrika").value=s.metrika_id||"";
+    $("#st-about").value=s.about_text||"";$("#st-owner").value=s.about_owner||"";$("#st-email").value=s.contact_email||"";
   }
   $("#setForm").addEventListener("submit",async e=>{
     e.preventDefault();
     const days=parseInt($("#st-days").value,10);
-    const data={submissions_open:$("#st-open").checked,tagline:$("#st-tagline").value.trim(),banner_on:$("#st-banner-on").checked,banner:$("#st-banner").value.trim(),support:$("#st-support").value.trim(),hide_after_days:isNaN(days)||days<0?0:days};
+    const data={submissions_open:$("#st-open").checked,tagline:$("#st-tagline").value.trim(),banner_on:$("#st-banner-on").checked,banner:$("#st-banner").value.trim(),support:$("#st-support").value.trim(),hide_after_days:isNaN(days)||days<0?0:days,
+      chat_on:$("#st-chat").checked,bot_username:$("#st-bot").value.trim().replace(/^@/,""),metrika_id:$("#st-metrika").value.replace(/\D/g,""),
+      about_text:$("#st-about").value.trim(),about_owner:$("#st-owner").value.trim(),contact_email:$("#st-email").value.trim()};
     const {error}=await sb.from("settings").update({data,updated_at:new Date().toISOString()}).eq("id",1);
     if(error){const er=$("#setErr");er.textContent="Не получилось сохранить. Выполнен ли SQL из migration-2-admin.sql?";er.hidden=false;return}
     st.settings=data;toast("Настройки сохранены");

@@ -17,133 +17,7 @@
 <meta name="darkreader-lock">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
-<style>
-/* Layout: шапка-доска объявлений → поиск и фильтры → лента вакансий + колонка «права подростка» */
-/* Layout: шапка в градиенте логотипа → поиск и фильтры → лента вакансий + колонка «права подростка».
-   Палитра снята с логотипа: светлый голубой стержень (#8DB7E8) уходит в яркий синий торец (#2F86F5). */
-:root{
-  --bg:#EEF4FC; --surface:#FFFFFF; --ink:#10213D; --muted:#5A6F8E; --line:#D3E1F3;
-  --accent:#2F86F5; --accent-ink:#FFFFFF;
-  --mark:#DCEBFF; --mark-ink:#1A5FC4;
-  --hero-a:#8DB7E8; --hero-b:#2F86F5; --on-hero:#FFFFFF; --hero-btn:#FFFFFF; --hero-btn-ink:#1F6FE0;
-  --good:#0E8A5F; --danger:#C2362B; --chip:#E4EEFB;
-  --f-display:"Unbounded","Arial Black",system-ui,sans-serif;
-  --f-body:"Golos Text",system-ui,-apple-system,"Segoe UI",sans-serif;
-  --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
-  --r:14px;
-  color-scheme:light dark;
-}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#0B1424; --surface:#122036; --ink:#E6EEFA; --muted:#93A7C4; --line:#223552;
-  --accent:#4E9BFA; --accent-ink:#06121F;
-  --mark:#1C3A66; --mark-ink:#CFE3FF;
-  --hero-a:#264A7A; --hero-b:#1F6FE0; --on-hero:#FFFFFF; --hero-btn:#0B1424; --hero-btn-ink:#FFFFFF;
-  --good:#3FC495; --danger:#FF7468; --chip:#1A2C47; color-scheme:dark}}
-:root[data-theme="dark"]{
-  --bg:#0B1424; --surface:#122036; --ink:#E6EEFA; --muted:#93A7C4; --line:#223552;
-  --accent:#4E9BFA; --accent-ink:#06121F;
-  --mark:#1C3A66; --mark-ink:#CFE3FF;
-  --hero-a:#264A7A; --hero-b:#1F6FE0; --on-hero:#FFFFFF; --hero-btn:#0B1424; --hero-btn-ink:#FFFFFF;
-  --good:#3FC495; --danger:#FF7468; --chip:#1A2C47; color-scheme:dark}
-
-*{box-sizing:border-box}
-html{background:var(--bg)}
-body{margin:0}
-.foot{border-top:1px solid var(--line);color:var(--muted);font-size:13px}
-.foot .wrap{padding-block:18px 28px;display:flex;flex-wrap:wrap;gap:6px 18px;justify-content:space-between}
-[hidden]{display:none!important}
-body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
-.wrap{max-width:1120px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-button,input,select,textarea{font:inherit;color:inherit}
-:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
-
-/* шапка */
-.top{background:linear-gradient(115deg,var(--hero-a) 0%,var(--hero-b) 78%);color:var(--on-hero)}
-.brand{display:flex;gap:14px;align-items:center}
-.brand img{width:auto;height:clamp(44px,8vw,60px);filter:drop-shadow(0 4px 10px rgb(0 40 120 / .25))}
-.brand-mark{display:flex}
-.top .wrap{padding-block:22px 26px;display:flex;flex-wrap:wrap;gap:16px 24px;align-items:flex-end;justify-content:space-between}
-.logo{font-family:var(--f-display);font-weight:800;font-size:clamp(28px,6vw,46px);line-height:1;letter-spacing:-.02em;margin:0}
-.logo .dot{color:rgb(255 255 255 / .55)}
-.tag{margin:8px 0 0;max-width:46ch;opacity:.92;text-wrap:balance}
-.btn{border:0;border-radius:999px;padding:12px 20px;font-weight:600;cursor:pointer;display:inline-flex;gap:8px;align-items:center}
-.btn-mark{background:var(--hero-btn);color:var(--hero-btn-ink);box-shadow:0 6px 18px rgb(0 40 120 / .2)}
-.btn-mark:hover{filter:brightness(1.05)}
-.btn-primary{background:var(--accent);color:var(--accent-ink)}
-.btn-ghost{background:transparent;border:1px solid var(--line);color:var(--ink)}
-
-/* поиск */
-.search{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);margin-top:-14px;padding:14px;display:grid;grid-template-columns:2fr 1.3fr auto;gap:10px;position:relative}
-.field{display:flex;flex-direction:column;gap:4px;min-width:0}
-.field label,.lbl{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
-input[type=text],input[type=search],select,textarea{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%;min-width:0}
-textarea{resize:vertical;min-height:96px}
-.check{display:flex;align-items:center;gap:8px;align-self:end;padding:10px 4px;white-space:nowrap}
-@media (max-width:720px){.search{grid-template-columns:1fr}.check{align-self:start;padding:0}}
-
-.filters{display:flex;flex-wrap:wrap;gap:14px 22px;margin:18px 0 6px}
-.group{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-.group .lbl{margin-right:4px}
-.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 12px;font-size:14px;cursor:pointer}
-.chip[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
-
-main.wrap{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:24px;padding-block:8px 48px}
-@media (max-width:900px){main.wrap{grid-template-columns:1fr}}
-.meta{display:flex;justify-content:space-between;gap:12px;align-items:center;color:var(--muted);font-size:14px;margin:10px 0}
-.status{font-size:13px}
-.notice{background:var(--mark);color:var(--mark-ink);border-radius:var(--r);padding:12px 16px;margin:10px 0 4px;font-weight:500;white-space:pre-line}
-.t-pin{background:var(--accent);color:var(--accent-ink);font-weight:600}
-
-/* карточки */
-.list{display:flex;flex-direction:column;gap:12px}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 16px}
-.card h3{margin:0;font-size:18px;line-height:1.3;text-wrap:balance}
-.where{color:var(--muted);font-size:14px}
-.pay{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:16px;text-align:right;white-space:nowrap}
-.tags{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-.t{font-size:12.5px;background:var(--chip);border-radius:6px;padding:3px 8px}
-.t-age{background:var(--mark);color:var(--mark-ink);font-weight:600}
-.t-remote{background:transparent;border:1px solid var(--good);color:var(--good)}
-.desc{grid-column:1/-1;margin:8px 0 0;color:var(--ink);white-space:pre-line;overflow-wrap:anywhere}
-.card:not(.open) .desc{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.contact{grid-column:1/-1;display:none;margin-top:10px;padding:10px 12px;border:1px dashed var(--line);border-radius:10px;gap:10px;align-items:center;flex-wrap:wrap}
-.card.open .contact{display:flex}
-.contact code{font-family:var(--f-mono);user-select:all;overflow-wrap:anywhere}
-.actions{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;align-items:center}
-.link{background:none;border:0;padding:4px 0;color:var(--accent);font-weight:600;cursor:pointer}
-.fav{background:none;border:1px solid var(--line);border-radius:999px;padding:4px 10px;cursor:pointer;font-size:13px}
-.fav[aria-pressed="true"]{background:var(--mark);color:var(--mark-ink);border-color:var(--accent)}
-.del{margin-left:auto;background:none;border:0;color:var(--danger);cursor:pointer;font-size:13px}
-.date{color:var(--muted);font-size:12.5px}
-
-.empty{background:var(--surface);border:1px dashed var(--line);border-radius:var(--r);padding:28px 22px;text-align:left}
-.empty h3{font-family:var(--f-display);font-weight:600;font-size:20px;margin:0 0 8px}
-.empty p{margin:0 0 14px;color:var(--muted);max-width:52ch}
-
-/* правая колонка */
-aside{display:flex;flex-direction:column;gap:14px;align-self:start}
-.box{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px}
-.box h2{font-family:var(--f-display);font-weight:600;font-size:16px;margin:0 0 10px;text-wrap:balance}
-.box p,.box li{font-size:14px;color:var(--muted)}
-.box ul{padding-left:18px;margin:8px 0 0}
-table{width:100%;border-collapse:collapse;font-size:13.5px;font-variant-numeric:tabular-nums}
-th,td{text-align:left;padding:7px 4px;border-bottom:1px solid var(--line);vertical-align:top}
-th{font-weight:600;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
-td.n{font-family:var(--f-mono);white-space:nowrap}
-.src{font-size:12px;color:var(--muted);margin-top:8px}
-
-/* форма */
-.sheet{position:fixed;inset:0;background:rgb(8 12 28 / .55);display:flex;justify-content:center;align-items:flex-start;overflow:auto;z-index:20;padding:calc(24px + env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) calc(24px + env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px))}
-.form{background:var(--surface);border-radius:18px;width:100%;max-width:620px;padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.form h2{grid-column:1/-1;font-family:var(--f-display);font-weight:600;font-size:20px;margin:0}
-.form .full{grid-column:1/-1}
-.form .hint{font-size:12.5px;color:var(--muted);margin:0}
-.form .row{grid-column:1/-1;display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
-.err{grid-column:1/-1;color:var(--danger);font-size:14px;margin:0}
-@media (max-width:560px){.form{grid-template-columns:1fr}}
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--surface);padding:10px 16px;border-radius:10px;z-index:30;font-size:14px}
-@media (prefers-reduced-motion:no-preference){.card{transition:border-color .15s}.card:hover{border-color:var(--accent)}}
-</style>
+<link rel="stylesheet" href="style.css">
 
 </head>
 <body>
@@ -156,9 +30,33 @@ td.n{font-family:var(--f-mono);white-space:nowrap}
       <p class="tag" id="tagline">Работа, подработка и стажировки для молодёжи от 14 лет. Вакансии по всей России и удалённо.</p>
       </div>
     </div>
-    <button class="btn btn-mark" id="openForm" type="button">＋ Разместить вакансию</button>
+    <div class="top-actions">
+      <nav class="topnav" aria-label="Разделы">
+        <div class="modes" role="group" aria-label="Режим сайта">
+          <button type="button" id="modeOff" aria-pressed="true">Обычный</button>
+          <button type="button" id="modeNewi" aria-pressed="false">С Newi</button>
+        </div>
+        <a href="guide.html">Гид подростку</a>
+        <a href="about.html">О проекте</a>
+      </nav>
+      <button class="btn btn-mark" id="openForm" type="button">＋ Разместить вакансию</button>
+    </div>
   </div>
 </header>
+
+<section class="wrap" id="newiWrap" hidden aria-label="Newi — помощница New.работа">
+  <div class="newi">
+    <div class="newi-head"><img src="logo.png" alt=""><div><b>Newi</b><small id="newiState"><span class="dotlive"></span>помощница New.работа</small></div></div>
+    <div class="chat" id="chat" aria-live="polite"></div>
+    <div class="quick" id="quick">
+      <button class="chip" type="button" data-q="pick">Подбери мне работу</button>
+      <button class="chip" type="button" data-q="rights">Мои права с 14 лет</button>
+      <button class="chip" type="button" data-q="scam">Как не попасть на обман</button>
+      <button class="chip" type="button" data-q="resume">Помоги с резюме</button>
+    </div>
+    <form class="ask" id="askForm"><input id="askInput" type="text" maxlength="600" placeholder="Спроси Newi о работе, правах, вакансиях…" autocomplete="off"><button class="btn btn-primary" type="submit">➤</button></form>
+  </div>
+</section>
 
 <div class="wrap">
   <form class="search" id="searchForm" role="search">
@@ -183,6 +81,7 @@ td.n{font-family:var(--f-mono);white-space:nowrap}
       <button class="chip" type="button" data-type="Частичная">частичная</button>
       <button class="chip" type="button" data-type="Полная">полная</button>
       <button class="chip" type="button" data-type="Разовая">разовая</button>
+      <button class="chip" type="button" data-type="__proj">проекты и волонтёрство</button>
       <button class="chip" type="button" data-fav="1" aria-pressed="false">★ избранное</button>
     </div>
   </div>
@@ -191,6 +90,7 @@ td.n{font-family:var(--f-mono);white-space:nowrap}
 <main class="wrap" id="main">
   <section aria-labelledby="listTitle">
     <div class="notice" id="banner" hidden></div>
+    <div class="sub-cta" id="subCta" hidden><span id="subText">🔔 Новые вакансии в Telegram — бот пришлёт сам</span><a class="respond" id="subLink" href="#" target="_blank" rel="noopener">Подписаться</a></div>
     <div class="meta"><strong id="listTitle">Вакансии</strong><span class="status" id="status">Загружаю вакансии…</span></div>
     <div class="list" id="list"></div>
   </section>
@@ -230,7 +130,7 @@ td.n{font-family:var(--f-mono);white-space:nowrap}
 <footer class="foot"><div class="wrap">
   <span>© 2026 New.работа<span id="support"></span></span>
   <span>Вакансии размещают работодатели. Перед выходом на работу проверяй договор и условия.</span>
-  <a href="admin.html" style="color:var(--muted)">Вход для модератора</a>
+  <span><a href="guide.html" style="color:var(--muted)">Гид подростку</a> · <a href="about.html" style="color:var(--muted)">О проекте и правила</a> · <a href="about.html#privacy" style="color:var(--muted)">Персональные данные</a> · <a href="admin.html" style="color:var(--muted)">Вход для модератора</a></span>
 </div></footer>
 <div class="sheet" id="sheet" hidden>
   <form class="form" id="vacForm" novalidate style="position:relative">
@@ -239,14 +139,16 @@ td.n{font-family:var(--f-mono);white-space:nowrap}
     <div class="field"><label for="f-company">Компания или человек</label><input id="f-company" type="text" maxlength="60" placeholder="Кофейня «Зерно»"></div>
     <div class="field"><label for="f-city">Город</label><input id="f-city" type="text" list="cities" maxlength="40" placeholder="Саратов"></div>
     <div class="field"><label for="f-type">Тип</label>
-      <select id="f-type"><option>Подработка</option><option>Стажировка</option><option>Частичная</option><option>Полная</option><option>Разовая</option></select></div>
+      <select id="f-type"><option>Подработка</option><option>Стажировка</option><option>Частичная</option><option>Полная</option><option>Разовая</option><option>Проект</option><option>Волонтёрство</option></select></div>
     <div class="field"><label for="f-age">Берём с</label>
       <select id="f-age"><option value="14">14 лет</option><option value="16" selected>16 лет</option><option value="18">18 лет</option></select></div>
     <div class="field"><label for="f-pay">Оплата</label><input id="f-pay" type="text" maxlength="40" placeholder="250 ₽/час"></div>
+    <div class="field"><label for="f-exp">Актуально</label>
+      <select id="f-exp"><option value="14">2 недели</option><option value="30" selected>месяц</option><option value="60">2 месяца</option><option value="90">3 месяца</option></select></div>
     <label class="check" style="align-self:end"><input type="checkbox" id="f-remote"> Можно удалённо</label>
     <div class="field full"><label for="f-desc">Что делать и график</label><textarea id="f-desc" maxlength="1200" placeholder="Сб–Вс с 10 до 15. Готовить кофе, принимать заказы. Научим с нуля."></textarea></div>
     <div class="field full"><label for="f-contact">Как откликнуться</label><input id="f-contact" type="text" maxlength="120" placeholder="Telegram @zerno_hr или +7 900 000-00-00"></div>
-    <p class="hint full">Вакансия появится на сайте после проверки модератором, обычно в течение суток. Для 14–15 лет указывай только лёгкую работу.</p>
+    <p class="hint full">Вакансия появится на сайте после проверки модератором, обычно в течение суток. Для 14–15 лет указывай только лёгкую работу. Отправляя вакансию, ты соглашаешься с <a href="about.html#rules">правилами размещения</a>.</p>
     <input type="text" id="f-website" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px">
     <p class="err" id="formErr" hidden></p>
     <div class="row"><button type="button" class="btn btn-ghost" id="cancelForm">Отмена</button><button type="submit" class="btn btn-primary" id="submitForm">Отправить на проверку</button></div>
@@ -260,6 +162,7 @@ td.n{font-family:var(--f-mono);white-space:nowrap}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
+<script src="common.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
