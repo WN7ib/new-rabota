@@ -182,7 +182,14 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
     <div class="field"><label for="email">Почта</label><input id="email" type="text" autocomplete="username" inputmode="email"></div>
     <div class="field"><label for="pass">Пароль</label><input id="pass" type="password" autocomplete="current-password" style="background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px"></div>
     <p class="err" id="loginErr" hidden></p>
-    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary" type="submit">Войти</button></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary" type="submit">Войти</button><button class="btn btn-ghost" type="button" id="forgot">Забыли пароль?</button></div>
+    <p class="help" id="forgotMsg" hidden></p>
+  </form>
+  <form class="login" id="newpass" hidden>
+    <h2 style="margin:0 0 6px">Новый пароль</h2>
+    <div class="field"><label for="np1">Придумай новый пароль (от 8 символов)</label><input id="np1" type="password" autocomplete="new-password" style="background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px"></div>
+    <p class="err" id="npErr" hidden></p>
+    <div><button class="btn btn-primary" type="submit">Сохранить пароль и войти</button></div>
   </form>
 
   <p class="empty" id="notAdmin" hidden>Ты вошёл, но этот аккаунт не модератор.</p>
@@ -350,6 +357,24 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
     if(error)showErr("Не вышло войти: проверь почту и пароль.");else start();
   });
   $("#logout").onclick=async()=>{await sb.auth.signOut();location.reload()};
+  // восстановление пароля: письмо со ссылкой → эта же страница → новый пароль
+  $("#forgot").onclick=async()=>{
+    const em=$("#email").value.trim(),m=$("#forgotMsg");
+    if(!/.+@.+\..+/.test(em)){showErr("Впиши почту модератора, на неё придёт ссылка.");return}
+    $("#loginErr").hidden=true;m.hidden=false;m.textContent="Отправляю…";
+    const {error}=await sb.auth.resetPasswordForEmail(em,{redirectTo:location.origin+location.pathname});
+    m.textContent=error?(/rate|limit|seconds/i.test(error.message)?"Слишком часто. Подожди минуту и попробуй снова.":"Не получилось отправить письмо: "+error.message):"Письмо отправлено на "+em+". Открой ссылку из письма на этом телефоне — здесь появится поле для нового пароля. Нет письма — проверь «Спам».";
+  };
+  function askNewPass(){$("#login").hidden=true;$("#newpass").hidden=false;$("#np1").focus()}
+  sb.auth.onAuthStateChange(ev=>{if(ev==="PASSWORD_RECOVERY")askNewPass()});
+  if(/type=recovery/.test(location.hash))askNewPass();
+  $("#newpass").addEventListener("submit",async e=>{
+    e.preventDefault();const pw=$("#np1").value,er=$("#npErr");er.hidden=true;
+    if(pw.length<8){er.textContent="Минимум 8 символов.";er.hidden=false;return}
+    const {error}=await sb.auth.updateUser({password:pw});
+    if(error){er.textContent="Не сохранилось: "+(/session|jwt|expired/i.test(error.message)?"ссылка устарела, запроси письмо ещё раз.":error.message);er.hidden=false;return}
+    history.replaceState(null,"",location.pathname);$("#newpass").hidden=true;toast("Пароль сохранён");start();
+  });
 
   async function start(){
     const {data:{user}}=await sb.auth.getUser();
