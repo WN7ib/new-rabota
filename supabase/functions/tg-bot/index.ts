@@ -116,6 +116,7 @@ async function vacancyStep(chat: number, u: any, text: string, from: any) {
       const v = ins?.[0];
       if (!v) { await send(chat, "Не получилось сохранить вакансию. Попробуй ещё раз позже.", MENU); return; }
       await db("POST", "bot_vacancy_from", { vacancy_id: v.id, chat_id: chat }, "return=minimal");
+      await markSeen("pend:" + v.id);
       await send(chat, "Спасибо! Вакансия ушла на проверку команде New.работа. Как одобрят — она появится в поиске и на сайте, и я тебе напишу.", MENU);
       const risk = scamFlags(v);
       const own = await ownerId();
@@ -134,30 +135,97 @@ async function ticket(chat: number, from: any, q: string, why: string) {
   if (own && id) await send(own, `❓ #q${id} · ${from.first_name ?? ""}${from.username ? " (@" + from.username + ")" : ""} ${why}:\n«${q.slice(0, 800)}»\n\nОтветь реплаем на это сообщение — перешлю. Если телефон с Неви в сети, она может ответить раньше.`);
 }
 
+// ───────── публикация: канал + подписчики города ─────────
+async function seen(key: string): Promise<boolean> { return !!(await db("GET", `bot_seen?select=key&key=eq.${enc(key)}`))?.[0]; }
+async function markSeen(key: string) { await db("POST", "bot_seen", { key }, "resolution=ignore-duplicates,return=minimal"); }
+async function announce(v: any, skipChat?: number): Promise<number> {
+  if (await seen("post:" + v.id)) return 0;
+  await markSeen("post:" + v.id);
+  const link = `${SITE}vacancy.html?id=${v.id}`;
+  const ch = await cfg("channel");
+  if (ch) await send(ch, card(v) + `\n🔗 ${link}\n\n#вакансия` + (v.city ? " #" + String(v.city).replace(/[^\p{L}\d]/gu, "") : "") + (v.remote ? " #удалённо" : ""),
+    { inline_keyboard: [[{ text: "Открыть на сайте", url: link }]] });
+  const c5 = (v.city ?? "").toLowerCase().slice(0, 5);
+  const subs: any[] = (await db("GET", `bot_users?select=chat_id,city&city=not.is.null&limit=1000`)) ?? [];
+  let n = 0;
+  for (const s of subs) {
+    const sc = String(s.city).toLowerCase();
+    if ((c5 && sc.startsWith(c5)) || (v.remote && sc.startsWith("удал"))) { if (s.chat_id !== skipChat) { await send(s.chat_id, "🆕 Новая вакансия:\n" + card(v) + `\n🔗 ${link}`); n++; } }
+    if (n >= 200) break;
+  }
+  return n;
+}
+
+// ───────── обход по расписанию (GitHub Actions раз в ~10 минут) ─────────
+// вакансии, одобренные в админке сайта → в канал и подписчикам; новые заявки и жалобы с сайта → владельцу с кнопками
+async function tick() {
+  const own = await ownerId();
+  if (!(await cfg("tick_init"))) {
+    // первый запуск: всё, что уже на сайте, считаем опубликованным, чтобы не завалить канал старыми вакансиями
+    const old: any[] = (await db("GET", "vacancies?select=id,status&status=in.(approved,pending)&limit=2000")) ?? [];
+    for (const v of old) await markSeen((v.status === "approved" ? "post:" : "pend:") + v.id);
+    const reps: any[] = (await db("GET", "reports?select=id&status=eq.new&limit=500")) ?? [];
+    for (const r of reps) await markSeen("rep:" + r.id);
+    await setCfg("tick_init", new Date().toISOString());
+    return "init";
+  }
+  const since = new Date(Date.now() - 4 * 86400_000).toISOString();
+  const appr: any[] = (await db("GET", `vacancies?select=*&status=eq.approved&created_at=gte.${enc(since)}&order=created_at.asc&limit=30`)) ?? [];
+  let posted = 0;
+  for (const v of appr) { if (posted >= 4) break; if (!(await seen("post:" + v.id))) { await announce(v); posted++; } }
+  if (own) {
+    const pend: any[] = (await db("GET", `vacancies?select=*&status=eq.pending&order=created_at.asc&limit=20`)) ?? [];
+    for (const v of pend) {
+      if (await seen("pend:" + v.id)) continue;
+      await markSeen("pend:" + v.id);
+      const risk = scamFlags(v);
+      await send(own, `📢 Новая вакансия с сайта\n\n${card(v)}${risk.length ? "\n\n⚠ Неви: " + risk.join("; ") : ""}`,
+        { inline_keyboard: [[{ text: "✅ Опубликовать", callback_data: `ok:${v.id}` }, { text: "❌ Отклонить", callback_data: `no:${v.id}` }]] });
+    }
+    const reps: any[] = (await db("GET", `reports?select=id,reason,vacancy_id,vacancies(title,city,contact)&status=eq.new&order=created_at.asc&limit=20`)) ?? [];
+    for (const r of reps) {
+      if (await seen("rep:" + r.id)) continue;
+      await markSeen("rep:" + r.id);
+      const v = r.vacancies ?? {};
+      await send(own, `⚠ Жалоба на вакансию «${v.title ?? "?"}»${v.city ? " (" + v.city + ")" : ""}\nПричина: ${String(r.reason).slice(0, 500)}\nКонтакт работодателя: ${v.contact ?? "—"}`,
+        { inline_keyboard: [[{ text: "🗑 Снять вакансию", callback_data: `rm:${r.vacancy_id}` }, { text: "👌 Всё в порядке", callback_data: `rk:${r.id}` }],
+          [{ text: "Открыть", url: `${SITE}vacancy.html?id=${r.vacancy_id}` }]] });
+    }
+  }
+  // напоминание записавшимся через бота: мероприятие завтра
+  const tmr0 = new Date(Date.now() + 20 * 3600_000).toISOString(), tmr1 = new Date(Date.now() + 28 * 3600_000).toISOString();
+  const evs: any[] = (await db("GET", `events?select=id,title,starts_at,place&published=eq.true&starts_at=gte.${enc(tmr0)}&starts_at=lt.${enc(tmr1)}`)) ?? [];
+  for (const e of evs) {
+    if (await seen("evr:" + e.id)) continue;
+    await markSeen("evr:" + e.id);
+    const ss: any[] = (await db("GET", `event_signups?select=chat_id&event_id=eq.${e.id}&chat_id=not.is.null`)) ?? [];
+    const when = new Date(e.starts_at).toLocaleString("ru-RU", { timeZone: "Europe/Saratov", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+    for (const s of ss) await send(s.chat_id, `⏰ Напоминаю: завтра «${e.title}», ${when}${e.place ? ", " + e.place : ""}. Ждём!`);
+  }
+  return `ok posted=${posted}`;
+}
+
 async function moderate(cbq: any) {
   await tg("answerCallbackQuery", { callback_query_id: cbq.id });
   const own = await ownerId();
   if (!own || cbq.from?.id !== own) return;
   const [act, id] = String(cbq.data ?? "").split(":");
-  const v = (await db("GET", `vacancies?select=*&id=eq.${enc(id)}`))?.[0];
   const msg = cbq.message;
   const mark = async (t: string) => { if (msg) await tg("editMessageText", { chat_id: msg.chat.id, message_id: msg.message_id, text: `${msg.text}\n\n${t}` }); };
+  if (act === "rk") { await db("PATCH", `reports?id=eq.${enc(id)}`, { status: "done" }, "return=minimal"); await mark("👌 Жалоба закрыта"); return; }
+  if (act === "rm") {
+    await db("PATCH", `vacancies?id=eq.${enc(id)}`, { status: "rejected" }, "return=minimal");
+    await db("PATCH", `reports?vacancy_id=eq.${enc(id)}`, { status: "done" }, "return=minimal");
+    await mark("🗑 Вакансия снята, жалобы закрыты"); return;
+  }
+  const v = (await db("GET", `vacancies?select=*&id=eq.${enc(id)}`))?.[0];
   if (!v) { await mark("Вакансия уже удалена."); return; }
   if (v.status !== "pending") { await mark(v.status === "approved" ? "Уже опубликована." : "Уже отклонена."); return; }
   const fromChat = (await db("GET", `bot_vacancy_from?select=chat_id&vacancy_id=eq.${enc(id)}`))?.[0]?.chat_id;
   if (act === "ok") {
     await db("PATCH", `vacancies?id=eq.${enc(id)}`, { status: "approved" }, "return=minimal");
     if (fromChat) await send(fromChat, `✅ Твоя вакансия «${v.title}» опубликована в New.работа!\n${SITE}vacancy.html?id=${v.id}`);
-    const ch = await cfg("channel"); if (ch) await send(ch, card(v) + `\n🔗 ${SITE}vacancy.html?id=${v.id}\n\n#вакансия`);
-    // подписчикам этого города (и удалёнки)
-    const c5 = (v.city ?? "").toLowerCase().slice(0, 5);
-    const subs: any[] = (await db("GET", `bot_users?select=chat_id,city&city=not.is.null&limit=1000`)) ?? [];
-    let n = 0;
-    for (const s of subs) {
-      const sc = String(s.city).toLowerCase();
-      if ((c5 && sc.startsWith(c5)) || (v.remote && sc.startsWith("удал"))) { if (s.chat_id !== fromChat) { await send(s.chat_id, "🆕 Новая вакансия:\n" + card(v)); n++; } }
-      if (n >= 200) break;
-    }
+    const n = await announce(v, fromChat);
     await mark(`✅ Опубликовано${n ? `, разослала ${n} подписчикам` : ""}`);
   } else {
     await db("PATCH", `vacancies?id=eq.${enc(id)}`, { status: "rejected" }, "return=minimal");
@@ -217,9 +285,31 @@ async function onMessage(m: any) {
 
   if (text.startsWith("/start")) {
     const arg = text.slice(6).trim();
-    if (arg.startsWith("c_")) { const city = decodeURIComponent(arg.slice(2)).replace(/_/g, " "); await setUser(chat, { city }); await send(chat, `Подписала на новые вакансии: ${city} 🔔`, MENU); return; }
+    if (arg.startsWith("c_")) {
+      const raw = arg.slice(2); let city = "";
+      try { const b = raw.replace(/-/g, "+").replace(/_/g, "/"); city = new TextDecoder().decode(Uint8Array.from(atob(b + "===".slice((b.length + 3) % 4)), (c) => c.charCodeAt(0))); } catch { city = ""; }
+      if (!city || /[\u0000-\u001f]/.test(city)) city = decodeURIComponent(raw).replace(/_/g, " ");
+      city = city.trim().slice(0, 40);
+      await setUser(chat, { city }); await send(chat, `Подписала на новые вакансии: ${city} 🔔\nОтписаться — /stop`, MENU); return;
+    }
+    if (arg.startsWith("ev_")) {
+      const eid = arg.slice(3);
+      const e = (await db("GET", `events?select=*&id=eq.${enc(eid)}&published=eq.true`))?.[0];
+      if (!e || new Date(e.starts_at).getTime() < Date.now()) { await send(chat, "Эта запись уже закрыта.", MENU); return; }
+      const has = (await db("GET", `event_signups?select=id&event_id=eq.${e.id}&chat_id=eq.${chat}`))?.[0];
+      if (!has) {
+        const cnt = ((await db("GET", `event_signups?select=id&event_id=eq.${e.id}`)) ?? []).length;
+        if (e.capacity && cnt >= e.capacity) { await send(chat, `На «${e.title}» мест больше нет 😔`, MENU); return; }
+        await db("POST", "event_signups", { event_id: e.id, name: (from.first_name ?? "Участник").slice(0, 60).padEnd(2, "."), contact: from.username ? "@" + from.username : "tg:" + chat, chat_id: chat }, "return=minimal");
+      }
+      const when = new Date(e.starts_at).toLocaleString("ru-RU", { timeZone: "Europe/Saratov", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+      await send(chat, `✅ Записала тебя: «${e.title}»\n🗓 ${when}${e.place ? "\n📍 " + e.place : ""}\nЗа день напомню.`, MENU);
+      const own2 = await ownerId(); if (own2 && !has) await send(own2, `🙋 Запись на «${e.title}»: ${from.first_name ?? ""}${from.username ? " @" + from.username : ""}`);
+      return;
+    }
     await send(chat, `Привет, ${from.first_name ?? "друг"}! Я Неви, помощница New.работа 🤖\nПомогу найти работу или подработку с 14 лет, разместить вакансию и разобраться с правами.\nВыбери кнопку внизу или просто задай вопрос.\n🌐 Сайт: ${SITE}`, MENU); return;
   }
+  if (text === "/stop") { await setUser(chat, { city: null }); await send(chat, "Отписала от новых вакансий. Подписаться снова — «🔎 Найти работу».", MENU); return; }
   if (text.startsWith("/help")) { await send(chat, "Что я умею:\n🔎 найти вакансии по городу\n📢 принять вакансию на проверку\n⚖️ рассказать про права подростков\n🛡 предупредить о мошенниках\n✉️ передать вопрос команде\nА ещё можно просто спросить меня словами.", MENU); return; }
   if (text.startsWith("🔎") || text.startsWith("/find") || text.startsWith("/jobs")) { await setUser(chat, { step: "city" }); await send(chat, "В каком городе ищешь? Или напиши «удалённо»."); return; }
   if (text.startsWith("📢") || text.startsWith("/add_job") || text.startsWith("/vacancy")) { await setUser(chat, { step: "v_title", draft: {} }); await send(chat, "Разместим вакансию. Отвечай по шагам, «отмена» — выйти.\n1/6. Какая должность? (например: «Бариста на выходные»)"); return; }
@@ -243,6 +333,7 @@ Deno.serve(async (req) => {
   if (req.headers.get("x-telegram-bot-api-secret-token") !== want) return new Response("forbidden", { status: 403 });
   try {
     const u = await req.json();
+    if (u.tick) return new Response(await tick());
     if (u.message) await onMessage(u.message);
     else if (u.callback_query) await moderate(u.callback_query);
   } catch (e) { console.error(e); }

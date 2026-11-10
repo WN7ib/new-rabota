@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Карта вакансий · New.работа</title>
+<meta name="description" content="Карта вакансий для молодёжи от 14 лет: где сейчас есть работа и подработка по городам России.">
+<meta name="theme-color" content="#2F86F5">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="style.css?v=5">
+<style>
+#map{height:min(62vh,560px);border-radius:var(--r);border:1px solid var(--line);margin-top:14px;z-index:0}
+.pin{background:var(--accent);color:var(--accent-ink);border-radius:999px;font:600 13px var(--f-body);display:grid;place-items:center;border:2px solid #fff;box-shadow:0 2px 8px rgb(0 0 0 / .3)}
+.leaflet-popup-content{font:14px var(--f-body);margin:12px 14px}
+.leaflet-popup-content a.mini{margin-top:6px}
+.cities{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+</style>
+</head>
+<body>
+<header class="mininav"><div class="wrap"><a class="home" href="./"><img src="logo.png" alt="">New.работа</a><a href="./">Списком →</a></div></header>
+<main class="wrap page wide">
+  <h1>Карта вакансий</h1>
+  <p class="lead" id="sum">Загружаю вакансии…</p>
+  <div id="map" role="region" aria-label="Карта вакансий"></div>
+  <div class="cities" id="cities"></div>
+</main>
+<footer class="foot"><div class="wrap"><span>© 2026 New.работа<span id="support"></span></span><span>Карта © участники OpenStreetMap</span></div></footer>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+(function(){
+  const {sb,el}=NR;
+  // координаты городов (широта, долгота)
+  const C={"саратов":[51.533,46.034],"энгельс":[51.485,46.126],"балаково":[52.03,47.80],"вольск":[52.045,47.374],"балашов":[51.553,43.163],"маркс":[51.71,46.75],"ртищево":[52.26,43.79],"аткарск":[51.87,45.0],"пугачёв":[52.015,48.80],"пугачев":[52.015,48.80],"красноармейск":[51.02,45.70],"петровск":[52.31,45.39],"хвалынск":[52.49,48.10],"ершов":[51.35,48.28],"калининск":[51.50,44.47],"новоузенск":[50.46,48.14],
+  "москва":[55.756,37.617],"санкт-петербург":[59.939,30.316],"питер":[59.939,30.316],"самара":[53.195,50.101],"тольятти":[53.508,49.42],"волгоград":[48.708,44.513],"казань":[55.796,49.106],"нижний новгород":[56.327,44.006],"екатеринбург":[56.838,60.597],"новосибирск":[55.008,82.935],"краснодар":[45.035,38.975],"ростов-на-дону":[47.222,39.718],"воронеж":[51.672,39.184],"пенза":[53.195,45.018],"уфа":[54.735,55.958],"пермь":[58.01,56.25],"челябинск":[55.16,61.40],"тюмень":[57.153,65.534],"красноярск":[56.01,92.852],"омск":[54.989,73.368],"ульяновск":[54.314,48.403],"оренбург":[51.768,55.097],"тамбов":[52.721,41.452],"липецк":[52.603,39.57],"астрахань":[46.348,48.033],"ярославль":[57.626,39.894],"тула":[54.193,37.617],"рязань":[54.629,39.736],"курск":[51.73,36.193],"белгород":[50.595,36.587],"калининград":[54.71,20.51],"сочи":[43.585,39.72],"иркутск":[52.287,104.305],"хабаровск":[48.48,135.07],"владивосток":[43.115,131.885],"сызрань":[53.155,48.475],"ижевск":[56.852,53.204],"чебоксары":[56.146,47.251],"киров":[58.603,49.668],"набережные челны":[55.743,52.396],"махачкала":[42.983,47.504],"ставрополь":[45.044,41.969],"томск":[56.484,84.948],"барнаул":[53.348,83.78],"кемерово":[55.355,86.087],"саранск":[54.187,45.184],"йошкар-ола":[56.634,47.9],"брянск":[53.243,34.364],"смоленск":[54.782,32.045],"тверь":[56.859,35.912],"иваново":[57.0,40.973],"владимир":[56.129,40.407],"калуга":[54.513,36.261],"орёл":[52.97,36.064],"орел":[52.97,36.064],"мурманск":[68.97,33.075],"архангельск":[64.54,40.54],"вологда":[59.22,39.89],"петрозаводск":[61.79,34.39],"сургут":[61.25,73.42],"якутск":[62.03,129.73]};
+  const norm=s=>String(s||"").toLowerCase().replace(/^г\.?\s*/,"").replace(/ё/g,"ё").trim();
+  const hasMap=typeof L!=="undefined";
+  const map=hasMap?L.map("map",{scrollWheelZoom:false}).setView([52.5,47],5):null;
+  if(hasMap)L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:17,attribution:"© OpenStreetMap"}).addTo(map);
+  else document.getElementById("map").hidden=true;
+  (async()=>{
+    const sum=document.getElementById("sum");
+    if(!sb){sum.textContent="Сайт не подключён к базе.";return}
+    const today=NR.today();
+    let {data,error}=await sb.from("vacancies").select("id,title,city,remote,pay,age_min,expires_at").eq("status","approved").order("created_at",{ascending:false}).limit(1000);
+    if(error)({data}=await sb.from("vacancies").select("id,title,city,remote,pay,age_min").eq("status","approved").limit(1000));
+    const rows=(data||[]).filter(v=>!v.expires_at||v.expires_at>=today);
+    const by={};let remote=0,unknown=0;
+    for(const v of rows){if(!v.city){if(v.remote)remote++;continue}const k=norm(v.city);(by[k]=by[k]||{name:v.city,list:[]}).list.push(v)}
+    const pts=[];
+    for(const k in by){
+      const g=by[k],c=C[k]||C[k.split(/[ ,(]/)[0]];if(!c){unknown+=g.list.length;continue}
+      if(!hasMap)continue;
+      const n=g.list.length,sz=Math.min(54,26+n*3);
+      const m=L.marker(c,{icon:L.divIcon({className:"",html:'<div class="pin" style="width:'+sz+'px;height:'+sz+'px">'+n+'</div>',iconSize:[sz,sz]}),title:g.name}).addTo(map);
+      const box=document.createElement("div");box.append(el("b",null,g.name+": "+n+" "+(n%10===1&&n%100!==11?"вакансия":n%10>=2&&n%10<=4&&(n%100<10||n%100>=20)?"вакансии":"вакансий")));
+      g.list.slice(0,6).forEach(v=>{const a=el("a","mini");a.href="vacancy.html?id="+v.id;a.append(el("b",null,v.title),el("span",null,[v.pay||"по договорённости","с "+v.age_min+" лет"].join(" · ")));box.append(a)});
+      if(n>6){const a=el("a",null,"Все вакансии города →");a.href="./?city="+encodeURIComponent(g.name);box.append(a)}
+      m.bindPopup(box);pts.push(c);
+    }
+    if(hasMap&&pts.length>1)map.fitBounds(pts,{padding:[40,40],maxZoom:8});else if(hasMap&&pts.length===1)map.setView(pts[0],9);
+    sum.textContent=rows.length?("Сейчас "+rows.length+" вакансий"+(remote?", из них "+remote+" полностью удалённо":"")+". Нажми на кружок, чтобы увидеть вакансии города."):"Пока вакансий нет — загляни позже.";
+    const cs=document.getElementById("cities");
+    Object.values(by).sort((a,b)=>b.list.length-a.list.length).forEach(g=>{const a=el("a","chip",g.name+" · "+g.list.length);a.href="./?city="+encodeURIComponent(g.name);a.style.textDecoration="none";cs.append(a)});
+    if(remote){const a=el("a","chip","Удалённо · "+remote);a.href="./?remote=1";a.style.textDecoration="none";cs.append(a)}
+  })();
+})();
+</script>
+</body>
+</html>

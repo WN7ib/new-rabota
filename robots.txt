@@ -1,0 +1,6 @@
+User-agent: *
+Disallow: /admin.html
+Disallow: /cabinet.html
+Allow: /
+
+Sitemap: https://wn7ib.github.io/new-rabota/sitemap.xml

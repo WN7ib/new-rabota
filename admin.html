@@ -193,6 +193,8 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
       <button class="chip" type="button" data-v="vac" aria-pressed="false">Вакансии<span class="badge" id="pendBadge" hidden></span></button>
       <button class="chip" type="button" data-v="reports" aria-pressed="false">Жалобы<span class="badge" id="repBadge" hidden></span></button>
       <button class="chip" type="button" data-v="chat" aria-pressed="false">Вопросы к Newi<span class="badge" id="chatBadge" hidden></span></button>
+      <button class="chip" type="button" data-v="reviews" aria-pressed="false">Отзывы<span class="badge" id="revBadge" hidden></span></button>
+      <button class="chip" type="button" data-v="events" aria-pressed="false">Мероприятия</button>
       <button class="chip" type="button" data-v="settings" aria-pressed="false">Настройки сайта</button>
     </nav>
 
@@ -215,6 +217,7 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
           <button class="chip" type="button" data-s="pending" aria-pressed="true">на проверке</button>
           <button class="chip" type="button" data-s="approved" aria-pressed="false">на сайте</button>
           <button class="chip" type="button" data-s="rejected" aria-pressed="false">отклонённые</button>
+          <button class="chip" type="button" data-s="closed" aria-pressed="false">закрыты работодателем</button>
         </div>
         <button class="btn btn-primary btn-sm" type="button" id="addVac">＋ Добавить вакансию</button>
       </div>
@@ -233,6 +236,31 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
       <p class="help">Вопросы с сайта в режиме «С Newi». Отвечает Newi с телефона через мессенджер, а если она не знает ответа, вопрос остаётся здесь — можешь ответить сам.</p>
       <div class="tools"><div class="group" id="ctabs"><button class="chip" type="button" data-c="open" aria-pressed="true">без ответа</button><button class="chip" type="button" data-c="all" aria-pressed="false">все</button></div><span class="status" id="cstatus"></span></div>
       <div class="list" id="clist"></div>
+    </section>
+
+    <!-- ОТЗЫВЫ -->
+    <section id="v-reviews" hidden style="flex-direction:column;gap:12px;margin-top:14px">
+      <div class="tools"><div class="group" id="rvtabs"><button class="chip" type="button" data-rv="pending" aria-pressed="true">на проверке</button><button class="chip" type="button" data-rv="approved" aria-pressed="false">опубликованы</button><button class="chip" type="button" data-rv="rejected" aria-pressed="false">отклонены</button></div><span class="status" id="rvstatus"></span></div>
+      <div class="list" id="rvlist"></div>
+    </section>
+
+    <!-- МЕРОПРИЯТИЯ -->
+    <section id="v-events" hidden style="flex-direction:column;gap:12px;margin-top:14px">
+      <form class="panel set" id="evForm">
+        <h2 style="margin:0 0 8px" id="evFormTitle">Новое мероприятие</h2>
+        <label>Название<input id="ev-title" maxlength="120" required></label>
+        <label>Дата и время<input id="ev-at" type="datetime-local" required></label>
+        <label>Тип<select id="ev-kind"><option>Мероприятие</option><option>Волонтёрство</option><option>Смена</option><option>Обучение</option></select></label>
+        <label>Город<input id="ev-city" maxlength="40" placeholder="Саратов"></label>
+        <label>Место<input id="ev-place" maxlength="160" placeholder="ДК, адрес"></label>
+        <label>Мест (пусто — без ограничения)<input id="ev-cap" type="number" min="1"></label>
+        <label>Ссылка (необязательно)<input id="ev-link" maxlength="300" placeholder="https://…"></label>
+        <label>Описание<textarea id="ev-desc" maxlength="2000" rows="3"></textarea></label>
+        <label class="check"><input type="checkbox" id="ev-pub" checked> Показывать на сайте</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary" type="submit">Сохранить</button><button class="btn btn-ghost" type="button" id="evReset">Очистить</button></div>
+      </form>
+      <span class="status" id="evstatus"></span>
+      <div class="list" id="evlist"></div>
     </section>
 
     <!-- НАСТРОЙКИ -->
@@ -324,12 +352,14 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
   function go(v){
     st.view=v;
     $$("#nav .chip").forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===v));
-    ["overview","vac","reports","chat","settings"].forEach(x=>{const e=$("#v-"+x);e.hidden=v!==x;if(x!=="overview"&&x!=="settings"&&v===x)e.style.display="flex"});
+    ["overview","vac","reports","chat","reviews","events","settings"].forEach(x=>{const e=$("#v-"+x);e.hidden=v!==x;if(x!=="overview"&&x!=="settings"&&v===x)e.style.display="flex"});
     if(v==="reports")loadReports();
     if(v==="chat")loadChat();
     if(v==="overview")loadOverview();
     if(v==="vac")loadList();
     if(v==="settings")fillSettings();
+    if(v==="reviews")loadReviews();
+    if(v==="events")loadEvents();
   }
   $$("#nav .chip").forEach(b=>b.onclick=()=>go(b.dataset.v));
   $$("[data-v2]").forEach(b=>b.onclick=()=>go(b.dataset.v2));
@@ -436,6 +466,8 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
     const n=r.count||0;$("#repBadge").textContent=n;$("#repBadge").hidden=!n;const sr=$("#s-reports");if(sr)sr.textContent=r.error?"–":n;
     const c=await sb.from("site_chat").select("id",{count:"exact",head:true}).is("a",null);
     const m=c.count||0;$("#chatBadge").textContent=m;$("#chatBadge").hidden=!m;
+    const rv=await sb.from("reviews").select("id",{count:"exact",head:true}).eq("status","pending");
+    const k=rv.error?0:rv.count||0;$("#revBadge").textContent=k;$("#revBadge").hidden=!k;
   }
 
   // жалобы
@@ -481,6 +513,65 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
       const b=el("button","btn btn-sm btn-primary","Отправить");b.type="button";
       b.onclick=async()=>{const t=inp.value.trim();if(!t)return;const {error}=await sb.from("site_chat").update({a:t,answered_at:new Date().toISOString()}).eq("id",m.id);toast(error?"Не сохранилось":"Ответ отправлен посетителю");loadChat();countBadges()};
       a.append(inp,b);c.append(a);list.append(c);
+    }
+  }
+
+  // отзывы
+  let rvtab="pending";
+  $$("#rvtabs .chip").forEach(b=>b.onclick=()=>{rvtab=b.dataset.rv;$$("#rvtabs .chip").forEach(x=>x.setAttribute("aria-pressed",x===b));loadReviews()});
+  async function loadReviews(){
+    $("#rvstatus").textContent="Загружаю…";
+    const {data,error}=await sb.from("reviews").select("*").eq("status",rvtab).order("created_at",{ascending:false}).limit(200);
+    const list=$("#rvlist");list.textContent="";
+    if(error){$("#rvstatus").textContent="Не загрузилось. Выполнен ли migration-5.sql?";return}
+    $("#rvstatus").textContent=data.length+" шт.";
+    if(!data.length){list.append(el("div","empty",rvtab==="pending"?"Новых отзывов нет.":"Пусто."));return}
+    for(const r of data){
+      const c=el("article","card open");const left=el("div");left.style.minWidth="0";
+      left.append(el("h3",null,"★".repeat(r.rating)+" "+r.company),el("div","where",r.author||"аноним"));
+      c.append(left,el("div","date",new Date(r.created_at).toLocaleString("ru-RU",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})),el("p","desc",r.body));
+      const a=el("div","row-actions");const mk=(t,cls,fn)=>{const b=el("button","btn btn-sm "+cls,t);b.type="button";b.onclick=fn;a.append(b)};
+      const set=async s=>{const {error}=await sb.from("reviews").update({status:s}).eq("id",r.id);toast(error?"Не сохранилось":s==="approved"?"Опубликован":"Отклонён");loadReviews();countBadges()};
+      if(r.status!=="approved")mk("Опубликовать","ok",()=>set("approved"));
+      if(r.status!=="rejected")mk("Отклонить","btn-ghost",()=>set("rejected"));
+      mk("Удалить","btn-ghost",async()=>{await sb.from("reviews").delete().eq("id",r.id);toast("Удалён");loadReviews()});
+      c.append(a);list.append(c);
+    }
+  }
+
+  // мероприятия
+  let evEdit=null;
+  function evClear(){evEdit=null;$("#evForm").reset();$("#ev-pub").checked=true;$("#evFormTitle").textContent="Новое мероприятие"}
+  $("#evReset").onclick=evClear;
+  const localDT=d=>{const x=new Date(d);x.setMinutes(x.getMinutes()-x.getTimezoneOffset());return x.toISOString().slice(0,16)};
+  $("#evForm").addEventListener("submit",async e=>{
+    e.preventDefault();
+    const row={title:$("#ev-title").value.trim(),starts_at:new Date($("#ev-at").value).toISOString(),kind:$("#ev-kind").value,city:$("#ev-city").value.trim()||null,place:$("#ev-place").value.trim()||null,
+      capacity:parseInt($("#ev-cap").value,10)||null,link:$("#ev-link").value.trim()||null,description:$("#ev-desc").value.trim()||null,published:$("#ev-pub").checked};
+    const {error}=evEdit?await sb.from("events").update(row).eq("id",evEdit):await sb.from("events").insert(row);
+    if(error){toast("Не сохранилось. Выполнен ли migration-5.sql?");return}
+    toast(evEdit?"Сохранено":"Мероприятие добавлено");evClear();loadEvents();
+  });
+  async function loadEvents(){
+    $("#evstatus").textContent="Загружаю…";
+    const {data,error}=await sb.from("events").select("*, event_signups(name,contact,age,created_at,chat_id)").order("starts_at",{ascending:false}).limit(100);
+    const list=$("#evlist");list.textContent="";
+    if(error){$("#evstatus").textContent="Не загрузилось. Выполнен ли migration-5.sql?";return}
+    $("#evstatus").textContent=data.length?data.length+" мероприятий":"";
+    if(!data.length){list.append(el("div","empty","Мероприятий пока нет. Добавь первое — оно появится на странице «Мероприятия»."));return}
+    const bot=(st.settings.bot_username||"").replace(/^@/,"");
+    for(const ev of data){
+      const past=new Date(ev.starts_at)<new Date();const s=ev.event_signups||[];
+      const c=el("article","card open");const left=el("div");left.style.minWidth="0";
+      left.append(el("h3",null,(past?"✓ ":"")+ev.title+(ev.published?"":" (скрыто)")),el("div","where",[ev.kind,new Date(ev.starts_at).toLocaleString("ru-RU",{day:"numeric",month:"long",hour:"2-digit",minute:"2-digit"}),ev.city,ev.place].filter(Boolean).join(" · ")));
+      c.append(left,el("div","date","записано: "+s.length+(ev.capacity?" / "+ev.capacity:"")));
+      if(s.length)c.append(el("p","desc",s.map((x,i)=>(i+1)+". "+x.name+(x.age?", "+x.age:"")+" — "+x.contact).join("\n")));
+      const a=el("div","row-actions");const mk=(t,cls,fn)=>{const b=el("button","btn btn-sm "+cls,t);b.type="button";b.onclick=fn;a.append(b)};
+      mk("Изменить","btn-ghost",()=>{evEdit=ev.id;$("#evFormTitle").textContent="Изменить: "+ev.title;$("#ev-title").value=ev.title;$("#ev-at").value=localDT(ev.starts_at);$("#ev-kind").value=ev.kind;$("#ev-city").value=ev.city||"";$("#ev-place").value=ev.place||"";$("#ev-cap").value=ev.capacity||"";$("#ev-link").value=ev.link||"";$("#ev-desc").value=ev.description||"";$("#ev-pub").checked=ev.published;window.scrollTo({top:0,behavior:"smooth"})});
+      if(s.length)mk("Скопировать список","btn-ghost",()=>{navigator.clipboard.writeText(s.map(x=>[x.name,x.age||"",x.contact].join("\t")).join("\n")).then(()=>toast("Список скопирован — вставь в таблицу"),()=>toast("Не получилось скопировать"))});
+      if(bot)mk("Ссылка записи в бот","btn-ghost",()=>{const u="https://t.me/"+bot+"?start=ev_"+ev.id;navigator.clipboard.writeText(u).then(()=>toast("Скопировано: "+u),()=>toast(u))});
+      mk("Удалить","btn-ghost",async b=>{const x=b.currentTarget;if(x.dataset.sure!=="1"){x.dataset.sure="1";x.textContent="Точно удалить?";return}await sb.from("events").delete().eq("id",ev.id);toast("Удалено");loadEvents()});
+      c.append(a);list.append(c);
     }
   }
 

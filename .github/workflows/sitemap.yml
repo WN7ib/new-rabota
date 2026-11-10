@@ -1,0 +1,28 @@
+name: sitemap
+
+# Карта сайта для Яндекса и Google: все страницы и каждая вакансия. Обновляется 4 раза в сутки.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "23 */6 * * *"
+  push:
+    branches: [main]
+    paths: ["tools/sitemap.mjs", ".github/workflows/sitemap.yml"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node tools/sitemap.mjs
+      - name: Сохранить
+        run: |
+          if git diff --quiet -- sitemap.xml; then echo "без изменений"; exit 0; fi
+          git config user.name "new-rabota-bot"; git config user.email "actions@users.noreply.github.com"
+          git add sitemap.xml && git commit -m "Карта сайта обновлена" && git push

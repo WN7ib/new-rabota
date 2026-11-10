@@ -33,7 +33,7 @@
     const d=t.replace(/[^\d+]/g,""); if(d.replace(/\D/g,"").length>=10){ let p=d.replace(/\D/g,""); if(p.length===11&&p[0]==="8")p="7"+p.slice(1); if(p.length===10)p="7"+p; return {href:"tel:+"+p, label:"Позвонить", copy:"+"+p} }
     return {href:null, label:"Скопировать контакт", copy:t};
   }
-  function copy(t){ try{ navigator.clipboard.writeText(t).then(()=>toast("Скопировано: "+t),()=>toast("Выдели контакт и скопируй вручную")) }catch(e){ toast("Выдели контакт и скопируй вручную") } }
+  function copy(t){ try{ navigator.clipboard.writeText(t).then(()=>toast(t.length>60?"Скопировано":"Скопировано: "+t),()=>toast("Выдели контакт и скопируй вручную")) }catch(e){ toast("Выдели контакт и скопируй вручную") } }
   /** Кнопка «Откликнуться»: открывает контакт и считает отклик. */
   function respondButton(v){
     const c=contactLink(v.contact);

@@ -1,0 +1,21 @@
+name: bot-tick
+
+# Раз в ~10 минут будит бота на сервере: вакансии, одобренные в админке, уходят в канал и подписчикам,
+# новые заявки и жалобы с сайта — тебе в бот с кнопками, напоминания о мероприятиях — записавшимся.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "7,17,27,37,47,57 * * * *"
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Обход
+        env:
+          TGT: ${{ secrets.TG_BOT_TOKEN }}
+        run: |
+          if [ -z "$TGT" ]; then echo "Бот не настроен (нет TG_BOT_TOKEN)"; exit 0; fi
+          SECRET=$(printf %s "$TGT" | sha256sum | cut -c1-32)
+          curl -s -m 60 -X POST "https://htachxunemajeawnbccy.supabase.co/functions/v1/tg-bot" \
+            -H "Content-Type: application/json" -H "x-telegram-bot-api-secret-token: $SECRET" -d '{"tick":true}'; echo

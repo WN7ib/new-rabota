@@ -17,7 +17,7 @@
 <meta name="darkreader-lock">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
-<link rel="stylesheet" href="style.css?v=4">
+<link rel="stylesheet" href="style.css?v=5">
 
 </head>
 <body>
@@ -36,6 +36,9 @@
           <button type="button" id="modeOff" aria-pressed="true">Обычный</button>
           <button type="button" id="modeNewi" aria-pressed="false">С Newi</button>
         </div>
+        <a href="events.html">Мероприятия</a>
+        <a href="map.html">Карта</a>
+        <a href="resume.html">Резюме</a>
         <a href="guide.html">Гид подростку</a>
         <a href="about.html">О проекте</a>
       </nav>
@@ -59,6 +62,7 @@
         <button class="chip" type="button" data-q="rights">Мои права</button>
         <button class="chip" type="button" data-q="scam">Обман</button>
         <button class="chip" type="button" data-q="resume">Резюме</button>
+        <button class="chip" type="button" data-q="interview">Собеседование</button>
       </div>
       <form class="ask" id="askForm"><input id="askInput" type="text" maxlength="600" placeholder="Спроси Newi…" autocomplete="off"><button class="btn btn-ghost" type="button" id="micBtn" title="Сказать голосом" hidden>🎤</button><button class="btn btn-primary" type="submit">➤</button></form>
     </div>
@@ -162,7 +166,7 @@
 <footer class="foot"><div class="wrap">
   <span>© 2026 New.работа<span id="support"></span></span>
   <span>Вакансии размещают работодатели. Перед выходом на работу проверяй договор и условия.</span>
-  <span><a href="guide.html" style="color:var(--muted)">Гид подростку</a> · <a href="about.html" style="color:var(--muted)">О проекте и правила</a> · <a href="about.html#privacy" style="color:var(--muted)">Персональные данные</a> · <a href="admin.html" style="color:var(--muted)">Вход для модератора</a></span>
+  <span><a href="guide.html" style="color:var(--muted)">Гид подростку</a> · <a href="about.html" style="color:var(--muted)">О проекте и правила</a> · <a href="about.html#privacy" style="color:var(--muted)">Персональные данные</a> · <a href="cabinet.html" style="color:var(--muted)">Кабинет работодателя</a> · <a href="admin.html" style="color:var(--muted)">Вход для модератора</a></span>
 </div></footer>
 <div class="sheet" id="sheet" hidden>
   <form class="form" id="vacForm" novalidate style="position:relative">
@@ -195,7 +199,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
 <script src="common.js"></script>
-<script src="mascot.js?v=2"></script>
-<script src="app.js"></script>
+<script src="mascot.js?v=3"></script>
+<script src="app.js?v=5"></script>
 </body>
 </html>

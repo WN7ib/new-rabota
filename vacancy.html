@@ -10,7 +10,7 @@
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=5">
 </head>
 <body>
 <header class="mininav"><div class="wrap"><a class="home" href="./"><img src="logo.png" alt="">New.работа</a><a href="./">← Все вакансии</a></div></header>
@@ -70,6 +70,34 @@
     jobLocationType:v.remote?"TELECOMMUTE":undefined, applicantLocationRequirements:v.remote?{"@type":"Country",name:"Россия"}:undefined};
   if(v.expires_at)ld.validThrough=v.expires_at+"T23:59:59+03:00";
   const s=document.createElement("script");s.type="application/ld+json";s.textContent=JSON.stringify(ld);document.head.append(s);
+
+  // отзывы о работодателе
+  if(v.company){
+    const rv=el("section","panel");rv.style.marginTop="16px";page.append(rv);
+    const head=el("h2",null,"Отзывы о «"+v.company+"»");head.style.marginTop="0";rv.append(head);
+    const body=el("div");rv.append(body);
+    const {data:rs,error:re}=await sb.from("reviews").select("rating,body,author,created_at").ilike("company",v.company.replace(/[%_]/g,"")).eq("status","approved").order("created_at",{ascending:false}).limit(20);
+    if(!re){
+      if(rs&&rs.length){const avg=rs.reduce((s,x)=>s+x.rating,0)/rs.length;body.append(el("p",null,"★ "+avg.toFixed(1)+" из 5 · "+rs.length+" отзыв"+(rs.length===1?"":rs.length<5?"а":"ов")));
+        rs.forEach(x=>{const d=el("div","rev");d.append(el("span","stars","★★★★★".slice(0,x.rating)+"☆☆☆☆☆".slice(0,5-x.rating)),document.createTextNode(" "+(x.author||"Аноним")+" · "+new Date(x.created_at).toLocaleDateString("ru-RU",{month:"long",year:"numeric"})),el("p",null,x.body));body.append(d)})}
+      else body.append(el("p","hint","Отзывов пока нет. Работал(а) здесь? Расскажи другим — это защищает от недобросовестных работодателей."));
+      const btn=el("button","btn btn-ghost btn-sm","✍ Оставить отзыв");btn.type="button";btn.style.marginTop="10px";rv.append(btn);
+      btn.onclick=()=>{
+        const sh=el("div","sheet"),f=el("form","form");f.noValidate=true;
+        f.append(el("h2",null,"Отзыв о «"+v.company+"»"),el("p","hint full","Пиши честно и по делу: условия, оплата, отношение. Отзыв появится после проверки модератором."));
+        const sel=document.createElement("select");[5,4,3,2,1].forEach(n=>{const o=el("option",null,"★".repeat(n)+" — "+["","ужасно","плохо","нормально","хорошо","отлично"][n]);o.value=n;sel.append(o)});
+        const fld=(lab,node,full)=>{const d=el("div","field"+(full?" full":""));d.append(el("label",null,lab),node);f.append(d)};
+        fld("Оценка",sel);const nm=document.createElement("input");nm.maxLength=40;nm.placeholder="Можно не указывать";fld("Имя",nm);
+        const ta=document.createElement("textarea");ta.maxLength=1500;ta.placeholder="Что понравилось, что нет, платили ли вовремя";fld("Отзыв",ta,true);
+        const err=el("p","err");err.hidden=true;f.append(err);
+        const row=el("div","row");const c=el("button","btn btn-ghost","Отмена");c.type="button";c.onclick=()=>sh.remove();const s=el("button","btn btn-primary","Отправить");s.type="submit";row.append(c,s);f.append(row);
+        f.addEventListener("submit",async e=>{e.preventDefault();if(ta.value.trim().length<10){err.textContent="Напиши хотя бы пару предложений.";err.hidden=false;return}
+          s.disabled=true;const {error}=await sb.from("reviews").insert({company:v.company,rating:+sel.value,body:ta.value.trim(),author:nm.value.trim()||null,status:"pending"});s.disabled=false;
+          if(error){err.textContent="Не получилось отправить.";err.hidden=false;return}sh.remove();NR.toast("Спасибо! Отзыв появится после проверки")});
+        sh.append(f);document.body.append(sh);sh.addEventListener("click",x=>{if(x.target===sh)sh.remove()});
+      };
+    } else rv.remove();
+  }
 
   // похожие
   let q=sb.from("vacancies").select("id,title,pay,city,age_min,remote").eq("status","approved").neq("id",v.id).order("created_at",{ascending:false}).limit(4);

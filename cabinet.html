@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="robots" content="noindex">
+<title>Кабинет работодателя · New.работа</title>
+<meta name="theme-color" content="#2F86F5">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="style.css?v=5">
+<style>
+.cab{display:flex;flex-direction:column;gap:12px;margin-top:14px}
+.cab .vac h3{margin:0 0 4px;font-size:18px}
+.st{display:inline-block;font-size:12.5px;font-weight:600;padding:3px 10px;border-radius:999px;background:var(--chip)}
+.st.approved{background:color-mix(in srgb,var(--good) 18%,transparent);color:var(--good)}
+.st.pending{background:var(--mark);color:var(--mark-ink)}
+.st.rejected,.st.closed{background:color-mix(in srgb,var(--danger) 15%,transparent);color:var(--danger)}
+.nums{display:flex;gap:18px;flex-wrap:wrap;margin:10px 0;color:var(--muted);font-size:14px}.nums b{color:var(--ink);font-size:18px;display:block}
+.acts{display:flex;gap:8px;flex-wrap:wrap}
+.addlink{display:flex;gap:8px;flex-wrap:wrap}.addlink input{flex:1 1 220px;min-width:0}
+</style>
+</head>
+<body>
+<header class="mininav"><div class="wrap"><a class="home" href="./"><img src="logo.png" alt="">New.работа</a><a href="./">← Вакансии</a></div></header>
+<main class="wrap page">
+  <h1>Кабинет работодателя</h1>
+  <p class="lead">Здесь вакансии, которые ты разместил с этого телефона или по личной ссылке. Регистрация не нужна: доступ даёт ссылка, которую сайт показал после отправки вакансии.</p>
+  <div class="cab" id="cab"></div>
+  <div class="panel" style="margin-top:18px">
+    <h2 style="margin-top:0">Открыть вакансию по ссылке</h2>
+    <form class="addlink" id="addForm"><input id="addInput" type="text" placeholder="Вставь личную ссылку на вакансию" autocomplete="off"><button class="btn btn-primary" type="submit">Открыть</button></form>
+    <p class="hint">Ссылку потерял? Напиши нам через «О проекте» — проверим, что вакансия твоя, и пришлём новую.</p>
+  </div>
+  <p style="margin-top:20px"><a class="btn btn-mark" href="./#add">＋ Разместить ещё вакансию</a></p>
+</main>
+<footer class="foot"><div class="wrap"><span>© 2026 New.работа<span id="support"></span></span><span><a href="about.html#rules" style="color:var(--muted)">Правила размещения</a></span></div></footer>
+<div class="toast" id="toast" hidden></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+(function(){
+  const {sb,el,toast}=NR; const cab=document.getElementById("cab");
+  const ls={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+  const ST={pending:"на проверке",approved:"на сайте",rejected:"отклонена модератором",closed:"закрыта"};
+  const TYPES=["Подработка","Стажировка","Частичная","Полная","Разовая","Проект","Волонтёрство"];
+  function parse(s){const m=String(s||"").match(/v=([0-9a-f-]{36})\.([0-9a-f]{32,})/i);return m?{id:m[1],k:m[2]}:null}
+  function remember(id,k,t){const my=ls.get("nr-my",[]).filter(x=>x.id!==id);my.unshift({id,k,t:t||"",at:Date.now()});ls.set("nr-my",my.slice(0,30))}
+  const fromHash=parse(location.hash); if(fromHash){remember(fromHash.id,fromHash.k);history.replaceState(null,"",location.pathname)}
+  document.getElementById("addForm").addEventListener("submit",e=>{e.preventDefault();const p=parse(document.getElementById("addInput").value);if(!p){toast("Это не похоже на личную ссылку");return}remember(p.id,p.k);document.getElementById("addInput").value="";render()});
+
+  async function render(){
+    cab.textContent="";
+    const my=ls.get("nr-my",[]);
+    if(!sb){cab.append(el("div","empty","Сайт не подключён к базе."));return}
+    if(!my.length){const e=el("div","empty");e.append(el("h3",null,"Пока пусто"),el("p",null,"Разместишь вакансию — она появится здесь. Или вставь личную ссылку ниже."));cab.append(e);return}
+    for(const it of my){
+      const box=el("article","vac");cab.append(box);box.append(el("p","hint","Загружаю «"+(it.t||"вакансию")+"»…"));
+      const {data,error}=await sb.rpc("my_vacancy",{vid:it.id,k:it.k});
+      box.textContent="";
+      const v=data&&data[0];
+      if(error||!v){box.append(el("h3",null,it.t||"Вакансия"),el("p","hint",error?"Кабинет заработает, когда модератор обновит базу (migration-5).":"Вакансия удалена или ссылка неверна."));
+        const rm=el("button","btn btn-ghost btn-sm","Убрать из списка");rm.type="button";rm.onclick=()=>{ls.set("nr-my",ls.get("nr-my",[]).filter(x=>x.id!==it.id));render()};box.append(rm);continue}
+      if(v.title!==it.t)remember(v.id,it.k,v.title);
+      box.append(el("span","st "+v.status,ST[v.status]||v.status),el("h3",null,v.title),el("div","where",[v.company,v.city,v.remote?"удалённо":null,v.pay].filter(Boolean).join(" · ")));
+      const n=el("div","nums");
+      const cell=(b,s)=>{const d=el("div");d.append(el("b",null,b),document.createTextNode(s));n.append(d)};
+      cell(String(v.clicks??0),"откликов (нажатий «Откликнуться»)");
+      cell(v.expires_at?new Date(v.expires_at).toLocaleDateString("ru-RU",{day:"numeric",month:"long"}):"—","показывается до");
+      box.append(n);
+      if(v.status==="rejected")box.append(el("p","hint","Модератор не пропустил вакансию. Проверь правила размещения, исправь и отправь снова."));
+      if(v.status==="pending")box.append(el("p","hint","Ждёт проверки модератором, обычно до суток."));
+      const a=el("div","acts");
+      const b=(t,cls,fn)=>{const x=el("button","btn btn-sm "+cls,t);x.type="button";x.onclick=fn;a.append(x);return x};
+      if(v.status==="approved"){const l=el("a","btn btn-sm btn-ghost","Открыть на сайте");l.href="vacancy.html?id="+v.id;l.style.textDecoration="none";a.append(l)}
+      if(v.status==="approved"||v.status==="pending")b("Продлить на 30 дней","btn-ghost",async()=>{const {data:d,error:e}=await sb.rpc("my_vacancy_extend",{vid:v.id,k:it.k,days:30});toast(e?"Не получилось продлить":"Продлено до "+new Date(d).toLocaleDateString("ru-RU",{day:"numeric",month:"long"}));render()});
+      if(v.status!=="closed")b("Исправить","btn-ghost",()=>editForm(v,it.k));
+      if(v.status!=="closed")b("Закрыть вакансию","btn-ghost",async(ev)=>{const x=ev.currentTarget;if(x.dataset.sure!=="1"){x.dataset.sure="1";x.textContent="Точно закрыть?";return}
+        const {error:e}=await sb.rpc("my_vacancy_close",{vid:v.id,k:it.k});toast(e?"Не получилось":"Вакансия закрыта и убрана с сайта");render()});
+      b("Скопировать личную ссылку","btn-ghost",()=>NR.copy(new URL("cabinet.html#v="+v.id+"."+it.k,location.href).href));
+      box.append(a);
+    }
+  }
+
+  function editForm(v,k){
+    const sh=el("div","sheet"),f=el("form","form");f.noValidate=true;
+    f.append(el("h2",null,"Исправить вакансию"),el("p","hint full","После исправления вакансия снова уйдёт на проверку и вернётся на сайт после одобрения."));
+    const fld=(lab,node,full)=>{const d=el("div","field"+(full?" full":""));const l=el("label",null,lab);d.append(l,node);f.append(d);return node};
+    const inp=(val,max)=>{const i=document.createElement("input");i.type="text";i.maxLength=max;i.value=val||"";return i};
+    const title=fld("Должность",inp(v.title,80),true),company=fld("Компания",inp(v.company,60)),city=fld("Город",inp(v.city,40)),pay=fld("Оплата",inp(v.pay,40));
+    const type=document.createElement("select");TYPES.forEach(x=>{const o=el("option",null,x);o.value=x;if(x===v.type)o.selected=true;type.append(o)});fld("Тип",type);
+    const age=document.createElement("select");[14,16,18].forEach(x=>{const o=el("option",null,"с "+x+" лет");o.value=x;if(x===v.age_min)o.selected=true;age.append(o)});fld("Возраст",age);
+    const rl=el("label","check full");const remote=document.createElement("input");remote.type="checkbox";remote.checked=!!v.remote;rl.append(remote,document.createTextNode(" Можно удалённо"));f.append(rl);
+    const desc=document.createElement("textarea");desc.maxLength=1200;desc.value=v.description||"";fld("Описание",desc,true);
+    const contact=fld("Контакт для отклика",inp(v.contact,120),true);
+    const err=el("p","err");err.hidden=true;f.append(err);
+    const row=el("div","row");const c=el("button","btn btn-ghost","Отмена");c.type="button";c.onclick=()=>sh.remove();const s=el("button","btn btn-primary","Сохранить и отправить");s.type="submit";row.append(c,s);f.append(row);
+    f.addEventListener("submit",async e=>{e.preventDefault();
+      const p={title:title.value.trim(),company:company.value.trim(),city:city.value.trim(),pay:pay.value.trim(),type:type.value,age_min:+age.value,remote:remote.checked,description:desc.value.trim(),contact:contact.value.trim()};
+      if(p.title.length<2||p.contact.length<3||(!p.city&&!p.remote)){err.textContent="Заполни должность, город (или «удалённо») и контакт.";err.hidden=false;return}
+      s.disabled=true;const {error}=await sb.rpc("my_vacancy_update",{vid:v.id,k:k,p});s.disabled=false;
+      if(error){err.textContent="Не сохранилось. Попробуй ещё раз.";err.hidden=false;return}
+      sh.remove();toast("Сохранено. Вакансия снова на проверке");render()});
+    sh.append(f);document.body.append(sh);sh.addEventListener("click",e=>{if(e.target===sh)sh.remove()});
+  }
+  render();
+})();
+</script>
+</body>
+</html>

@@ -97,6 +97,7 @@
     else{state.type=b.dataset.type;$$("#typeGroup .chip:not([data-fav])").forEach(x=>x.setAttribute("aria-pressed",x===b))}
     render();refreshMeta()});
   {const c=ls.get("nr-city","");if(c){$("#city").value=c;state.city=c}}
+  {const q=new URLSearchParams(location.search);const qc=q.get("city");if(qc){$("#city").value=qc;state.city=qc;ls.set("nr-chosen",1)}if(q.get("remote")==="1"){state.remote=true;$("#remote").checked=true;ls.set("nr-chosen",1)}}
 
   // ═════════ форма вакансии ═════════
   const sheet=$("#sheet"),err=$("#formErr");
@@ -115,13 +116,35 @@
     const miss=[];if(data.title.length<2)miss.push("должность");if(!data.city&&!data.remote)miss.push("город или «удалённо»");if(data.contact.length<3)miss.push("контакт для отклика");
     if(miss.length){err.textContent="Заполни: "+miss.join(", ")+".";err.hidden=false;return}
     const btn=$("#submitForm");btn.disabled=true;btn.textContent="Отправляю…";
-    let {error}=await sb.from("vacancies").insert(data);
-    if(error&&/expires_at|column/i.test(error.message||"")){delete data.expires_at;if(!["Проект","Волонтёрство"].includes(data.type)) ({error}=await sb.from("vacancies").insert(data))}
+    // сначала через submit_vacancy: она возвращает личную ссылку управления (кабинет без регистрации)
+    let mine=null,error=null;
+    {const r=await sb.rpc("submit_vacancy",{p:data});
+     if(!r.error&&r.data&&r.data[0])mine=r.data[0];
+     else if(r.error&&/function|schema cache|PGRST202|404/i.test((r.error.message||"")+(r.error.code||""))){
+       ({error}=await sb.from("vacancies").insert(data));
+       if(error&&/expires_at|column/i.test(error.message||"")){delete data.expires_at;if(!["Проект","Волонтёрство"].includes(data.type)) ({error}=await sb.from("vacancies").insert(data))}
+     } else error=r.error}
     btn.disabled=false;btn.textContent="Отправить на проверку";
-    if(error){err.textContent=state.settings.submissions_open===false?"Приём вакансий сейчас закрыт.":"Не получилось отправить. Проверь интернет и попробуй ещё раз.";err.hidden=false;return}
+    if(error){err.textContent=state.settings.submissions_open===false||/closed/.test(error.message||"")?"Приём вакансий сейчас закрыт.":/too many/.test(error.message||"")?"Слишком много заявок сразу. Попробуй через 10 минут.":"Не получилось отправить. Проверь интернет и попробуй ещё раз.";err.hidden=false;return}
     ls.set("nr-last",Date.now());
-    closeForm();$("#vacForm").reset();toast("Отправлено. Вакансия появится после проверки");
+    closeForm();$("#vacForm").reset();
+    if(mine){
+      const my=ls.get("nr-my",[]);my.unshift({id:mine.id,k:mine.manage_key,t:data.title,at:Date.now()});ls.set("nr-my",my.slice(0,30));
+      manageDialog(mine.id,mine.manage_key,data.title);
+    } else toast("Отправлено. Вакансия появится после проверки");
   });
+
+  function manageDialog(id,key,title){
+    const url=new URL("cabinet.html#v="+id+"."+key,location.href).href;
+    const sh=el("div","sheet"),f=el("div","form");
+    f.append(el("h2",null,"Вакансия отправлена ✅"),el("p","hint full","«"+title+"» появится на сайте после проверки модератором — обычно в течение дня."),
+      el("p","full","Это твоя личная ссылка для управления вакансией: посмотреть статус и отклики, продлить, исправить или закрыть. Сохрани её — она работает без регистрации, и восстановить её нельзя."));
+    const box=el("div","field full");const inp=document.createElement("input");inp.readOnly=true;inp.value=url;inp.onclick=()=>inp.select();box.append(inp);f.append(box);
+    const row=el("div","row");const cp=el("button","btn btn-primary","Скопировать ссылку");cp.type="button";cp.onclick=()=>NR.copy(url);
+    const go=el("a","btn btn-ghost","Открыть кабинет");go.href=url;go.style.textDecoration="none";
+    const ok=el("button","btn btn-ghost","Готово");ok.type="button";ok.onclick=()=>sh.remove();row.append(cp,go,ok);f.append(row);
+    sh.append(f);document.body.append(sh);sh.addEventListener("click",e=>{if(e.target===sh)sh.remove()});
+  }
 
   // ═════════ загрузка ═════════
   function applySettings(s){
@@ -167,12 +190,14 @@
   function paintVoice(){const b=$("#voiceBtn");b.textContent=voiceOn()?"🔊":"🔇";b.setAttribute("aria-pressed",voiceOn());if(!synth)b.hidden=true}
   function setVoice(v){ls.set("nr-voice",v?"on":"off");paintVoice();$("#voicePick").hidden=true;if(!v)stopSpeak();else speak("Отлично, буду говорить вслух.")}
   function stopSpeak(){try{synth&&synth.cancel()}catch(_){}if(Mascot.face==="speak")Mascot.set("happy")}
+  let pendingFace=null;
   function speak(t){
     const txt=String(t).replace(/[•\n]+/g," ").slice(0,600);
-    if(!synth||!voiceOn()){Mascot.flash("speak",Math.min(4000,txt.length*35));return}
+    const after=()=>{const f=pendingFace;pendingFace=null;if(f)Mascot.flash(f,3500);else Mascot.set("happy")};
+    if(!synth||!voiceOn()){const d=Math.min(4000,txt.length*35);Mascot.set("speak");clearTimeout(speak.t);speak.t=setTimeout(after,d);return}
     try{synth.cancel();const u=new SpeechSynthesisUtterance(txt);u.lang="ru-RU";
       const v=synth.getVoices().find(x=>/^ru/i.test(x.lang));if(v)u.voice=v;u.rate=+ls.get("nr-rate",1)||1;
-      u.onstart=()=>Mascot.set("speak");u.onend=u.onerror=()=>Mascot.set("happy");synth.speak(u)}catch(_){}
+      u.onstart=()=>Mascot.set("speak");u.onend=u.onerror=after;synth.speak(u)}catch(_){}
   }
   $("#voiceBtn").onclick=()=>setVoice(!voiceOn());
   $("#vOn").onclick=()=>setVoice(true);$("#vOff").onclick=()=>setVoice(false);
@@ -229,24 +254,43 @@
     }
     chatEl.scrollTop=chatEl.scrollHeight;
   }
-  const say=(text,links)=>push({who:"nw",text,links});
+  const say=(text,links,face)=>{if(face!==undefined||!pendingFace)pendingFace=face||null;push({who:"nw",text,links})};
 
   const RIGHTS="По Трудовому кодексу работать можно с 14 лет — лёгкий труд в свободное от учёбы время.\n• 14–15 лет: нужно согласие родителя и органа опеки; до 24 ч в неделю, во время учёбы — до 12 ч.\n• 16–17 лет: можно без согласия; до 35 ч в неделю, во время учёбы — до 17,5 ч.\n• До 18 нельзя: ночью, сверхурочно, в выходные, на вредной работе, с алкоголем и табаком.\n• Перед работой — бесплатный медосмотр, испытательный срок не ставят, отпуск 31 день.";
   const SCAM="Как не попасть на обман:\n• Не плати за обучение, форму или «бронь» вакансии.\n• Не отдавай паспорт и банковскую карту.\n• Не оформляй карты «на себя» и не переводи чужие деньги — это дропперство, уголовная статья.\n• «Курьер документов», «закладки», «лёгкие деньги за час» — почти всегда преступление.\nСомневаешься в вакансии — нажми «Пожаловаться» под ней, модератор проверит.";
   const RESUME="Резюме для первой работы — на полстраницы:\n1. Имя, возраст, город, контакт.\n2. Чего хочешь: «подработка по выходным, курьер или бариста».\n3. Учёба: школа, класс.\n4. Опыт: волонтёрство, помощь на мероприятиях, кружки, олимпиады — всё считается.\n5. Навыки: общительность, ответственность, компьютер, языки.\nПодробнее с примером — в гиде.";
 
+  // ── тренажёр собеседования: вопросы и что в ответе хорошо
+  const IVQ=[
+    ["Расскажи немного о себе.","Хорошо: 3–4 предложения — учёба, чем увлекаешься, почему ищешь работу. Без биографии с детского сада."],
+    ["Почему хочешь работать именно у нас?","Хорошо: покажи, что знаешь, куда пришёл, — что делает компания и что тебе в этом интересно."],
+    ["Какой у тебя опыт? Даже если не работал(а) раньше.","Хорошо: волонтёрство, школьные мероприятия, кружки, помощь родственникам — это тоже опыт. Дай конкретный пример."],
+    ["Сколько часов в неделю сможешь работать и когда?","Хорошо: точный график. До 16 лет — до 24 ч в неделю, в учебное время вдвое меньше."],
+    ["Как поступишь, если клиент недоволен и грубит?","Хорошо: сохраню спокойствие, выслушаю, извинюсь за неудобство, позову старшего, если не могу решить сам(а)."],
+    ["Какие у тебя есть вопросы к нам?","Хорошо: спроси про обучение, график, оплату и когда её выдают, нужен ли договор. «Вопросов нет» — слабый ответ."]];
+  function ivFeedback(q,a){
+    const t=norm(a),tips=[];let pts=0;
+    if(a.length>=60)pts++;else tips.push("Ответ коротковат — добавь подробностей или пример.");
+    if(/например|когда|однажды|был|была|помогал|организ|волонт|участв|делал/.test(t))pts++;else if(q>0&&q<5)tips.push("Добавь конкретный пример из жизни.");
+    if(/не знаю|без понятия|наверно|хз|пофиг/.test(t)){pts--;tips.push("Избегай «не знаю» и «наверное» — звучит неуверенно.");}
+    if(q===5&&/нет|никаких/.test(t)&&a.length<20){pts--;tips.push("Лучше задать 1–2 вопроса: это показывает интерес.");}
+    return {pts:Math.max(0,pts),tips};
+  }
+
   function intent(t){
     t=norm(t);
+    if(/собеседов|интервью|тренаж/.test(t))return "interview";
     if(/подбер|найди|ищу|хочу работ|вакансии|работу|подработк/.test(t))return "pick";
     if(/прав|закон|сколько час|трудов|согласи|с 14|с 15|с 16/.test(t))return "rights";
     if(/обман|мошен|дроп|развод|безопас/.test(t))return "scam";
-    if(/резюме|собеседов/.test(t))return "resume";
+    if(/резюме/.test(t))return "resume";
     return null;
   }
   function run(k){
+    if(k==="interview"){flow={step:"iv",i:0,score:0};say("Давай потренируемся! Я задам "+IVQ.length+" вопросов, как на настоящем собеседовании. Отвечай так, как ответил бы работодателю. Напиши «стоп», чтобы закончить.\n\nВопрос 1: "+IVQ[0][0]);return}
     if(k==="rights")say(RIGHTS,[{href:"guide.html#law",title:"Гид: работа с 14 лет",sub:"документы, часы, что нельзя"}]);
     else if(k==="scam")say(SCAM);
-    else if(k==="resume")say(RESUME,[{href:"guide.html#resume",title:"Гид: резюме и собеседование",sub:"пример и вопросы работодателю"}]);
+    else if(k==="resume")say(RESUME,[{href:"resume.html",title:"📄 Собрать резюме за 2 минуты",sub:"конструктор с подсказками Newi"},{href:"guide.html#resume",title:"Гид: резюме и собеседование",sub:"пример и вопросы работодателю"}]);
     else if(k==="pick"){const p=prof();if(p.age>=14&&p.city){say("Беру из профиля: "+p.age+" лет, "+p.city+". Поменять можно в ⚙.");pickResult(p.age,p.city)}else{flow={step:"age"};say("Сколько тебе лет?")}}
   }
   function pickResult(age,city){
@@ -254,7 +298,7 @@
     if(city&&!/^удал/i.test(city)){state.city=city;$("#city").value=city;ls.set("nr-city",city)} else if(/^удал/i.test(city||"")){state.remote=true;$("#remote").checked=true}
     render();refreshMeta();
     const hit=filtered().slice(0,5);
-    if(!hit.length){say("Пока под тебя ничего нет"+(city?" в «"+city+"»":"")+". Новые вакансии появляются каждый день."+(state.settings.bot_username?" Подпишись на бота — он пришлёт, как только появится.":""),state.settings.bot_username?[{href:NR.botLink(state.settings.bot_username,city),title:"🔔 Подписаться в Telegram",sub:city||"все города"}]:[]);return}
+    if(!hit.length){pendingFace="sad";say("Пока под тебя ничего нет"+(city?" в «"+city+"»":"")+". Новые вакансии появляются каждый день."+(state.settings.bot_username?" Подпишись на бота — он пришлёт, как только появится.":""),state.settings.bot_username?[{href:NR.botLink(state.settings.bot_username,city),title:"🔔 Подписаться в Telegram",sub:city||"все города"}]:[]);return}
     say("Вот что подходит"+(city?" в «"+city+"»":"")+". Я ещё отфильтровала список ниже.",hit.map(v=>({href:vacUrl(v),title:v.title,sub:[v.pay||"по договорённости",v.city||(v.remote?"удалённо":""),"с "+v.age_min+" лет"].filter(Boolean).join(" · ")})));
   }
   async function askServer(q){
@@ -281,6 +325,15 @@
 
   function userSays(t){
     t=t.trim();if(!t)return;Mascot.wake();push({who:"me",text:t});
+    if(flow&&flow.step==="iv"){
+      if(/^(стоп|хватит|выход|закончить)/i.test(t)){flow=null;say("Хорошо, закончили. Возвращайся потренироваться перед настоящим собеседованием!");return}
+      const i=flow.i,fb=ivFeedback(i,t);flow.score+=fb.pts;
+      const good=fb.pts>=2;
+      let msg=(good?"👍 Хороший ответ.":fb.pts===1?"Неплохо.":"Можно сильнее.")+(fb.tips.length?" "+fb.tips.join(" "):"")+"\n💡 "+IVQ[i][1];
+      if(i+1<IVQ.length){flow.i=i+1;say(msg+"\n\nВопрос "+(i+2)+": "+IVQ[i+1][0],null,good?"happy":"think")}
+      else{const max=IVQ.length*2,sc=flow.score;flow=null;
+        say(msg+"\n\nИтог: "+sc+" из "+max+". "+(sc>=max*0.7?"Ты готов(а) к собеседованию! 🎉":sc>=max*0.4?"Неплохо! Потренируйся ещё раз — и будет отлично.":"Перечитай подсказки и попробуй снова — с каждым разом проще.")+"\nЕщё: приходи на 5–10 минут раньше, возьми паспорт, спроси про договор.",[{href:"resume.html",title:"📄 Собрать резюме",sub:"за 2 минуты, с подсказками Newi"}],sc>=max*0.7?"alert":"happy")}
+      return}
     if(flow&&flow.step==="age"){const n=parseInt(t,10);if(!(n>=13&&n<=30)){say("Напиши возраст числом, например 15.");return}if(n<14){flow=null;say("Работать по договору можно с 14 лет. Пока можно попробовать волонтёрство и проекты — загляни в фильтр «проекты и волонтёрство».");return}flow={step:"city",age:n};say("В каком городе ищешь? Или напиши «удалённо».");return}
     if(flow&&flow.step==="city"){const a=flow.age;flow=null;pickResult(a,t);return}
     const k=intent(t); if(k&&t.length<60){run(k);return}
@@ -289,7 +342,8 @@
   $$("#quick .chip").forEach(b=>b.onclick=()=>{push({who:"me",text:b.textContent});run(b.dataset.q)});
   $("#askForm").addEventListener("submit",e=>{e.preventDefault();const i=$("#askInput");userSays(i.value);i.value=""});
 
-  if(location.hash==="#newi"){ls.set("nr-chosen",1);setMode("newi",true)}
+  if(location.hash==="#add"){ls.set("nr-chosen",1);setMode(ls.get("nr-mode","off"));setTimeout(openForm,300)}
+  else if(location.hash==="#newi"){ls.set("nr-chosen",1);setMode("newi",true)}
   else if(ls.get("nr-chosen",0)){setMode(ls.get("nr-mode","off"))}
   else{setMode("off");$("#gate").hidden=false}
   load();

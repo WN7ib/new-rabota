@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Резюме за 2 минуты · New.работа</title>
+<meta name="description" content="Конструктор резюме для первой работы: заполни поля — Newi подскажет, что добавить, и соберёт готовое резюме для печати или PDF.">
+<meta name="theme-color" content="#2F86F5">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="style.css?v=5">
+<style>
+.rs{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;margin-top:14px;align-items:start}
+@media (max-width:860px){.rs{grid-template-columns:minmax(0,1fr)}}
+.rs form{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.rs .full{grid-column:1/-1}
+.rs label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+.rs input,.rs textarea,.rs select{font:inherit;font-size:15px;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);width:100%;min-width:0}
+.rs textarea{min-height:76px;resize:vertical}
+.skills{display:flex;flex-wrap:wrap;gap:6px}
+.tips{background:var(--mark);color:var(--mark-ink);border-radius:var(--r);padding:12px 14px;display:flex;gap:12px;align-items:flex-start}
+.tips .ava{width:46px;height:46px;flex:none;background:#0A1224;border-radius:50%;padding:4px}
+.tips ul{margin:4px 0 0;padding-left:18px}
+.paper{background:#fff;color:#14202f;border-radius:6px;padding:28px 30px;box-shadow:0 6px 30px rgb(0 0 0 / .18);font-family:var(--f-body);line-height:1.45;position:sticky;top:12px}
+.paper h2{font-family:var(--f-display);font-size:22px;margin:0 0 2px;color:#14202f}
+.paper .sub{color:#4b5b70;font-size:14px}
+.paper h4{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#1F6FE0;margin:16px 0 4px;border-bottom:1px solid #dfe7f2;padding-bottom:3px}
+.paper p{margin:0;white-space:pre-line;font-size:14.5px}
+.paper .goal{font-weight:600;font-size:15.5px;margin-top:10px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+@media print{
+  body{background:#fff}.mininav,.foot,.no-print,.rs form,.tips,.bar,h1,.lead{display:none!important}
+  .rs{display:block;margin:0}.paper{box-shadow:none;padding:0;position:static}
+  @page{margin:16mm}
+}
+</style>
+</head>
+<body>
+<header class="mininav"><div class="wrap"><a class="home" href="./"><img src="logo.png" alt="">New.работа</a><a href="./">Вакансии →</a></div></header>
+<main class="wrap page wide">
+  <h1>Резюме за 2 минуты</h1>
+  <p class="lead">Заполняй поля — справа сразу собирается готовое резюме. Newi подскажет, что стоит добавить. Всё хранится только в твоём браузере.</p>
+  <div class="rs">
+    <div style="display:flex;flex-direction:column;gap:12px;min-width:0">
+      <div class="tips" aria-live="polite"><div class="ava" data-mascot></div><div><b>Newi подсказывает</b><ul id="tips"></ul></div></div>
+      <form id="rf" autocomplete="on">
+        <label>Имя и фамилия<input name="name" maxlength="60" placeholder="Анна Смирнова"></label>
+        <label>Возраст<input name="age" type="number" min="14" max="30" inputmode="numeric" placeholder="16"></label>
+        <label>Город<input name="city" maxlength="40" placeholder="Саратов"></label>
+        <label>Телефон или телеграм<input name="contact" maxlength="80" placeholder="@anna или +7…"></label>
+        <label class="full">Какую работу ищешь<input name="goal" maxlength="120" placeholder="Подработка по выходным: бариста, промоутер, помощник на мероприятиях"></label>
+        <label>Когда можешь работать<select name="sched"><option value="">— выбрать —</option><option>по выходным</option><option>после школы, 2–4 часа</option><option>летом / в каникулы</option><option>гибко, удалённо</option></select></label>
+        <label>Учёба<input name="study" maxlength="120" placeholder="Лицей №2, 10 класс"></label>
+        <label class="full">Опыт: подработки, волонтёрство, проекты<textarea name="exp" maxlength="900" placeholder="2025 — волонтёр на городском форуме: встречал гостей, помогал с регистрацией&#10;2024 — помогал вести группу школьного клуба ВКонтакте"></textarea></label>
+        <div class="full"><span style="font-size:13px;color:var(--muted)">Навыки — нажми подходящие</span><div class="skills" id="skills"></div></div>
+        <label class="full">Ещё навыки<input name="skills2" maxlength="160" placeholder="английский A2, Canva, CapCut"></label>
+        <label class="full">О себе (1–2 предложения)<textarea name="about" maxlength="400" placeholder="Ответственный, быстро учусь, люблю работать с людьми. Хочу получить первый опыт и заработать на учёбу."></textarea></label>
+      </form>
+    </div>
+    <div style="min-width:0">
+      <article class="paper" id="paper"></article>
+      <div class="bar no-print">
+        <button class="btn btn-primary" type="button" id="pdf">⬇ Сохранить в PDF / печать</button>
+        <button class="btn btn-ghost" type="button" id="copy">Скопировать текстом</button>
+        <button class="btn btn-ghost" type="button" id="clear">Очистить</button>
+      </div>
+      <p class="hint no-print">В окне печати выбери «Сохранить как PDF». Готовое резюме отправляй работодателю в ответ на вакансию.</p>
+    </div>
+  </div>
+</main>
+<footer class="foot"><div class="wrap"><span>© 2026 New.работа<span id="support"></span></span><span><a href="guide.html#resume" style="color:var(--muted)">Как написать резюме — гид</a></span></div></footer>
+<div class="toast" id="toast" hidden></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script src="mascot.js?v=3"></script>
+<script>
+(function(){
+  const {el}=NR; const f=document.getElementById("rf"), paper=document.getElementById("paper");
+  const ls={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+  const SK=["ответственность","общительность","пунктуальность","работа в команде","быстро учусь","грамотная речь","компьютер / офис","соцсети и SMM","фото и видео","дизайн","английский язык","водительские права"];
+  const st=ls.get("nr-resume",null)||{}; st.sk=st.sk||[];
+  const prof=ls.get("nr-profile",{}); if(!st.name&&prof.name)st.name=prof.name; if(!st.age&&prof.age)st.age=prof.age; if(!st.city&&prof.city)st.city=prof.city;
+  for(const k in st)if(f.elements[k])f.elements[k].value=st[k];
+  const box=document.getElementById("skills");
+  SK.forEach(s=>{const b=el("button","chip",s);b.type="button";b.setAttribute("aria-pressed",st.sk.includes(s));b.onclick=()=>{const i=st.sk.indexOf(s);if(i<0)st.sk.push(s);else st.sk.splice(i,1);b.setAttribute("aria-pressed",i<0);upd()};box.append(b)});
+  function read(){for(const e of f.elements)if(e.name)st[e.name]=e.value.trim();return st}
+  const word=n=>{n=+n;return n%10===1&&n%100!==11?"год":n%10>=2&&n%10<=4&&(n%100<10||n%100>=20)?"года":"лет"};
+  function text(){const s=st;const skills=[...s.sk,...(s.skills2?s.skills2.split(/\s*,\s*/):[])].filter(Boolean);
+    return [s.name||"Имя Фамилия",[s.age?s.age+" "+word(s.age):"",s.city,s.contact].filter(Boolean).join(" · "),
+      s.goal?"\nЦель: "+s.goal+(s.sched?" ("+s.sched+")":""):"",s.study?"\nОбразование\n"+s.study:"",s.exp?"\nОпыт\n"+s.exp:"",skills.length?"\nНавыки\n"+skills.join(", "):"",s.about?"\nО себе\n"+s.about:""].filter(Boolean).join("\n")}
+  function render(){
+    const s=st;paper.textContent="";
+    paper.append(el("h2",null,s.name||"Имя Фамилия"),el("div","sub",[s.age?s.age+" "+word(s.age):"",s.city,s.contact].filter(Boolean).join(" · ")||"возраст · город · контакт"));
+    if(s.goal)paper.append(el("p","goal",s.goal+(s.sched?" — "+s.sched:"")));
+    const sec=(h,t)=>{if(!t)return;paper.append(el("h4",null,h),el("p",null,t))};
+    sec("Образование",s.study);sec("Опыт",s.exp);
+    const skills=[...s.sk,...(s.skills2?s.skills2.split(/\s*,\s*/):[])].filter(Boolean);sec("Навыки",skills.join(" · "));sec("О себе",s.about);
+  }
+  function tips(){
+    const s=st,t=[];
+    if(!s.name)t.push("Начни с имени и фамилии — так тебя запомнят.");
+    if(!s.contact)t.push("Добавь контакт: без него работодатель не сможет ответить.");
+    if(!s.goal)t.push("Напиши, какую работу ищешь: «подработка по выходным, курьер или бариста».");
+    if(!s.exp)t.push("Нет опыта работы? Впиши волонтёрство, помощь на школьных мероприятиях, кружки, олимпиады — это тоже опыт.");
+    else if(!/\d{4}/.test(s.exp))t.push("В опыте укажи годы — так понятнее.");
+    if(s.sk.length+(s.skills2?1:0)<3)t.push("Отметь хотя бы 3 навыка.");
+    if(!s.about)t.push("Добавь 1–2 предложения о себе: какой ты и зачем тебе работа.");
+    if(s.age&&+s.age<16)t.push("Тебе меньше 16 — понадобится согласие родителя и органа опеки. Как оформить — в гиде.");
+    if(!t.length)t.push("Отлично, резюме готово! Сохрани PDF и отправляй работодателям.");
+    const ul=document.getElementById("tips");ul.textContent="";t.slice(0,3).forEach(x=>ul.append(el("li",null,x)));
+    if(window.Mascot)Mascot.set(t.length===1&&/Отлично/.test(t[0])?"speak":"happy");
+  }
+  function upd(){read();ls.set("nr-resume",st);render();tips()}
+  f.addEventListener("input",upd);f.addEventListener("change",upd);
+  document.getElementById("pdf").onclick=()=>window.print();
+  document.getElementById("copy").onclick=()=>NR.copy(text());
+  document.getElementById("clear").onclick=e=>{const b=e.currentTarget;if(b.dataset.sure!=="1"){b.dataset.sure="1";b.textContent="Точно очистить?";return}
+    try{localStorage.removeItem("nr-resume")}catch(_){}location.reload()};
+  if(window.Mascot)Mascot.mount();
+  upd();
+})();
+</script>
+</body>
+</html>

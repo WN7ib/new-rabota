@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Мероприятия и волонтёрство · New.работа</title>
+<meta name="description" content="Мероприятия, волонтёрские смены и обучение для молодёжи Саратовской области и всей России. Запись в один клик.">
+<meta name="theme-color" content="#2F86F5">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="style.css?v=5">
+</head>
+<body>
+<header class="mininav"><div class="wrap"><a class="home" href="./"><img src="logo.png" alt="">New.работа</a><a href="./">Вакансии →</a></div></header>
+<main class="wrap page wide">
+  <h1>Мероприятия и волонтёрство</h1>
+  <p class="lead">Субботники, форумы, волонтёрские смены и обучение. Записывайся на сайте или через Telegram-бота — за день бот напомнит.</p>
+  <div class="group" id="kinds" style="display:flex;gap:6px;flex-wrap:wrap;margin:14px 0">
+    <button class="chip" type="button" data-k="" aria-pressed="true">все</button>
+    <button class="chip" type="button" data-k="Мероприятие" aria-pressed="false">мероприятия</button>
+    <button class="chip" type="button" data-k="Волонтёрство" aria-pressed="false">волонтёрство</button>
+    <button class="chip" type="button" data-k="Смена" aria-pressed="false">смены</button>
+    <button class="chip" type="button" data-k="Обучение" aria-pressed="false">обучение</button>
+  </div>
+  <div class="grid2" id="list"><p class="hint">Загружаю…</p></div>
+</main>
+<footer class="foot"><div class="wrap"><span>© 2026 New.работа<span id="support"></span></span><span><a href="guide.html" style="color:var(--muted)">Гид подростку</a> · <a href="about.html#privacy" style="color:var(--muted)">Персональные данные</a></span></div></footer>
+<div class="toast" id="toast" hidden></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+(function(){
+  const {sb,el,toast}=NR; const list=document.getElementById("list");
+  let items=[],counts={},kind="",settings={};
+  const fmt=d=>new Date(d).toLocaleString("ru-RU",{weekday:"short",day:"numeric",month:"long",hour:"2-digit",minute:"2-digit"});
+  document.querySelectorAll("#kinds .chip").forEach(b=>b.onclick=()=>{kind=b.dataset.k;document.querySelectorAll("#kinds .chip").forEach(x=>x.setAttribute("aria-pressed",x===b));render()});
+  function render(){
+    list.textContent="";
+    const rows=items.filter(e=>!kind||e.kind===kind);
+    if(!rows.length){const e=el("div","empty");e.append(el("h3",null,"Скоро здесь появятся события"),el("p",null,"Следи за новостями в нашем Telegram-боте."));list.append(e);return}
+    for(const e of rows){
+      const c=el("article","ev");const n=counts[e.id]||0;const full=e.capacity&&n>=e.capacity;
+      c.append(el("span","when",fmt(e.starts_at)),el("h3",null,e.title));
+      c.append(el("div","meta",[e.kind,e.city,e.place].filter(Boolean).join(" · ")));
+      if(e.description)c.append(el("p",null,e.description));
+      c.append(el("div","meta",e.capacity?("Записалось "+n+" из "+e.capacity):(n?("Записалось: "+n):"Будь первым")));
+      const a=el("div","acts");
+      const b=el("button","btn btn-primary btn-sm",full?"Мест нет":"Записаться");b.type="button";b.disabled=!!full;b.onclick=()=>signup(e);a.append(b);
+      const bl=NR.botLink(settings.bot_username);if(bl&&!full){const t=el("a","btn btn-ghost btn-sm","Через Telegram");t.href="https://t.me/"+String(settings.bot_username).replace(/^@/,"")+"?start=ev_"+e.id;t.target="_blank";t.rel="noopener";t.style.textDecoration="none";a.append(t)}
+      if(e.link){const l=el("a","btn btn-ghost btn-sm","Подробнее ↗");l.href=e.link;l.target="_blank";l.rel="noopener";l.style.textDecoration="none";a.append(l)}
+      c.append(a);list.append(c);
+    }
+  }
+  function signup(e){
+    const sh=el("div","sheet"),f=el("form","form");f.noValidate=true;
+    f.append(el("h2",null,"Запись: "+e.title),el("p","hint full",fmt(e.starts_at)+(e.place?", "+e.place:"")));
+    const fld=(lab,i,full)=>{const d=el("div","field"+(full?" full":""));d.append(el("label",null,lab),i);f.append(d);return i};
+    const mk=(ph,max,type)=>{const i=document.createElement("input");i.type=type||"text";i.maxLength=max;i.placeholder=ph;return i};
+    const name=fld("Имя",mk("Как к тебе обращаться",60)),age=fld("Возраст",mk("16",2,"number")),contact=fld("Телеграм или телефон",mk("@username или +7…",120),true);
+    f.append(el("p","hint full","Контакт увидят только организаторы, чтобы связаться по мероприятию."));
+    const err=el("p","err");err.hidden=true;f.append(err);
+    const row=el("div","row");const c=el("button","btn btn-ghost","Отмена");c.type="button";c.onclick=()=>sh.remove();const s=el("button","btn btn-primary","Записаться");s.type="submit";row.append(c,s);f.append(row);
+    f.addEventListener("submit",async ev=>{ev.preventDefault();
+      if(name.value.trim().length<2||contact.value.trim().length<3){err.textContent="Впиши имя и контакт.";err.hidden=false;return}
+      s.disabled=true;const a=parseInt(age.value,10);
+      const {data,error}=await sb.rpc("event_signup",{eid:e.id,p_name:name.value.trim(),p_contact:contact.value.trim(),p_age:a>=10&&a<=99?a:null});s.disabled=false;
+      if(error){err.textContent=/full/.test(error.message)?"Мест больше нет.":/closed/.test(error.message)?"Запись закрыта.":"Не получилось, попробуй ещё раз.";err.hidden=false;return}
+      counts[e.id]=data;sh.remove();render();toast("Ты записан(а)! Организаторы свяжутся с тобой.")});
+    sh.append(f);document.body.append(sh);sh.addEventListener("click",x=>{if(x.target===sh)sh.remove()});name.focus();
+  }
+  (async()=>{
+    if(!sb){list.textContent="";list.append(el("div","empty","Сайт не подключён к базе."));return}
+    settings=await NR.settings();
+    const {data,error}=await sb.from("events").select("*").gte("starts_at",new Date().toISOString()).order("starts_at").limit(100);
+    items=error?[]:data||[];
+    const r=await sb.rpc("event_counts");(r.data||[]).forEach(x=>counts[x.event_id]=x.n);
+    render();
+  })();
+})();
+</script>
+</body>
+</html>
