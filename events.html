@@ -68,7 +68,8 @@
       s.disabled=true;const a=parseInt(age.value,10);
       const {data,error}=await sb.rpc("event_signup",{eid:e.id,p_name:name.value.trim(),p_contact:contact.value.trim(),p_age:a>=10&&a<=99?a:null});s.disabled=false;
       if(error){err.textContent=/full/.test(error.message)?"Мест больше нет.":/closed/.test(error.message)?"Запись закрыта.":"Не получилось, попробуй ещё раз.";err.hidden=false;return}
-      counts[e.id]=data;sh.remove();render();toast("Ты записан(а)! Организаторы свяжутся с тобой.")});
+      counts[e.id]=data;sh.remove();render();toast("Ты записан(а)! Организаторы свяжутся с тобой.");
+      try{const m=JSON.parse(localStorage.getItem("nr-events")||"[]").filter(x=>x.id!==e.id);m.unshift({id:e.id,t:e.title,at:e.starts_at,p:e.place||""});localStorage.setItem("nr-events",JSON.stringify(m.slice(0,30)))}catch(_){} });
     sh.append(f);document.body.append(sh);sh.addEventListener("click",x=>{if(x.target===sh)sh.remove()});name.focus();
   }
   (async()=>{

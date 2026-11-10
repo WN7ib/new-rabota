@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="robots" content="noindex">
+<title>Мой профиль · New.работа</title>
+<meta name="theme-color" content="#2F86F5">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="style.css?v=6">
+<style>
+.ph{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-top:8px}
+.ava{width:84px;height:84px;border-radius:50%;background:linear-gradient(135deg,#2F86F5,#22D3EE);color:#fff;display:grid;place-items:center;font:800 34px var(--f-display);flex:none}
+.ph .who{min-width:0;flex:1}
+.ph h1{margin:0}
+.ph .sub{color:var(--muted)}
+.meter{height:8px;border-radius:4px;background:var(--chip);overflow:hidden;margin:8px 0 4px;max-width:360px}.meter i{display:block;height:100%;background:var(--accent);border-radius:4px}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,330px),1fr));gap:12px;margin-top:16px}
+.pc{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;min-width:0;display:flex;flex-direction:column;gap:8px}
+.pc h2{margin:0;font-size:16px;font-family:var(--f-display);display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.pc h2 small{font:500 13px var(--f-body);color:var(--muted)}
+.pc .mini{margin:0}
+.pc .empty-s{color:var(--muted);font-size:14px}
+.pform{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pform label{display:flex;flex-direction:column;gap:3px;font-size:13px;color:var(--muted)}
+.pform .full{grid-column:1/-1}
+.pform input,.pform select,.pform textarea{font:inherit;font-size:15px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);width:100%;min-width:0}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.rowx{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:15px}
+</style>
+</head>
+<body>
+<header class="mininav"><div class="wrap"><a class="home" href="./"><img src="logo.png" alt="">New.работа</a><a href="./">Вакансии →</a></div></header>
+<main class="wrap page wide">
+  <section class="ph">
+    <div class="ava" id="ava">?</div>
+    <div class="who">
+      <h1 id="pname">Мой профиль</h1>
+      <div class="sub" id="psub">Заполни профиль — Newi будет подбирать вакансии под тебя</div>
+      <div class="meter" aria-hidden="true"><i id="meter" style="width:0"></i></div>
+      <small class="sub" id="mtext"></small>
+    </div>
+  </section>
+
+  <div class="pgrid">
+    <section class="pc" style="grid-column:1/-1">
+      <h2>Обо мне <small>хранится только в этом браузере</small></h2>
+      <form class="pform" id="pf">
+        <label>Имя<input name="name" maxlength="30" placeholder="Как тебя зовут"></label>
+        <label>Возраст<input name="age" type="number" min="13" max="30" inputmode="numeric" placeholder="16"></label>
+        <label>Город<input name="city" maxlength="40" list="cities" placeholder="Саратов"></label>
+        <label>Контакт для работодателей<input name="contact" maxlength="80" placeholder="@telegram или телефон"></label>
+        <div class="full"><span style="font-size:13px;color:var(--muted)">Что интересно</span><div class="chips" id="ints"></div></div>
+        <label class="full">Коротко о себе<textarea name="about" maxlength="300" rows="2" placeholder="Учусь в 10 классе, люблю фото и работу с людьми"></textarea></label>
+      </form>
+      <datalist id="cities"><option>Саратов</option><option>Энгельс</option><option>Балаково</option><option>Вольск</option><option>Балашов</option><option>Москва</option><option>Санкт-Петербург</option><option>Самара</option><option>Волгоград</option></datalist>
+    </section>
+
+    <section class="pc"><h2>Подходят тебе <small id="mcount"></small></h2><div id="match"><p class="empty-s">Загружаю…</p></div><a class="btn btn-ghost btn-sm" href="./" style="align-self:flex-start;text-decoration:none">Все вакансии</a></section>
+    <section class="pc"><h2>Избранное <small id="fcount"></small></h2><div id="favs"></div></section>
+    <section class="pc"><h2>Мои отклики <small id="acount"></small></h2><div id="applied"></div></section>
+    <section class="pc"><h2>Мои мероприятия</h2><div id="evs"></div><a class="btn btn-ghost btn-sm" href="events.html" style="align-self:flex-start;text-decoration:none">Все мероприятия</a></section>
+    <section class="pc"><h2>Резюме</h2><div id="res"></div></section>
+    <section class="pc"><h2>Я работодатель</h2><div id="emp"></div></section>
+    <section class="pc">
+      <h2>Настройки</h2>
+      <div class="rowx"><span>Режим сайта</span><select id="sMode"><option value="off">Официальный</option><option value="newi">С Newi</option></select></div>
+      <div class="rowx"><span>Newi говорит вслух</span><input type="checkbox" id="sVoice"></div>
+      <div class="rowx"><span>Анимация дрона</span><input type="checkbox" id="sAnim"></div>
+      <div class="rowx"><span>Новые вакансии в Telegram</span><a class="btn btn-ghost btn-sm" id="sSub" target="_blank" rel="noopener" style="text-decoration:none">Подписаться</a></div>
+      <button class="btn btn-ghost btn-sm" type="button" id="sForget" style="align-self:flex-start">Забыть меня на этом устройстве</button>
+    </section>
+  </div>
+</main>
+<footer class="foot"><div class="wrap"><span>© 2026 New.работа<span id="support"></span></span><span><a href="about.html#privacy" style="color:var(--muted)">Персональные данные</a></span></div></footer>
+<div class="toast" id="toast" hidden></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+(function(){
+  const {sb,el,toast}=NR;
+  const ls={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+  const $=s=>document.querySelector(s);
+  const INTS=["Подработка","Стажировка","Разовая","Проект","Волонтёрство","Удалённо","Полная","Частичная"];
+  const f=$("#pf"); let prof=ls.get("nr-profile",{}); prof.ints=prof.ints||[];
+  for(const k of ["name","age","city","contact","about"])if(prof[k])f.elements[k].value=prof[k];
+  INTS.forEach(x=>{const b=el("button","chip",x);b.type="button";b.setAttribute("aria-pressed",prof.ints.includes(x));b.onclick=()=>{const i=prof.ints.indexOf(x);if(i<0)prof.ints.push(x);else prof.ints.splice(i,1);b.setAttribute("aria-pressed",i<0);save()};$("#ints").append(b)});
+  let vacs=[],t=null;
+  function save(){
+    for(const k of ["name","city","contact","about"])prof[k]=f.elements[k].value.trim();
+    const a=parseInt(f.elements.age.value,10);prof.age=a>=13&&a<=30?a:0;
+    ls.set("nr-profile",prof);if(prof.city)ls.set("nr-city",prof.city);
+    head();clearTimeout(t);t=setTimeout(match,300);
+  }
+  f.addEventListener("input",save);
+  function head(){
+    $("#ava").textContent=(prof.name||"?").trim().charAt(0).toUpperCase()||"?";
+    $("#pname").textContent=prof.name?prof.name:"Мой профиль";
+    $("#psub").textContent=[prof.age?prof.age+" лет":"",prof.city,prof.ints.slice(0,3).join(", ").toLowerCase()].filter(Boolean).join(" · ")||"Заполни профиль — Newi будет подбирать вакансии под тебя";
+    const parts=[prof.name,prof.age,prof.city,prof.contact,prof.ints.length,prof.about,ls.get("nr-resume",null)?.exp];
+    const p=Math.round(parts.filter(Boolean).length/parts.length*100);
+    $("#meter").style.width=p+"%";$("#mtext").textContent="Профиль заполнен на "+p+"%"+(p<100?" — чем полнее, тем точнее подбор":" 🎉");
+  }
+  const mini=(v,extra)=>{const a=el("a","mini");a.href="vacancy.html?id="+v.id;a.append(el("b",null,v.title||v.t),el("span",null,extra||[v.pay||"по договорённости",v.city||(v.remote?"удалённо":""),v.age_min?"с "+v.age_min+" лет":""].filter(Boolean).join(" · ")));return a};
+  function match(){
+    const box=$("#match");box.textContent="";
+    const age=prof.age||99,c=(prof.city||"").toLowerCase().slice(0,5),wantRemote=prof.ints.includes("Удалённо"),types=prof.ints.filter(x=>x!=="Удалённо");
+    const today=NR.today();
+    let rows=vacs.filter(v=>(!v.expires_at||v.expires_at>=today)&&v.age_min<=age&&((c&&(v.city||"").toLowerCase().startsWith(c))||v.remote||(!c&&!wantRemote)));
+    if(types.length)rows.sort((a,b)=>(types.includes(b.type)?1:0)-(types.includes(a.type)?1:0));
+    $("#mcount").textContent=rows.length?rows.length+" шт.":"";
+    if(!prof.age&&!prof.city){box.append(el("p","empty-s","Укажи возраст и город — покажу, что подходит."));return}
+    if(!rows.length){box.append(el("p","empty-s","Пока под тебя ничего нет. Подпишись на новые вакансии в Telegram — пришлём первым."));return}
+    rows.slice(0,6).forEach(v=>box.append(mini(v)));
+  }
+  function lists(){
+    const favs=ls.get("nr-favs",[]),fb=$("#favs");fb.textContent="";$("#fcount").textContent=favs.length?favs.length+" шт.":"";
+    const fv=vacs.filter(v=>favs.includes(v.id));
+    if(!fv.length)fb.append(el("p","empty-s",favs.length?"Вакансии из избранного уже сняты с публикации.":"Нажимай ☆ у вакансий — они соберутся здесь."));else fv.forEach(v=>fb.append(mini(v)));
+    const ap=ls.get("nr-applied",[]),ab=$("#applied");ab.textContent="";$("#acount").textContent=ap.length?ap.length+" шт.":"";
+    if(!ap.length)ab.append(el("p","empty-s","Здесь будут вакансии, где ты нажал(а) «Откликнуться»."));
+    else ap.slice(0,8).forEach(x=>ab.append(mini(x,[x.c,"отклик "+new Date(x.at).toLocaleDateString("ru-RU",{day:"numeric",month:"short"})].filter(Boolean).join(" · "))));
+    const ev=ls.get("nr-events",[]).filter(x=>new Date(x.at)>new Date(Date.now()-86400e3)),eb=$("#evs");eb.textContent="";
+    if(!ev.length)eb.append(el("p","empty-s","Записывайся на мероприятия — они появятся здесь."));
+    else ev.forEach(x=>{const d=el("div","mini");d.append(el("b",null,x.t),el("span",null,new Date(x.at).toLocaleString("ru-RU",{day:"numeric",month:"long",hour:"2-digit",minute:"2-digit"})+(x.p?" · "+x.p:"")));eb.append(d)});
+    const r=ls.get("nr-resume",null),rb=$("#res");rb.textContent="";
+    rb.append(el("p","empty-s",r&&r.name?"Черновик резюме сохранён"+(r.goal?": «"+r.goal.slice(0,60)+"»":"")+".":"Резюме ещё нет — Newi поможет собрать за 2 минуты."));
+    const rl=el("a","btn btn-primary btn-sm",r&&r.name?"Открыть резюме":"Собрать резюме");rl.href="resume.html";rl.style.cssText="align-self:flex-start;text-decoration:none";rb.append(rl);
+    const my=ls.get("nr-my",[]),eb2=$("#emp");eb2.textContent="";
+    eb2.append(el("p","empty-s",my.length?"Твоих вакансий: "+my.length+". Статусы, отклики и продление — в кабинете.":"Ищешь сотрудников? Размести вакансию бесплатно — после проверки она появится на сайте."));
+    const ca=el("a","btn btn-ghost btn-sm",my.length?"Кабинет работодателя":"Разместить вакансию");ca.href=my.length?"cabinet.html":"./#add";ca.style.cssText="align-self:flex-start;text-decoration:none";eb2.append(ca);
+  }
+  // настройки — те же, что в чате Newi на главной
+  $("#sMode").value=ls.get("nr-mode","off");$("#sMode").onchange=e=>{ls.set("nr-mode",e.target.value);ls.set("nr-chosen",1);toast("Сохранено — откроется на главной")};
+  $("#sVoice").checked=ls.get("nr-voice","")==="on";$("#sVoice").onchange=e=>ls.set("nr-voice",e.target.checked?"on":"off");
+  $("#sAnim").checked=ls.get("nr-anim",true)!==false;$("#sAnim").onchange=e=>ls.set("nr-anim",e.target.checked);
+  $("#sForget").onclick=e=>{const b=e.currentTarget;if(b.dataset.sure!=="1"){b.dataset.sure="1";b.textContent="Точно? Сотрутся профиль, избранное, отклики и чат";return}
+    ["nr-profile","nr-favs","nr-applied","nr-events","nr-resume","nr-chat","nr-voice","nr-rate","nr-anim","nr-size","nr-chosen","nr-mode","nr-city","nr-my"].forEach(k=>{try{localStorage.removeItem(k)}catch(_){}});location.reload()};
+  head();lists();
+  (async()=>{
+    const s=sb?await NR.settings():{};
+    const bl=NR.botLink(s.bot_username,prof.city);if(bl)$("#sSub").href=bl;else $("#sSub").hidden=true;
+    if(!sb){$("#match").textContent="";$("#match").append(el("p","empty-s","Сайт не подключён к базе."));return}
+    let {data,error}=await sb.from("vacancies").select("id,title,city,remote,pay,age_min,type,expires_at").eq("status","approved").order("created_at",{ascending:false}).limit(500);
+    if(error)({data}=await sb.from("vacancies").select("id,title,city,remote,pay,age_min,type").eq("status","approved").limit(500));
+    vacs=data||[];match();lists();
+  })();
+})();
+</script>
+</body>
+</html>

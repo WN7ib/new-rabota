@@ -40,7 +40,9 @@
     const a=el(c.href?"a":"button","respond","✉ Откликнуться");
     if(c.href){ a.href=c.href; if(/^https/.test(c.href)){a.target="_blank";a.rel="noopener"} } else a.type="button";
     a.title=c.label;
-    a.addEventListener("click",()=>{ if(sb&&v.id) sb.rpc("vacancy_click",{vid:v.id}).then(()=>{},()=>{}); if(c.copy) copy(c.copy) });
+    a.addEventListener("click",()=>{ if(sb&&v.id) sb.rpc("vacancy_click",{vid:v.id}).then(()=>{},()=>{}); if(c.copy) copy(c.copy);
+      // история откликов — для профиля (только в этом браузере)
+      try{const h=JSON.parse(localStorage.getItem("nr-applied")||"[]").filter(x=>x.id!==v.id);h.unshift({id:v.id,t:v.title,c:v.city||(v.remote?"удалённо":""),at:Date.now()});localStorage.setItem("nr-applied",JSON.stringify(h.slice(0,50)))}catch(_){} });
     return a;
   }
 

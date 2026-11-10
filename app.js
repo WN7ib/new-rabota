@@ -223,7 +223,7 @@
   $("#profBtn").onclick=()=>{if($("#viewProf").hidden){fillProf();showView("prof")}else showView("chat")};
   $("#sSave").onclick=()=>{
     const age=parseInt($("#pAge").value,10),p={name:$("#pName").value.trim().slice(0,30),age:age>=13&&age<=30?age:0,city:$("#pCity").value.trim().slice(0,40)};
-    ls.set("nr-profile",p);ls.set("nr-voice",$("#sVoice").checked?"on":"off");ls.set("nr-rate",+$("#sRate").value);ls.set("nr-anim",$("#sAnim").checked);ls.set("nr-size",$("#sSize").value);
+    ls.set("nr-profile",Object.assign({},prof(),p));ls.set("nr-voice",$("#sVoice").checked?"on":"off");ls.set("nr-rate",+$("#sRate").value);ls.set("nr-anim",$("#sAnim").checked);ls.set("nr-size",$("#sSize").value);
     paintVoice();applyPrefs();$("#voicePick").hidden=true;
     if(p.age>=14){setAge(p.age>=18?18:p.age>=16?16:14)}
     if(p.city&&!/^удал/i.test(p.city)){state.city=p.city;$("#city").value=p.city;ls.set("nr-city",p.city)}
