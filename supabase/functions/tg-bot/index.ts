@@ -192,6 +192,17 @@ async function tick() {
           [{ text: "Открыть", url: `${SITE}vacancy.html?id=${r.vacancy_id}` }]] });
     }
   }
+  // заказы продвижения из кабинета работодателя
+  if (own) {
+    const ords: any[] = (await db("GET", `orders?select=id,product,price,contact,vacancy_id,vacancies(title,city)&status=eq.new&order=created_at.asc&limit=20`)) ?? [];
+    const PROD: Record<string, string> = { top7: "В топ на 7 дней", urgent: "Срочно + пост в канале", verify: "Проверка ✓ на год", business: "Бизнес на месяц" };
+    for (const o of ords) {
+      if (await seen("ord:" + o.id)) continue;
+      await markSeen("ord:" + o.id);
+      await send(own, `💰 Заказ ${String(o.id).slice(0, 8)}: ${PROD[o.product] ?? o.product} — ${o.price} ₽\nВакансия: «${o.vacancies?.title ?? "?"}»${o.vacancies?.city ? ", " + o.vacancies.city : ""}\nСвязь: ${o.contact || "—"}\n\nПришли, как оплатить; когда деньги придут — пробей чек в «Мой налог» и нажми «Оплачено».`,
+        { inline_keyboard: [[{ text: "✅ Оплачено", callback_data: `opd:${o.id}` }, { text: "✖ Отменить", callback_data: `ocx:${o.id}` }]] });
+    }
+  }
   // напоминание записавшимся через бота: мероприятие завтра
   const tmr0 = new Date(Date.now() + 20 * 3600_000).toISOString(), tmr1 = new Date(Date.now() + 28 * 3600_000).toISOString();
   const evs: any[] = (await db("GET", `events?select=id,title,starts_at,place&published=eq.true&starts_at=gte.${enc(tmr0)}&starts_at=lt.${enc(tmr1)}`)) ?? [];
@@ -212,6 +223,10 @@ async function moderate(cbq: any) {
   const [act, id] = String(cbq.data ?? "").split(":");
   const msg = cbq.message;
   const mark = async (t: string) => { if (msg) await tg("editMessageText", { chat_id: msg.chat.id, message_id: msg.message_id, text: `${msg.text}\n\n${t}` }); };
+  if (act === "opd" || act === "ocx") {
+    await db("PATCH", `orders?id=eq.${enc(id)}`, { status: act === "opd" ? "paid" : "cancelled" }, "return=minimal");
+    await mark(act === "opd" ? "✅ Оплачено — услуга включена" : "✖ Заказ отменён"); return;
+  }
   if (act === "rk") { await db("PATCH", `reports?id=eq.${enc(id)}`, { status: "done" }, "return=minimal"); await mark("👌 Жалоба закрыта"); return; }
   if (act === "rm") {
     await db("PATCH", `vacancies?id=eq.${enc(id)}`, { status: "rejected" }, "return=minimal");

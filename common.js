@@ -77,5 +77,17 @@
   function ageWord(n){ return "с "+n+" лет" }
   function expiryText(d){ if(!d) return ""; const t=new Date(d+"T23:59:59"); const days=Math.ceil((t-Date.now())/864e5); return days<=0?"последний день":days<=7?"ещё "+days+" дн.":"до "+t.toLocaleDateString("ru-RU",{day:"numeric",month:"long"}) }
 
-  window.NR = {sb, el, toast, today, settings, contactLink, respondButton, reportDialog, botLink, copy, ageWord, expiryText};
+  // ── синхронизация профиля между устройствами (по секретной ссылке, без регистрации)
+  const SYNC_KEYS=["nr-profile","nr-favs","nr-applied","nr-events","nr-resume","nr-my","nr-mode","nr-voice","nr-anim","nr-city"];
+  const syncKey=()=>{try{return localStorage.getItem("nr-sync-key")||""}catch(_){return ""}};
+  function syncBundle(){const b={};SYNC_KEYS.forEach(k=>{try{const v=localStorage.getItem(k);if(v!=null)b[k]=v}catch(_){}});return b}
+  function syncApply(b){Object.keys(b||{}).forEach(k=>{if(SYNC_KEYS.includes(k))try{localStorage.setItem(k,b[k])}catch(_){}})}
+  async function syncPush(){const k=syncKey();if(!sb||!k)return null;const {data,error}=await sb.rpc("profile_save",{k,p:syncBundle()});if(error)return null;try{localStorage.setItem("nr-sync-at",data)}catch(_){}return data}
+  async function syncPull(force){const k=syncKey();if(!sb||!k)return false;const {data,error}=await sb.rpc("profile_load",{k});const r=!error&&data&&data[0];if(!r)return false;
+    let local="";try{local=localStorage.getItem("nr-sync-at")||""}catch(_){}
+    if(force||!local||new Date(r.updated_at)>new Date(local)){syncApply(r.data);try{localStorage.setItem("nr-sync-at",r.updated_at)}catch(_){}return true}return false}
+  // уходя со страницы — отправить изменения (избранное, отклики и т.д.)
+  document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden"&&syncKey())syncPush()});
+
+  window.NR = {sb, el, toast, today, settings, contactLink, respondButton, reportDialog, botLink, copy, ageWord, expiryText, syncKey, syncPush, syncPull, syncBundle};
 })();

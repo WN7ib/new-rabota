@@ -10,7 +10,7 @@
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
-<link rel="stylesheet" href="style.css?v=6">
+<link rel="stylesheet" href="style.css?v=7">
 <style>
 .ph{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-top:8px}
 .ava{width:84px;height:84px;border-radius:50%;background:linear-gradient(135deg,#2F86F5,#22D3EE);color:#fff;display:grid;place-items:center;font:800 34px var(--f-display);flex:none}
@@ -65,6 +65,10 @@
     <section class="pc"><h2>Мои мероприятия</h2><div id="evs"></div><a class="btn btn-ghost btn-sm" href="events.html" style="align-self:flex-start;text-decoration:none">Все мероприятия</a></section>
     <section class="pc"><h2>Резюме</h2><div id="res"></div></section>
     <section class="pc"><h2>Я работодатель</h2><div id="emp"></div></section>
+    <section class="pc" id="syncCard">
+      <h2>На всех устройствах</h2>
+      <div id="sync"></div>
+    </section>
     <section class="pc">
       <h2>Настройки</h2>
       <div class="rowx"><span>Режим сайта</span><select id="sMode"><option value="off">Официальный</option><option value="newi">С Newi</option></select></div>
@@ -94,7 +98,7 @@
     for(const k of ["name","city","contact","about"])prof[k]=f.elements[k].value.trim();
     const a=parseInt(f.elements.age.value,10);prof.age=a>=13&&a<=30?a:0;
     ls.set("nr-profile",prof);if(prof.city)ls.set("nr-city",prof.city);
-    head();clearTimeout(t);t=setTimeout(match,300);
+    head();clearTimeout(t);t=setTimeout(match,300);if(NR.syncKey()){clearTimeout(window._pt);window._pt=setTimeout(()=>NR.syncPush(),1500)}
   }
   f.addEventListener("input",save);
   function head(){
@@ -140,6 +144,39 @@
   $("#sAnim").checked=ls.get("nr-anim",true)!==false;$("#sAnim").onchange=e=>ls.set("nr-anim",e.target.checked);
   $("#sForget").onclick=e=>{const b=e.currentTarget;if(b.dataset.sure!=="1"){b.dataset.sure="1";b.textContent="Точно? Сотрутся профиль, избранное, отклики и чат";return}
     ["nr-profile","nr-favs","nr-applied","nr-events","nr-resume","nr-chat","nr-voice","nr-rate","nr-anim","nr-size","nr-chosen","nr-mode","nr-city","nr-my"].forEach(k=>{try{localStorage.removeItem(k)}catch(_){}});location.reload()};
+  // ── синхронизация: секретная ссылка вместо логина и пароля
+  function syncUI(){
+    const box=$("#sync");box.textContent="";const k=NR.syncKey();
+    const btn=(t,cls,fn)=>{const b=el("button","btn btn-sm "+cls,t);b.type="button";b.onclick=fn;b.style.alignSelf="flex-start";box.append(b);return b};
+    if(!k){
+      box.append(el("p","empty-s","Сейчас профиль, избранное и отклики хранятся только на этом устройстве. Включи синхронизацию — получишь личную ссылку: открой её на другом телефоне или компьютере, и всё появится там."));
+      btn("Включить синхронизацию","btn-primary",async e=>{const b=e.currentTarget;b.disabled=true;
+        const a=new Uint8Array(24);crypto.getRandomValues(a);const key=[...a].map(x=>x.toString(16).padStart(2,"0")).join("");
+        try{localStorage.setItem("nr-sync-key",key)}catch(_){}
+        const ok=await NR.syncPush();b.disabled=false;
+        if(!ok){try{localStorage.removeItem("nr-sync-key")}catch(_){}toast("Синхронизация скоро заработает — модератор обновляет сайт");return}
+        toast("Синхронизация включена");syncUI()});
+      return;
+    }
+    const link=new URL("profile.html#sync="+k,location.href).href;
+    let at="";try{at=localStorage.getItem("nr-sync-at")||""}catch(_){}
+    box.append(el("p","empty-s","Синхронизация включена"+(at?" · обновлено "+new Date(at).toLocaleString("ru-RU",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}):"")+". Ссылка — как пароль: не публикуй её."));
+    btn("Скопировать ссылку для другого устройства","btn-primary",()=>NR.copy(link));
+    const tg=el("a","btn btn-sm btn-ghost","Отправить себе в Telegram");tg.href="https://t.me/share/url?url="+encodeURIComponent(link)+"&text="+encodeURIComponent("Мой профиль New.работа");tg.target="_blank";tg.rel="noopener";tg.style.cssText="align-self:flex-start;text-decoration:none";box.append(tg);
+    btn("Синхронизировать сейчас","btn-ghost",async()=>{await NR.syncPull();const t=await NR.syncPush();toast(t?"Готово":"Нет связи");location.reload()});
+    btn("Выключить на этом устройстве","btn-ghost",e=>{const b=e.currentTarget;if(b.dataset.sure!=="1"){b.dataset.sure="1";b.textContent="Точно? Облачная копия останется, пока не удалишь её";return}
+      try{localStorage.removeItem("nr-sync-key");localStorage.removeItem("nr-sync-at")}catch(_){}syncUI()});
+  }
+  let pushT=null;
+  f.addEventListener("input",()=>{if(NR.syncKey()){clearTimeout(pushT);pushT=setTimeout(()=>NR.syncPush().then(syncUI),1500)}});
+  (async()=>{
+    const m=location.hash.match(/sync=([0-9a-f]{32,})/i);
+    if(m){try{localStorage.setItem("nr-sync-key",m[1])}catch(_){}history.replaceState(null,"",location.pathname);
+      if(await NR.syncPull(true)){toast("Профиль загружен с другого устройства");setTimeout(()=>location.reload(),700);return}
+      else toast("Не нашла профиль по этой ссылке")}
+    else if(NR.syncKey()&&await NR.syncPull()){location.reload();return}
+    syncUI();
+  })();
   head();lists();
   (async()=>{
     const s=sb?await NR.settings():{};

@@ -10,7 +10,7 @@
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
-<link rel="stylesheet" href="style.css?v=5">
+<link rel="stylesheet" href="style.css?v=7">
 <style>
 .cab{display:flex;flex-direction:column;gap:12px;margin-top:14px}
 .cab .vac h3{margin:0 0 4px;font-size:18px}
@@ -81,8 +81,37 @@
       if(v.status!=="closed")b("Закрыть вакансию","btn-ghost",async(ev)=>{const x=ev.currentTarget;if(x.dataset.sure!=="1"){x.dataset.sure="1";x.textContent="Точно закрыть?";return}
         const {error:e}=await sb.rpc("my_vacancy_close",{vid:v.id,k:it.k});toast(e?"Не получилось":"Вакансия закрыта и убрана с сайта");render()});
       b("Скопировать личную ссылку","btn-ghost",()=>NR.copy(new URL("cabinet.html#v="+v.id+"."+it.k,location.href).href));
+      if(v.status==="approved"||v.status==="pending"){const pb=b("🚀 Продвинуть","btn-primary",()=>promote(v,it.k));a.prepend(pb)}
       box.append(a);
+      // заказы продвижения
+      const {data:os,error:oe}=await sb.rpc("my_orders",{vid:v.id,k:it.k});
+      if(!oe&&os&&os.length){const ol=el("div","hint");ol.style.marginTop="8px";
+        ol.append(el("b",null,"Заказы: "),document.createTextNode(os.map(o=>PROD[o.product]+" — "+OST[o.status]).join("; ")));box.append(ol);
+        if(os.some(o=>o.status==="new"||o.status==="invoiced")&&S.pay_info){const pi=el("p","hint");pi.style.whiteSpace="pre-line";pi.textContent="Как оплатить: "+S.pay_info+"\nНомер заказа: "+os.find(o=>o.status!=="paid").id.slice(0,8);box.append(pi)}}
     }
+  }
+
+  const PROD={top7:"В топ на 7 дней",urgent:"Срочно + пост в канале",verify:"Значок «✓ проверен» на год",business:"Бизнес на месяц"};
+  const OST={new:"принят, пришлём, как оплатить",invoiced:"ждёт оплаты",paid:"оплачен, включено ✅",cancelled:"отменён"};
+  const PDEF={top7:199,urgent:299,verify:490,business:990};
+  const PDESC={top7:"Вакансия закреплена вверху списка 7 дней.",urgent:"Закрепление на 3 дня, повторный пост в Telegram-канале и рассылка подписчикам города.",verify:"Проверим компанию и поставим значок доверия — на него откликаются чаще.",business:"Значок ✓ и закрепление на 14 дней, приоритетная проверка."};
+  let S={};
+  function promote(v,k){
+    const sh=el("div","sheet"),f=el("form","form");f.noValidate=true;
+    f.append(el("h2",null,"Продвинуть «"+v.title+"»"),el("p","hint full","Выбери услугу. После заказа пришлём, как оплатить, а после оплаты услуга включится сама."));
+    let pick="top7";const list=el("div","full");list.style.cssText="display:flex;flex-direction:column;gap:8px";
+    Object.keys(PROD).forEach(p=>{const price=(S.prices&&S.prices[p]!=null)?S.prices[p]:PDEF[p];const lab=el("label","check");lab.style.alignItems="flex-start";
+      const r=document.createElement("input");r.type="radio";r.name="prod";r.value=p;r.checked=p===pick;r.onchange=()=>pick=p;
+      const t=el("span");t.append(el("b",null,PROD[p]+" — "+price.toLocaleString("ru-RU")+" ₽"),document.createElement("br"),el("small",null,PDESC[p]));lab.append(r,t);list.append(lab)});
+    f.append(list);
+    const d=el("div","field full");const ci=document.createElement("input");ci.maxLength=120;ci.placeholder="@telegram, телефон или почта";ci.value=v.contact||"";d.append(el("label",null,"Куда прислать, как оплатить"),ci);f.append(d);
+    const err=el("p","err");err.hidden=true;f.append(err);
+    const row=el("div","row");const c=el("button","btn btn-ghost","Отмена");c.type="button";c.onclick=()=>sh.remove();const s=el("button","btn btn-primary","Заказать");s.type="submit";row.append(c,s);f.append(row);
+    f.addEventListener("submit",async e=>{e.preventDefault();if(ci.value.trim().length<3){err.textContent="Укажи контакт.";err.hidden=false;return}
+      s.disabled=true;const {data,error}=await sb.rpc("order_create",{vid:v.id,k,p_product:pick,p_contact:ci.value.trim()});s.disabled=false;
+      if(error){err.textContent=/too many/.test(error.message)?"У этой вакансии уже есть неоплаченные заказы.":/function|schema/.test(error.message)?"Заказы скоро заработают — модератор обновляет сайт.":"Не получилось, попробуй ещё раз.";err.hidden=false;return}
+      sh.remove();toast("Заказ принят! Номер "+data[0].id.slice(0,8)+". Пришлём, как оплатить.");render()});
+    sh.append(f);document.body.append(sh);sh.addEventListener("click",x=>{if(x.target===sh)sh.remove()});
   }
 
   function editForm(v,k){
@@ -106,7 +135,7 @@
       sh.remove();toast("Сохранено. Вакансия снова на проверке");render()});
     sh.append(f);document.body.append(sh);sh.addEventListener("click",e=>{if(e.target===sh)sh.remove()});
   }
-  render();
+  NR.settings().then(s=>{S=s||{}}).finally(render);
 })();
 </script>
 </body>

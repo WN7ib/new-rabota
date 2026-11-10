@@ -158,11 +158,14 @@
     NR.settings().then(s=>{applySettings(s);render();refreshMeta()});
     const timer=setTimeout(()=>{if(!state.ready)refreshMeta("Не удаётся загрузить вакансии. Проверь интернет.")},10000);
     const base="id,created_at,title,company,city,type,age_min,pay,remote,description,contact";
-    let {data,error}=await sb.from("vacancies").select(base+",pinned,verified,expires_at").eq("status","approved").or("expires_at.is.null,expires_at.gte."+today()).order("created_at",{ascending:false}).limit(500);
+    const q=cols=>sb.from("vacancies").select(cols).eq("status","approved").or("expires_at.is.null,expires_at.gte."+today()).order("created_at",{ascending:false}).limit(500);
+    let {data,error}=await q(base+",pinned,pinned_until,verified,expires_at");
+    if(error)({data,error}=await q(base+",pinned,verified,expires_at"));
     if(error)({data,error}=await sb.from("vacancies").select(base).eq("status","approved").order("created_at",{ascending:false}).limit(500));
     clearTimeout(timer);state.ready=true;
     if(error){render();refreshMeta("Вакансии сейчас недоступны");return}
-    state.items=data||[];render();refreshMeta();
+    // платное закрепление действует до pinned_until
+    state.items=(data||[]).map(v=>{if(v.pinned&&v.pinned_until&&new Date(v.pinned_until)<new Date())v.pinned=false;return v});render();refreshMeta();
   }
 
   // ═════════ режимы: официальный / с Newi ═════════

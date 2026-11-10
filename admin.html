@@ -195,6 +195,7 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
       <button class="chip" type="button" data-v="chat" aria-pressed="false">Вопросы к Newi<span class="badge" id="chatBadge" hidden></span></button>
       <button class="chip" type="button" data-v="reviews" aria-pressed="false">Отзывы<span class="badge" id="revBadge" hidden></span></button>
       <button class="chip" type="button" data-v="events" aria-pressed="false">Мероприятия</button>
+      <button class="chip" type="button" data-v="orders" aria-pressed="false">Заказы<span class="badge" id="ordBadge" hidden></span></button>
       <button class="chip" type="button" data-v="settings" aria-pressed="false">Настройки сайта</button>
     </nav>
 
@@ -263,6 +264,13 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
       <div class="list" id="evlist"></div>
     </section>
 
+    <!-- ЗАКАЗЫ -->
+    <section id="v-orders" hidden style="flex-direction:column;gap:12px;margin-top:14px">
+      <div class="tools"><div class="group" id="ordtabs"><button class="chip" type="button" data-o="new" aria-pressed="true">новые</button><button class="chip" type="button" data-o="invoiced" aria-pressed="false">ждут оплаты</button><button class="chip" type="button" data-o="paid" aria-pressed="false">оплачены</button><button class="chip" type="button" data-o="cancelled" aria-pressed="false">отменены</button></div><span class="status" id="ordstatus"></span></div>
+      <p class="help">Работодатель заказывает продвижение в кабинете. Пришли ему, как оплатить (или он видит текст из настроек), получи деньги, пробей чек в «Мой налог» и нажми «Оплачено» — услуга включится сама.</p>
+      <div class="list" id="ordlist"></div>
+    </section>
+
     <!-- НАСТРОЙКИ -->
     <section id="v-settings" hidden style="margin-top:14px">
       <form class="panel set" id="setForm">
@@ -276,6 +284,12 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
         <label class="sw"><input type="checkbox" id="st-chat"><span>Newi отвечает на свободные вопросы на сайте<small>Отвечает Newi с твоего телефона через мессенджер. Если выключить, на сайте останутся только готовые ответы-кнопки.</small></span></label>
         <div class="field"><label for="st-bot">Ник рабочего бота для подписки (без @)</label><input id="st-bot" type="text" maxlength="40" placeholder="NewRabotaBot"></div>
         <div class="field"><label for="st-metrika">Номер счётчика Яндекс.Метрики</label><input id="st-metrika" type="text" inputmode="numeric" maxlength="12" placeholder="например 98765432"></div>
+        <div class="field"><label>Цены продвижения, ₽</label><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px">
+          <label style="font-size:13px">В топ 7 дней<input id="pr-top7" type="number" min="0" placeholder="199"></label>
+          <label style="font-size:13px">Срочно + канал<input id="pr-urgent" type="number" min="0" placeholder="299"></label>
+          <label style="font-size:13px">Проверка ✓ (год)<input id="pr-verify" type="number" min="0" placeholder="490"></label>
+          <label style="font-size:13px">Бизнес (месяц)<input id="pr-business" type="number" min="0" placeholder="990"></label></div></div>
+        <div class="field"><label for="st-pay">Как оплатить (видит работодатель после заказа)</label><textarea id="st-pay" maxlength="500" placeholder="Перевод по СБП на номер +7…, получатель …. В комментарии укажи номер заказа. Чек пришлём из «Мой налог»."></textarea></div>
         <div class="field"><label for="st-about">Текст «О проекте» (пусто — стандартный)</label><textarea id="st-about" maxlength="600"></textarea></div>
         <div class="field"><label for="st-owner">Кто делает проект и обрабатывает данные</label><input id="st-owner" type="text" maxlength="120" placeholder="молодёжная команда New.работа, Саратов"></div>
         <div class="field"><label for="st-email">Почта для связи</label><input id="st-email" type="text" maxlength="80" inputmode="email"></div>
@@ -352,7 +366,7 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
   function go(v){
     st.view=v;
     $$("#nav .chip").forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===v));
-    ["overview","vac","reports","chat","reviews","events","settings"].forEach(x=>{const e=$("#v-"+x);e.hidden=v!==x;if(x!=="overview"&&x!=="settings"&&v===x)e.style.display="flex"});
+    ["overview","vac","reports","chat","reviews","events","orders","settings"].forEach(x=>{const e=$("#v-"+x);e.hidden=v!==x;if(x!=="overview"&&x!=="settings"&&v===x)e.style.display="flex"});
     if(v==="reports")loadReports();
     if(v==="chat")loadChat();
     if(v==="overview")loadOverview();
@@ -360,6 +374,7 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
     if(v==="settings")fillSettings();
     if(v==="reviews")loadReviews();
     if(v==="events")loadEvents();
+    if(v==="orders")loadOrders();
   }
   $$("#nav .chip").forEach(b=>b.onclick=()=>go(b.dataset.v));
   $$("[data-v2]").forEach(b=>b.onclick=()=>go(b.dataset.v2));
@@ -468,6 +483,8 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
     const m=c.count||0;$("#chatBadge").textContent=m;$("#chatBadge").hidden=!m;
     const rv=await sb.from("reviews").select("id",{count:"exact",head:true}).eq("status","pending");
     const k=rv.error?0:rv.count||0;$("#revBadge").textContent=k;$("#revBadge").hidden=!k;
+    const od=await sb.from("orders").select("id",{count:"exact",head:true}).eq("status","new");
+    const n2=od.error?0:od.count||0;$("#ordBadge").textContent=n2;$("#ordBadge").hidden=!n2;
   }
 
   // жалобы
@@ -539,6 +556,32 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
     }
   }
 
+  // заказы продвижения
+  const PROD={top7:"В топ на 7 дней",urgent:"Срочно + пост в канале",verify:"Проверка ✓ на год",business:"Бизнес на месяц"};
+  let otab="new";
+  $$("#ordtabs .chip").forEach(b=>b.onclick=()=>{otab=b.dataset.o;$$("#ordtabs .chip").forEach(x=>x.setAttribute("aria-pressed",x===b));loadOrders()});
+  async function loadOrders(){
+    $("#ordstatus").textContent="Загружаю…";
+    const {data,error}=await sb.from("orders").select("*, vacancies(title,city,contact)").eq("status",otab).order("created_at",{ascending:false}).limit(200);
+    const list=$("#ordlist");list.textContent="";
+    if(error){$("#ordstatus").textContent="Не загрузилось. Выполнен ли migration-6.sql?";return}
+    const sum=data.reduce((s,o)=>s+o.price,0);$("#ordstatus").textContent=data.length?data.length+" шт. на "+sum.toLocaleString("ru-RU")+" ₽":"";
+    if(!data.length){list.append(el("div","empty",otab==="new"?"Новых заказов нет.":"Пусто."));return}
+    for(const o of data){
+      const v=o.vacancies||{};const c=el("article","card open");const left=el("div");left.style.minWidth="0";
+      left.append(el("h3",null,(PROD[o.product]||o.product)+" · "+o.price.toLocaleString("ru-RU")+" ₽"),el("div","where","«"+(v.title||"?")+"»"+(v.city?", "+v.city:"")+" · заказ "+o.id.slice(0,8)));
+      c.append(left,el("div","date",new Date(o.created_at).toLocaleString("ru-RU",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})));
+      c.append(el("p","desc","Связь: "+(o.contact||v.contact||"—")+(o.paid_at?"\nОплачен: "+new Date(o.paid_at).toLocaleString("ru-RU"):"")));
+      const a=el("div","row-actions");const mk=(t,cls,fn)=>{const b=el("button","btn btn-sm "+cls,t);b.type="button";b.onclick=fn;a.append(b)};
+      const set=async s=>{const {error}=await sb.from("orders").update({status:s}).eq("id",o.id);toast(error?"Не сохранилось":s==="paid"?"Оплачено — услуга включена":"Сохранено");loadOrders();countBadges()};
+      if(o.status==="new")mk("Отправил, как оплатить","btn-ghost",()=>set("invoiced"));
+      if(o.status!=="paid")mk("✅ Оплачено","ok",()=>set("paid"));
+      if(o.status!=="cancelled"&&o.status!=="paid")mk("Отменить","btn-ghost",()=>set("cancelled"));
+      mk("Открыть вакансию","btn-ghost",()=>window.open("vacancy.html?id="+o.vacancy_id,"_blank"));
+      c.append(a);list.append(c);
+    }
+  }
+
   // мероприятия
   let evEdit=null;
   function evClear(){evEdit=null;$("#evForm").reset();$("#ev-pub").checked=true;$("#evFormTitle").textContent="Новое мероприятие"}
@@ -583,13 +626,16 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
     $("#st-banner").value=s.banner||"";$("#st-support").value=s.support||"";$("#st-days").value=s.hide_after_days??60;$("#setErr").hidden=true;
     $("#st-chat").checked=s.chat_on!==false;$("#st-bot").value=s.bot_username||"";$("#st-metrika").value=s.metrika_id||"";
     $("#st-about").value=s.about_text||"";$("#st-owner").value=s.about_owner||"";$("#st-email").value=s.contact_email||"";
+    const p=s.prices||{};["top7","urgent","verify","business"].forEach(k=>$("#pr-"+k).value=p[k]??"");$("#st-pay").value=s.pay_info||"";
   }
   $("#setForm").addEventListener("submit",async e=>{
     e.preventDefault();
     const days=parseInt($("#st-days").value,10);
     const data={submissions_open:$("#st-open").checked,tagline:$("#st-tagline").value.trim(),banner_on:$("#st-banner-on").checked,banner:$("#st-banner").value.trim(),support:$("#st-support").value.trim(),hide_after_days:isNaN(days)||days<0?0:days,
       chat_on:$("#st-chat").checked,bot_username:$("#st-bot").value.trim().replace(/^@/,""),metrika_id:$("#st-metrika").value.replace(/\D/g,""),
-      about_text:$("#st-about").value.trim(),about_owner:$("#st-owner").value.trim(),contact_email:$("#st-email").value.trim()};
+      about_text:$("#st-about").value.trim(),about_owner:$("#st-owner").value.trim(),contact_email:$("#st-email").value.trim(),pay_info:$("#st-pay").value.trim()};
+    const prices={};["top7","urgent","verify","business"].forEach(k=>{const v=parseInt($("#pr-"+k).value,10);if(v>=0)prices[k]=v});data.prices=prices;
+    Object.keys(st.settings).forEach(k=>{if(!(k in data))data[k]=st.settings[k]});   // ключи, которые ставит Newi, не теряем
     const {error}=await sb.from("settings").update({data,updated_at:new Date().toISOString()}).eq("id",1);
     if(error){const er=$("#setErr");er.textContent="Не получилось сохранить. Выполнен ли SQL из migration-2-admin.sql?";er.hidden=false;return}
     st.settings=data;toast("Настройки сохранены");

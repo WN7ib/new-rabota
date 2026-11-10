@@ -246,3 +246,5 @@ td.n{font-family:var(--f-mono);white-space:nowrap}
 .rev p{margin:4px 0 0}
 main.page{display:block}
 .page.wide{max-width:1120px}
+.form>*{min-width:0}
+.form .full .check{white-space:normal;align-self:auto;padding:4px 0}

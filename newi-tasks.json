@@ -1,11 +1,98 @@
 {
   "about": "Поручения Клода для Newi Мессенджера. Никита говорит Newi «выполни поручения Клода» — мессенджер делает всё по списку сам, в фоне. Выполненные (по id) не повторяются.",
   "tasks": [
-    { "id": "2026-11-10-sql", "title": "Обновить базу сайта (жалобы, чат с Newi, кабинет, отзывы, мероприятия)", "do": "sql", "args": { "files": ["migration-3.sql", "migration-4-bot.sql", "migration-5.sql"] } },
-    { "id": "2026-11-10-work-bot", "title": "Рабочий бот New.работа", "do": "bot_create", "args": { "kind": "work" } },
-    { "id": "2026-11-10-channel", "title": "Канал с вакансиями и автопостинг", "do": "channel_create", "args": { "title": "New.работа — вакансии для молодёжи", "about": "Работа и подработка с 14 лет по всей России и удалённо. Каждая вакансия проверена модератором. Сайт: wn7ib.github.io/new-rabota", "usernames": ["newrabota", "new_rabota", "newrabota_jobs", "newrabota_vakansii", "new_rabota_jobs"] } },
-    { "id": "2026-11-10-site-settings", "title": "Подключить бота к сайту и включить чат с Newi", "do": "site_settings", "args": { "data": { "bot_username": "{work_bot}", "chat_on": true } } },
-    { "id": "2026-11-10-yandex", "title": "Яндекс.Вебмастер", "do": "manual", "args": { "text": "Яндекс.Вебмастер (по желанию, 2 минуты): webmaster.yandex.ru → Добавить сайт wn7ib.github.io/new-rabota → способ «HTML-файл» → пришли Клоду имя файла. Клод положит его на сайт." } },
-    { "id": "2026-11-10-apps", "title": "Свежие версии приложений", "do": "update_apps" }
+    {
+      "id": "2026-11-10-sql",
+      "title": "Обновить базу сайта (жалобы, чат с Newi, кабинет, отзывы, мероприятия)",
+      "do": "sql",
+      "args": {
+        "files": [
+          "migration-3.sql",
+          "migration-4-bot.sql",
+          "migration-5.sql"
+        ]
+      }
+    },
+    {
+      "id": "2026-11-10-sql-6",
+      "title": "База: синхронизация профиля и заказы продвижения",
+      "do": "sql",
+      "args": {
+        "files": [
+          "migration-6.sql"
+        ]
+      }
+    },
+    {
+      "id": "2026-11-10-work-bot",
+      "title": "Рабочий бот New.работа",
+      "do": "bot_create",
+      "args": {
+        "kind": "work"
+      }
+    },
+    {
+      "id": "2026-11-10-channel",
+      "title": "Канал с вакансиями и автопостинг",
+      "do": "channel_create",
+      "args": {
+        "title": "New.работа — вакансии для молодёжи",
+        "about": "Работа и подработка с 14 лет по всей России и удалённо. Каждая вакансия проверена модератором. Сайт: wn7ib.github.io/new-rabota",
+        "usernames": [
+          "newrabota",
+          "new_rabota",
+          "newrabota_jobs",
+          "newrabota_vakansii",
+          "new_rabota_jobs"
+        ]
+      }
+    },
+    {
+      "id": "2026-11-10-site-settings",
+      "title": "Подключить бота к сайту и включить чат с Newi",
+      "do": "site_settings",
+      "args": {
+        "data": {
+          "bot_username": "{work_bot}",
+          "chat_on": true
+        }
+      }
+    },
+    {
+      "id": "2026-11-10-yandex",
+      "title": "Яндекс.Вебмастер",
+      "do": "manual",
+      "args": {
+        "text": "Яндекс.Вебмастер (по желанию, 2 минуты): webmaster.yandex.ru → Добавить сайт wn7ib.github.io/new-rabota → способ «HTML-файл» → пришли Клоду имя файла. Клод положит его на сайт."
+      }
+    },
+    {
+      "id": "2026-11-10-apps",
+      "title": "Свежие версии приложений",
+      "do": "update_apps"
+    },
+    {
+      "id": "2026-11-10-prices",
+      "title": "Цены продвижения по умолчанию",
+      "do": "site_settings",
+      "args": {
+        "data": {
+          "prices": {
+            "top7": 199,
+            "urgent": 299,
+            "verify": 490,
+            "business": 990
+          }
+        }
+      }
+    },
+    {
+      "id": "2026-11-10-selfemployed",
+      "title": "Самозанятость для приёма оплаты",
+      "do": "manual",
+      "args": {
+        "text": "Чтобы брать деньги за продвижение: зарегистрируйся самозанятым в приложении «Мой налог» (до 18 лет нужно письменное согласие родителей), потом впиши в админке → Настройки → «Как оплатить» свои реквизиты СБП. Подробно — в бизнес-плане."
+      }
+    }
   ]
 }
