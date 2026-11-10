@@ -176,7 +176,8 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
 <body>
 <div class="wrap adm">
   <div class="bar"><h1><img src="logo.png" alt="">Админка New.работа</h1>
-    <div class="tools"><a class="btn btn-ghost btn-sm" href="./" target="_blank" rel="noopener">Открыть сайт ↗</a><button class="btn btn-ghost btn-sm" id="logout" type="button" hidden>Выйти</button></div></div>
+    <div class="tools"><a class="btn btn-ghost btn-sm" href="./" target="_blank" rel="noopener">Открыть сайт ↗</a><button class="btn btn-ghost btn-sm" id="chpass" type="button" hidden>🔑 Сменить пароль</button><button class="btn btn-ghost btn-sm" id="logout" type="button" hidden>Выйти</button></div></div>
+  <p class="help" id="whoami" hidden></p>
 
   <form class="login" id="login">
     <div class="field"><label for="email">Почта</label><input id="email" type="text" autocomplete="username" inputmode="email"></div>
@@ -187,6 +188,7 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
   </form>
   <form class="login" id="newpass" hidden>
     <h2 style="margin:0 0 6px">Новый пароль</h2>
+    <p class="help" id="npWho"></p>
     <div class="field"><label for="np1">Придумай новый пароль (от 8 символов)</label><input id="np1" type="password" autocomplete="new-password" style="background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px"></div>
     <p class="err" id="npErr" hidden></p>
     <div><button class="btn btn-primary" type="submit">Сохранить пароль и войти</button></div>
@@ -365,7 +367,8 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
     const {error}=await sb.auth.resetPasswordForEmail(em,{redirectTo:location.origin+location.pathname});
     m.textContent=error?(/rate|limit|seconds/i.test(error.message)?"Слишком часто. Подожди минуту и попробуй снова.":"Не получилось отправить письмо: "+error.message):"Письмо отправлено на "+em+". Открой ссылку из письма на этом телефоне — здесь появится поле для нового пароля. Нет письма — проверь «Спам».";
   };
-  function askNewPass(){$("#login").hidden=true;$("#newpass").hidden=false;$("#np1").focus()}
+  function askNewPass(){$("#login").hidden=true;$("#newpass").hidden=false;$("#np1").focus();window.scrollTo({top:0,behavior:"smooth"})}
+  $("#chpass").onclick=()=>{$("#newpass").hidden?askNewPass():($("#newpass").hidden=true)};
   sb.auth.onAuthStateChange(ev=>{if(ev==="PASSWORD_RECOVERY")askNewPass()});
   if(/type=recovery/.test(location.hash))askNewPass();
   $("#newpass").addEventListener("submit",async e=>{
@@ -373,13 +376,14 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
     if(pw.length<8){er.textContent="Минимум 8 символов.";er.hidden=false;return}
     const {error}=await sb.auth.updateUser({password:pw});
     if(error){er.textContent="Не сохранилось: "+(/session|jwt|expired/i.test(error.message)?"ссылка устарела, запроси письмо ещё раз.":error.message);er.hidden=false;return}
-    history.replaceState(null,"",location.pathname);$("#newpass").hidden=true;toast("Пароль сохранён");start();
+    history.replaceState(null,"",location.pathname);$("#newpass").hidden=true;$("#np1").value="";toast("Пароль сохранён — впиши его в Мессенджер");start();
   });
 
   async function start(){
     const {data:{user}}=await sb.auth.getUser();
     if(!user)return;
-    $("#login").hidden=true;$("#logout").hidden=false;
+    $("#login").hidden=true;$("#logout").hidden=false;$("#chpass").hidden=false;
+    $("#whoami").hidden=false;$("#whoami").textContent="Ты вошёл как "+user.email+" — эта почта и пароль нужны для входа модератора в Мессенджере.";$("#npWho").textContent="Почта: "+user.email;
     const {data:adm}=await sb.from("admins").select("user_id").eq("user_id",user.id).maybeSingle();
     if(!adm){$("#notAdmin").hidden=false;return}
     $("#app").hidden=false;
