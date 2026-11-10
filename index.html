@@ -44,9 +44,27 @@
   </div>
 </header>
 
-<section class="wrap" id="newiWrap" hidden aria-label="Newi — помощница New.работа">
+<button class="drone" id="drone" type="button" aria-label="Открыть Newi" hidden><svg viewBox="0 0 120 120" aria-hidden="true"><defs><radialGradient id="dg" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#22D3EE" stop-opacity=".55"/><stop offset="1" stop-color="#22D3EE" stop-opacity="0"/></radialGradient></defs>
+<ellipse cx="60" cy="104" rx="26" ry="9" fill="url(#dg)"/><rect x="52" y="92" width="16" height="9" rx="2" fill="#22D3EE"/>
+<g class="prop"><rect x="14" y="30" width="26" height="8" rx="3" fill="#9FB4D0"/><rect x="80" y="30" width="26" height="8" rx="3" fill="#9FB4D0"/></g>
+<rect x="26" y="38" width="12" height="10" fill="#7F93AE"/><rect x="82" y="38" width="12" height="10" fill="#7F93AE"/>
+<rect x="22" y="44" width="76" height="52" rx="9" fill="#B8C8DE"/><rect x="22" y="44" width="76" height="8" rx="4" fill="#DCE7F5"/>
+<rect x="30" y="52" width="60" height="38" rx="5" fill="#0A1224"/>
+<rect class="eye" x="38" y="68" width="16" height="4" rx="1" fill="#22D3EE"/><rect class="eye" x="66" y="68" width="16" height="4" rx="1" fill="#22D3EE"/>
+<circle cx="86" cy="58" r="3.5" fill="#FF4D6A"/></svg><span class="drone-badge" id="droneBadge" hidden>1</span></button>
+<section class="newi-pop" id="newiWrap" hidden aria-label="Newi — помощница New.работа">
   <div class="newi">
-    <div class="newi-head"><img src="logo.png" alt=""><div><b>Newi</b><small id="newiState"><span class="dotlive"></span>помощница New.работа</small></div></div>
+    <div class="newi-head"><div class="newi-ava"><svg viewBox="0 0 120 120" aria-hidden="true"><defs><radialGradient id="dg" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#22D3EE" stop-opacity=".55"/><stop offset="1" stop-color="#22D3EE" stop-opacity="0"/></radialGradient></defs>
+<ellipse cx="60" cy="104" rx="26" ry="9" fill="url(#dg)"/><rect x="52" y="92" width="16" height="9" rx="2" fill="#22D3EE"/>
+<g class="prop"><rect x="14" y="30" width="26" height="8" rx="3" fill="#9FB4D0"/><rect x="80" y="30" width="26" height="8" rx="3" fill="#9FB4D0"/></g>
+<rect x="26" y="38" width="12" height="10" fill="#7F93AE"/><rect x="82" y="38" width="12" height="10" fill="#7F93AE"/>
+<rect x="22" y="44" width="76" height="52" rx="9" fill="#B8C8DE"/><rect x="22" y="44" width="76" height="8" rx="4" fill="#DCE7F5"/>
+<rect x="30" y="52" width="60" height="38" rx="5" fill="#0A1224"/>
+<rect class="eye" x="38" y="68" width="16" height="4" rx="1" fill="#22D3EE"/><rect class="eye" x="66" y="68" width="16" height="4" rx="1" fill="#22D3EE"/>
+<circle cx="86" cy="58" r="3.5" fill="#FF4D6A"/></svg></div><div><b>Newi</b><small id="newiState"><span class="dotlive"></span>помощница New.работа</small></div>
+      <button type="button" class="ibtn" id="voiceBtn" aria-pressed="false" title="Озвучка ответов">🔇</button>
+      <button type="button" class="ibtn" id="newiClose" aria-label="Свернуть">✕</button></div>
+    <div class="voicepick" id="voicePick" hidden><span>Как общаемся?</span><button class="btn btn-primary" type="button" id="vOn">🔊 С озвучкой</button><button class="btn btn-ghost" type="button" id="vOff">🔇 Без озвучки</button></div>
     <div class="chat" id="chat" aria-live="polite"></div>
     <div class="quick" id="quick">
       <button class="chip" type="button" data-q="pick">Подбери мне работу</button>
@@ -54,9 +72,27 @@
       <button class="chip" type="button" data-q="scam">Как не попасть на обман</button>
       <button class="chip" type="button" data-q="resume">Помоги с резюме</button>
     </div>
-    <form class="ask" id="askForm"><input id="askInput" type="text" maxlength="600" placeholder="Спроси Newi о работе, правах, вакансиях…" autocomplete="off"><button class="btn btn-primary" type="submit">➤</button></form>
+    <form class="ask" id="askForm"><input id="askInput" type="text" maxlength="600" placeholder="Спроси Newi о работе, правах, вакансиях…" autocomplete="off"><button class="btn btn-ghost" type="button" id="micBtn" title="Сказать голосом" hidden>🎤</button><button class="btn btn-primary" type="submit">➤</button></form>
   </div>
 </section>
+<div class="gate" id="gate" hidden role="dialog" aria-modal="true" aria-label="Выбери режим сайта">
+  <div class="gate-box">
+    <img src="logo.png" alt="" class="gate-logo"><h2>New<span class="dot">.</span>работа</h2>
+    <p>Как тебе удобнее пользоваться сайтом?</p>
+    <div class="gate-cards">
+      <button type="button" class="gcard" id="gOff"><b>Официальный</b><span>Обычный сайт вакансий: поиск, фильтры, размещение.</span></button>
+      <button type="button" class="gcard gcard-newi" id="gNewi"><div class="gdrone"><svg viewBox="0 0 120 120" aria-hidden="true"><defs><radialGradient id="dg" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#22D3EE" stop-opacity=".55"/><stop offset="1" stop-color="#22D3EE" stop-opacity="0"/></radialGradient></defs>
+<ellipse cx="60" cy="104" rx="26" ry="9" fill="url(#dg)"/><rect x="52" y="92" width="16" height="9" rx="2" fill="#22D3EE"/>
+<g class="prop"><rect x="14" y="30" width="26" height="8" rx="3" fill="#9FB4D0"/><rect x="80" y="30" width="26" height="8" rx="3" fill="#9FB4D0"/></g>
+<rect x="26" y="38" width="12" height="10" fill="#7F93AE"/><rect x="82" y="38" width="12" height="10" fill="#7F93AE"/>
+<rect x="22" y="44" width="76" height="52" rx="9" fill="#B8C8DE"/><rect x="22" y="44" width="76" height="8" rx="4" fill="#DCE7F5"/>
+<rect x="30" y="52" width="60" height="38" rx="5" fill="#0A1224"/>
+<rect class="eye" x="38" y="68" width="16" height="4" rx="1" fill="#22D3EE"/><rect class="eye" x="66" y="68" width="16" height="4" rx="1" fill="#22D3EE"/>
+<circle cx="86" cy="58" r="3.5" fill="#FF4D6A"/></svg></div><b>С Newi</b><span>Дрон-помощник подберёт работу, ответит на вопросы и может говорить вслух.</span></button>
+    </div>
+    <small>Режим можно поменять в любой момент.</small>
+  </div>
+</div>
 
 <div class="wrap">
   <form class="search" id="searchForm" role="search">

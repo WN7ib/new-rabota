@@ -142,13 +142,47 @@
     state.items=data||[];render();refreshMeta();
   }
 
-  // ═════════ режимы: обычный / с Newi ═════════
-  function setMode(m){
+  // ═════════ режимы: официальный / с Newi ═════════
+  let panelOpen=false;
+  function setMode(m,open){
     const on=m==="newi"; ls.set("nr-mode",m);
-    $("#newiWrap").hidden=!on;$("#modeNewi").setAttribute("aria-pressed",on);$("#modeOff").setAttribute("aria-pressed",!on);
-    if(on){renderChat();resumeWaiting()}
+    $("#modeNewi").setAttribute("aria-pressed",on);$("#modeOff").setAttribute("aria-pressed",!on);
+    $("#drone").hidden=!on;
+    if(!on)openPanel(false); else if(open)openPanel(true);
   }
-  $("#modeOff").onclick=()=>setMode("off");$("#modeNewi").onclick=()=>setMode("newi");
+  function openPanel(o){
+    panelOpen=o;$("#newiWrap").hidden=!o;$("#drone").setAttribute("aria-expanded",o);
+    if(o){$("#droneBadge").hidden=true;renderChat();resumeWaiting();if(ls.get("nr-voice","")==="")$("#voicePick").hidden=false;else $("#voicePick").hidden=true}
+    else stopSpeak();
+  }
+  $("#modeOff").onclick=()=>setMode("off");$("#modeNewi").onclick=()=>setMode("newi",true);
+  $("#drone").onclick=()=>openPanel(!panelOpen);$("#newiClose").onclick=()=>openPanel(false);
+  // стартовый выбор режима
+  $("#gOff").onclick=()=>{ls.set("nr-chosen",1);$("#gate").hidden=true;setMode("off")};
+  $("#gNewi").onclick=()=>{ls.set("nr-chosen",1);$("#gate").hidden=true;setMode("newi",true)};
+
+  // ═════════ озвучка ═════════
+  const synth=window.speechSynthesis;
+  function voiceOn(){return ls.get("nr-voice","")==="on"}
+  function paintVoice(){const b=$("#voiceBtn");b.textContent=voiceOn()?"🔊":"🔇";b.setAttribute("aria-pressed",voiceOn());if(!synth)b.hidden=true}
+  function setVoice(v){ls.set("nr-voice",v?"on":"off");paintVoice();$("#voicePick").hidden=true;if(!v)stopSpeak();else speak("Отлично, буду отвечать вслух.")}
+  function stopSpeak(){try{synth&&synth.cancel()}catch(_){}}
+  function speak(t){
+    if(!synth||!voiceOn())return;
+    try{synth.cancel();const u=new SpeechSynthesisUtterance(String(t).replace(/[•\n]+/g," ").slice(0,600));u.lang="ru-RU";
+      const v=synth.getVoices().find(x=>/^ru/i.test(x.lang));if(v)u.voice=v;u.rate=1.02;synth.speak(u)}catch(_){}
+  }
+  $("#voiceBtn").onclick=()=>setVoice(!voiceOn());
+  $("#vOn").onclick=()=>setVoice(true);$("#vOff").onclick=()=>setVoice(false);
+  paintVoice();
+  // голосовой ввод
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(SR){const mb=$("#micBtn");mb.hidden=false;let rec=null;
+    mb.onclick=()=>{ if(rec){rec.stop();return}
+      rec=new SR();rec.lang="ru-RU";rec.interimResults=false;mb.classList.add("rec");
+      rec.onresult=e=>{const t=e.results[0][0].transcript;if(t)userSays(t)};
+      rec.onend=()=>{rec=null;mb.classList.remove("rec")};rec.onerror=()=>{};
+      try{rec.start()}catch(_){rec=null;mb.classList.remove("rec")} } }
 
   // ═════════ Newi на сайте ═════════
   const chatEl=$("#chat");
@@ -156,7 +190,8 @@
   if(!session){session=Array.from(crypto.getRandomValues(new Uint8Array(16)),b=>b.toString(16).padStart(2,"0")).join("");ls.set("nr-sess",session)}
   let msgs=ls.get("nr-chat",[]); let flow=null;
   const saveMsgs=()=>{msgs=msgs.slice(-60);ls.set("nr-chat",msgs)};
-  function push(m){msgs.push(m);saveMsgs();renderChat()}
+  function push(m){msgs.push(m);saveMsgs();renderChat();if(m.who==="nw"&&!m.wait){speak(m.text);notify()}}
+  function notify(){if(!panelOpen&&!$("#drone").hidden){const b=$("#droneBadge");b.hidden=false}}
   function renderChat(){
     chatEl.textContent="";
     const all=msgs.length?msgs:[{who:"nw",text:"Привет! Я Newi, помощница New.работа. Подберу работу под твой возраст и город, расскажу о правах и помогу не попасть на обман. Нажми кнопку внизу или спроси своими словами."}];
@@ -208,7 +243,7 @@
     const waiting=msgs.filter(m=>m.wait&&m.id); if(!waiting.length||!sb)return;
     const {data}=await sb.rpc("chat_get",{p_session:session});
     let changed=false;
-    (data||[]).forEach(r=>{const m=msgs.find(x=>x.id===r.id);if(m&&m.wait&&r.a){m.text=r.a;m.wait=false;changed=true}});
+    (data||[]).forEach(r=>{const m=msgs.find(x=>x.id===r.id);if(m&&m.wait&&r.a){m.text=r.a;m.wait=false;changed=true;speak(r.a);notify()}});
     const now=Date.now();
     msgs.forEach(m=>{if(m.wait&&now-m.at>90000&&!m.late){m.late=true;m.text="Newi сейчас не на связи с сайтом. Ответ появится здесь, когда она прочитает, — можно вернуться позже.";changed=true}});
     if(changed){saveMsgs();renderChat()}
@@ -226,6 +261,8 @@
   $$("#quick .chip").forEach(b=>b.onclick=()=>{push({who:"me",text:b.textContent});run(b.dataset.q)});
   $("#askForm").addEventListener("submit",e=>{e.preventDefault();const i=$("#askInput");userSays(i.value);i.value=""});
 
-  setMode(location.hash==="#newi"?"newi":ls.get("nr-mode","off"));
+  if(location.hash==="#newi"){ls.set("nr-chosen",1);setMode("newi",true)}
+  else if(ls.get("nr-chosen",0)){setMode(ls.get("nr-mode","off"))}
+  else{setMode("off");$("#gate").hidden=false}
   load();
 })();
