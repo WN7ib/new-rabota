@@ -177,7 +177,7 @@ td.n{font-family:var(--f-mono);white-space:nowrap}
 @media (max-width:420px){.kv{grid-template-columns:1fr}.kv dd{margin-bottom:6px}}
 
 /* ── дрон Newi в углу, выбор режима, озвучка, профиль ── */
-.mascot{width:100%;height:100%;display:block;overflow:visible}
+.mascot{width:100%;height:100%;display:block;object-fit:contain;image-rendering:auto}
 .mascot .e{display:none}
 .mascot[data-face="happy"] .e-happy,.mascot[data-face="blink"] .e-blink,.mascot[data-face="think"] .e-think,.mascot[data-face="alert"] .e-alert,.mascot[data-face="sleepy"] .e-sleepy,.mascot[data-face="sad"] .e-sad,.mascot[data-face="speak"] .e-speak{display:inline}
 .mascot[data-face="speak"] .m-frame{fill:#2bb8ff}.mascot[data-face="speak"] .m-led{fill:#67e8f9}
