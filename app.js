@@ -152,7 +152,7 @@
   }
   function openPanel(o){
     panelOpen=o;$("#newiWrap").hidden=!o;$("#drone").setAttribute("aria-expanded",o);
-    if(o){$("#droneBadge").hidden=true;renderChat();resumeWaiting();if(ls.get("nr-voice","")==="")$("#voicePick").hidden=false;else $("#voicePick").hidden=true}
+    if(o){Mascot.flash("alert",900);Mascot.wake();showView("chat");$("#droneBadge").hidden=true;renderChat();resumeWaiting();if(ls.get("nr-voice","")==="")$("#voicePick").hidden=false;else $("#voicePick").hidden=true}
     else stopSpeak();
   }
   $("#modeOff").onclick=()=>setMode("off");$("#modeNewi").onclick=()=>setMode("newi",true);
@@ -165,12 +165,14 @@
   const synth=window.speechSynthesis;
   function voiceOn(){return ls.get("nr-voice","")==="on"}
   function paintVoice(){const b=$("#voiceBtn");b.textContent=voiceOn()?"🔊":"🔇";b.setAttribute("aria-pressed",voiceOn());if(!synth)b.hidden=true}
-  function setVoice(v){ls.set("nr-voice",v?"on":"off");paintVoice();$("#voicePick").hidden=true;if(!v)stopSpeak();else speak("Отлично, буду отвечать вслух.")}
-  function stopSpeak(){try{synth&&synth.cancel()}catch(_){}}
+  function setVoice(v){ls.set("nr-voice",v?"on":"off");paintVoice();$("#voicePick").hidden=true;if(!v)stopSpeak();else speak("Отлично, буду говорить вслух.")}
+  function stopSpeak(){try{synth&&synth.cancel()}catch(_){}if(Mascot.face==="speak")Mascot.set("happy")}
   function speak(t){
-    if(!synth||!voiceOn())return;
-    try{synth.cancel();const u=new SpeechSynthesisUtterance(String(t).replace(/[•\n]+/g," ").slice(0,600));u.lang="ru-RU";
-      const v=synth.getVoices().find(x=>/^ru/i.test(x.lang));if(v)u.voice=v;u.rate=1.02;synth.speak(u)}catch(_){}
+    const txt=String(t).replace(/[•\n]+/g," ").slice(0,600);
+    if(!synth||!voiceOn()){Mascot.flash("speak",Math.min(4000,txt.length*35));return}
+    try{synth.cancel();const u=new SpeechSynthesisUtterance(txt);u.lang="ru-RU";
+      const v=synth.getVoices().find(x=>/^ru/i.test(x.lang));if(v)u.voice=v;u.rate=+ls.get("nr-rate",1)||1;
+      u.onstart=()=>Mascot.set("speak");u.onend=u.onerror=()=>Mascot.set("happy");synth.speak(u)}catch(_){}
   }
   $("#voiceBtn").onclick=()=>setVoice(!voiceOn());
   $("#vOn").onclick=()=>setVoice(true);$("#vOff").onclick=()=>setVoice(false);
@@ -184,6 +186,31 @@
       rec.onend=()=>{rec=null;mb.classList.remove("rec")};rec.onerror=()=>{};
       try{rec.start()}catch(_){rec=null;mb.classList.remove("rec")} } }
 
+  // ═════════ профиль и настройки ═════════
+  const prof=()=>ls.get("nr-profile",{});
+  function showView(v){$("#viewChat").hidden=v!=="chat";$("#viewProf").hidden=v!=="prof";$("#newiSub").textContent=v==="prof"?"профиль и настройки":"помощница New.работа"}
+  function applyPrefs(){
+    document.body.classList.toggle("noanim",ls.get("nr-anim",true)===false);
+    const w=$("#newiWrap");w.classList.remove("ts-s","ts-l");const s=ls.get("nr-size","m");if(s==="s")w.classList.add("ts-s");if(s==="l")w.classList.add("ts-l");
+  }
+  function fillProf(){const p=prof();$("#pName").value=p.name||"";$("#pAge").value=p.age||"";$("#pCity").value=p.city||"";
+    $("#sVoice").checked=voiceOn();$("#sRate").value=ls.get("nr-rate",1);$("#sAnim").checked=ls.get("nr-anim",true)!==false;$("#sSize").value=ls.get("nr-size","m");$("#sVoice").disabled=!synth}
+  $("#profBtn").onclick=()=>{if($("#viewProf").hidden){fillProf();showView("prof")}else showView("chat")};
+  $("#sSave").onclick=()=>{
+    const age=parseInt($("#pAge").value,10),p={name:$("#pName").value.trim().slice(0,30),age:age>=13&&age<=30?age:0,city:$("#pCity").value.trim().slice(0,40)};
+    ls.set("nr-profile",p);ls.set("nr-voice",$("#sVoice").checked?"on":"off");ls.set("nr-rate",+$("#sRate").value);ls.set("nr-anim",$("#sAnim").checked);ls.set("nr-size",$("#sSize").value);
+    paintVoice();applyPrefs();$("#voicePick").hidden=true;
+    if(p.age>=14){setAge(p.age>=18?18:p.age>=16?16:14)}
+    if(p.city&&!/^удал/i.test(p.city)){state.city=p.city;$("#city").value=p.city;ls.set("nr-city",p.city)}
+    render();refreshMeta();showView("chat");renderChat();Mascot.flash("happy",800);
+    say(p.name?"Сохранила, "+p.name+"! Список вакансий подстроила под твой профиль.":"Настройки сохранены.");
+  };
+  $("#sTest").onclick=()=>{ls.set("nr-rate",+$("#sRate").value);const was=voiceOn();ls.set("nr-voice","on");speak("Привет! Так я буду говорить.");if(!was)ls.set("nr-voice","off")};
+  $("#sOffMode").onclick=()=>{setMode("off")};
+  $("#sClear").onclick=()=>{msgs=[];saveMsgs();flow=null;showView("chat");renderChat()};
+  $("#sForget").onclick=()=>{["nr-profile","nr-chat","nr-voice","nr-rate","nr-anim","nr-size","nr-chosen","nr-mode","nr-city"].forEach(k=>{try{localStorage.removeItem(k)}catch(_){}});location.reload()};
+  Mascot.mount();Mascot.wake();applyPrefs();
+
   // ═════════ Newi на сайте ═════════
   const chatEl=$("#chat");
   let session=ls.get("nr-sess","");
@@ -194,7 +221,7 @@
   function notify(){if(!panelOpen&&!$("#drone").hidden){const b=$("#droneBadge");b.hidden=false}}
   function renderChat(){
     chatEl.textContent="";
-    const all=msgs.length?msgs:[{who:"nw",text:"Привет! Я Newi, помощница New.работа. Подберу работу под твой возраст и город, расскажу о правах и помогу не попасть на обман. Нажми кнопку внизу или спроси своими словами."}];
+    const all=msgs.length?msgs:[{who:"nw",text:"Привет"+(prof().name?", "+prof().name:"")+"! Я Newi, помощница New.работа. Подберу работу, расскажу о правах и помогу не попасть на обман. Нажми кнопку или спроси своими словами."}];
     for(const m of all){
       const d=el("div","msg "+(m.who==="me"?"me":"nw")+(m.wait?" wait":""),m.text);
       (m.links||[]).forEach(l=>{const a=el("a","mini");a.href=l.href;a.append(el("b",null,l.title));if(l.sub)a.append(el("span",null,l.sub));d.append(a)});
@@ -220,7 +247,7 @@
     if(k==="rights")say(RIGHTS,[{href:"guide.html#law",title:"Гид: работа с 14 лет",sub:"документы, часы, что нельзя"}]);
     else if(k==="scam")say(SCAM);
     else if(k==="resume")say(RESUME,[{href:"guide.html#resume",title:"Гид: резюме и собеседование",sub:"пример и вопросы работодателю"}]);
-    else if(k==="pick"){flow={step:"age"};say("Сколько тебе лет?")}
+    else if(k==="pick"){const p=prof();if(p.age>=14&&p.city){say("Беру из профиля: "+p.age+" лет, "+p.city+". Поменять можно в ⚙.");pickResult(p.age,p.city)}else{flow={step:"age"};say("Сколько тебе лет?")}}
   }
   function pickResult(age,city){
     setAge(age>=18?18:age>=16?16:14);
@@ -234,7 +261,7 @@
     if(!sb||state.settings.chat_on===false){say("Сейчас я отвечаю только на готовые вопросы — кнопки ниже. Свободные вопросы скоро снова включат.");return}
     const {data,error}=await sb.rpc("chat_ask",{p_session:session,p_q:q});
     if(error){say(/too many/.test(error.message||"")?"Слишком много вопросов подряд. Подожди минутку.":"Не получилось отправить вопрос. Попробуй ещё раз.");return}
-    push({who:"nw",text:"Newi думает…",wait:true,id:data,at:Date.now()});
+    push({who:"nw",text:"Newi думает…",wait:true,id:data,at:Date.now()});Mascot.set("think");
     poll();
   }
   let pollT=null;
@@ -247,12 +274,13 @@
     const now=Date.now();
     msgs.forEach(m=>{if(m.wait&&now-m.at>90000&&!m.late){m.late=true;m.text="Newi сейчас не на связи с сайтом. Ответ появится здесь, когда она прочитает, — можно вернуться позже.";changed=true}});
     if(changed){saveMsgs();renderChat()}
+    if(!msgs.some(m=>m.wait&&!m.late)&&Mascot.face==="think")Mascot.set("happy");
     if(msgs.some(m=>m.wait&&m.id))pollT=setTimeout(poll,msgs.some(m=>m.wait&&!m.late)?4000:20000);
   }
   function resumeWaiting(){if(msgs.some(m=>m.wait))poll()}
 
   function userSays(t){
-    t=t.trim();if(!t)return;push({who:"me",text:t});
+    t=t.trim();if(!t)return;Mascot.wake();push({who:"me",text:t});
     if(flow&&flow.step==="age"){const n=parseInt(t,10);if(!(n>=13&&n<=30)){say("Напиши возраст числом, например 15.");return}if(n<14){flow=null;say("Работать по договору можно с 14 лет. Пока можно попробовать волонтёрство и проекты — загляни в фильтр «проекты и волонтёрство».");return}flow={step:"city",age:n};say("В каком городе ищешь? Или напиши «удалённо».");return}
     if(flow&&flow.step==="city"){const a=flow.age;flow=null;pickResult(a,t);return}
     const k=intent(t); if(k&&t.length<60){run(k);return}
