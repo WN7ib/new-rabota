@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<meta name="color-scheme" content="dark">
+<title>Newi · переход</title>
+<style>
+  body{margin:0;min-height:100vh;display:grid;place-items:center;background:#050a16;color:#e2e8f0;font:16px/1.45 system-ui,sans-serif;padding:24px;box-sizing:border-box;text-align:center}
+  .c{max-width:380px}
+  h1{font-size:20px;color:#22d3ee;margin:0 0 8px}
+  p{color:#94a3b8;margin:0 0 20px}
+  a.b{display:block;padding:16px 18px;border-radius:14px;background:#22d3ee;color:#04111c;font-weight:700;text-decoration:none;font-size:18px}
+  small{display:block;margin-top:16px;color:#64748b}
+</style>
+</head>
+<body>
+<div class="c">
+  <h1 id="t">Открываю Newi…</h1>
+  <p id="d">Если ничего не открылось — нажми кнопку.</p>
+  <a class="b" id="go" href="#">Открыть</a>
+  <small>Нужен установленный Newi Мессенджер.</small>
+</div>
+<script>
+(function(){
+  var to=(new URLSearchParams(location.search).get("to")||"").replace(/[^a-z]/g,"");
+  var names={install:"🔓 Разрешить установку",overlay:"🔓 Разрешить «поверх других окон»",notif:"🔓 Доступ к уведомлениям",battery:"🔋 Работа в фоне",update:"⬆️ Обновить Newi",newi:"⚙️ Настройки Newi"};
+  var hints={install:"Откроется переключатель — включи его, дальше Newi поставит обновление сама.",update:"Newi скачает и откроет установку — останется нажать «Установить»."};
+  document.getElementById("t").textContent=names[to]||"Открываю Newi…";
+  if(hints[to])document.getElementById("d").textContent=hints[to];
+  var url="intent://go/"+to+"#Intent;scheme=newi;package=app.newi.msg;end";
+  var a=document.getElementById("go"); a.href=url; a.textContent=names[to]||"Открыть";
+  setTimeout(function(){location.href=url},150);
+})();
+</script>
+</body>
+</html>
