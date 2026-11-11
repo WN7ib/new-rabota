@@ -25,7 +25,7 @@
 <script>
 (function(){
   var to=(new URLSearchParams(location.search).get("to")||"").replace(/[^a-z]/g,"");
-  var names={install:"🔓 Разрешить установку",overlay:"🔓 Разрешить «поверх других окон»",notif:"🔓 Доступ к уведомлениям",battery:"🔋 Работа в фоне",update:"⬆️ Обновить Newi",newi:"⚙️ Настройки Newi"};
+  var names={install:"🔓 Разрешить установку",overlay:"🔓 Разрешить «поверх других окон»",notif:"🔓 Доступ к уведомлениям",battery:"🔋 Работа в фоне",update:"⬆️ Обновить Newi",confirm:"✅ Подтвердить установку",newi:"⚙️ Настройки Newi"};
   var hints={install:"Откроется переключатель — включи его, дальше Newi поставит обновление сама.",update:"Newi скачает и откроет установку — останется нажать «Установить»."};
   document.getElementById("t").textContent=names[to]||"Открываю Newi…";
   if(hints[to])document.getElementById("d").textContent=hints[to];
