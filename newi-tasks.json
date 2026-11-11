@@ -53,6 +53,22 @@
       }
     },
     {
+      "id": "2026-11-11-channel-fix",
+      "title": "Проверить ссылку на канал вакансий и исправить, если её нет",
+      "do": "channel_create",
+      "args": {
+        "title": "New.работа — вакансии для молодёжи",
+        "about": "Работа и подработка с 14 лет по всей России и удалённо. Каждая вакансия проверена модератором. Сайт: wn7ib.github.io/new-rabota",
+        "usernames": [
+          "newrabota",
+          "new_rabota",
+          "newrabota_jobs",
+          "newrabota_vakansii",
+          "new_rabota_jobs"
+        ]
+      }
+    },
+    {
       "id": "2026-11-10-site-settings",
       "title": "Подключить бота к сайту и включить чат с Newi",
       "do": "site_settings",
