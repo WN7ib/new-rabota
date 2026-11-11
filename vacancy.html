@@ -62,6 +62,21 @@
   act.append(share,rep);box.append(act);
   if(v.age_min<16)box.append(el("p","hint","Если тебе 14–15: понадобится согласие родителя и органа опеки. Как его оформить — в гиде подростку."));
   page.append(box);
+  // подсказка по Трудовому кодексу для несовершеннолетних (ст. 63, 92, 94, 96, 265 ТК РФ)
+  if((v.age_min||16)<18){
+    const tk=el("section","panel");tk.style.marginTop="16px";
+    const young=(v.age_min||16)<16;
+    tk.append(el("h2",null,"⚖️ Если тебе меньше 18"));
+    const ul=document.createElement("ul");ul.style.margin="6px 0 0";ul.style.paddingLeft="18px";
+    [young?"14–15 лет: не больше 24 часов в неделю и 5 часов в день (в 14 лет — 4 часа); во время учёбы — не больше 2,5 часа в день.":null,
+     "16–17 лет: не больше 35 часов в неделю и 7 часов в день; во время учёбы — не больше 4 часов в день.",
+     "Нельзя: ночные смены (22:00–6:00), сверхурочные, выходные и праздники, тяжести и вредная работа.",
+     young?"В 14–15 лет нужно письменное согласие родителя и органа опеки.":"Работодатель может попросить согласие родителя.",
+     "Работа оформляется договором, оплата — не ниже, чем у взрослых за то же время работы."].filter(Boolean).forEach(t=>ul.append(el("li",null,t)));
+    tk.append(ul);
+    const p=el("p","hint");p.append(document.createTextNode("Ст. 63, 92, 94, 96, 265 Трудового кодекса. "));const a=el("a",null,"Бланк согласия родителя →");a.href="consent.html";p.append(a);tk.append(p);
+    page.append(tk);
+  }
 
   // разметка для поисковиков (Google и Яндекс понимают JobPosting)
   const ld={"@context":"https://schema.org","@type":"JobPosting",title:v.title,description:v.description||v.title,datePosted:v.created_at.slice(0,10),
