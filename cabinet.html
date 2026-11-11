@@ -175,14 +175,14 @@
   const when=d=>new Date(d).toLocaleString("ru-RU",{weekday:"short",day:"numeric",month:"long",hour:"2-digit",minute:"2-digit"});
   async function renderShifts(){
     const add=el("button","btn btn-primary","＋ Новая смена");add.type="button";add.onclick=()=>shiftForm(null);cab.append(add);
-    cab.append(el("p","hint","Создай смену и отправь людям ссылку: они записываются в боте, Неви напоминает им накануне и за 2 часа, а если кто-то отменит — сразу напишет тебе."));
+    cab.append(el("p","hint","Создай смену и отправь людям ссылку: они записываются в боте, Неви напоминает им накануне и за 2 часа. Записалось больше, чем мест, — лишние в резерве, ты выбираешь основных. Кто-то отменил — бот сам предложит место резерву и напишет тебе, кто заменил."));
     const {data,error}=await sb.rpc("emp_events",{t:T});
     if(error){cab.append(el("div","empty","Смены скоро заработают — модератор обновляет базу."));return}
     const bot=(S.bot_username||"").replace(/^@/,"");
     for(const e of (data||[])){
       const past=new Date(e.starts_at)<new Date();
       const box=el("article","vac");
-      box.append(el("span","st "+(past?"closed":"approved"),past?"прошла":e.n+(e.capacity?" из "+e.capacity:"")+" записались"),el("h3",null,e.title),
+      box.append(el("span","st "+(past?"closed":"approved"),past?"прошла":e.n+(e.capacity?" из "+e.capacity:"")+" записались"+(e.r?" · резерв "+e.r:"")),el("h3",null,e.title),
         el("div","where",[when(e.starts_at),e.place,e.city].filter(Boolean).join(" · ")));
       if(e.description)box.append(el("p","msg",e.description));
       const acts=el("div","acts");
@@ -193,8 +193,12 @@
         const {data:ss}=await sb.rpc("emp_signups",{t:T,eid:e.id});
         if(!ss||!ss.length){list.append(el("li",null,"Пока никого"));return}
         for(const p of ss){const li=el("li");const c=NR.contactLink(p.contact);const a=el(c.href?"a":"span",null,p.contact);if(c.href){a.href=c.href;a.target="_blank";a.rel="noopener"}
-          li.append(document.createTextNode(p.name+(p.age?", "+p.age+" лет":"")+" — "),a);
-          const rm=el("button","btn btn-ghost btn-sm","убрать");rm.type="button";rm.style.marginLeft="6px";rm.onclick=async()=>{await sb.rpc("emp_signup_remove",{t:T,sid:p.id});li.remove()};li.append(rm);list.append(li)}});
+          const res=p.status==="reserve";
+          li.append(el("b",null,res?"🕓 резерв · ":"✅ "),document.createTextNode(p.name+(p.age?", "+p.age+" лет":"")+" — "),a);
+          const sw=el("button","btn btn-ghost btn-sm",res?"сделать основным":"в резерв");sw.type="button";sw.style.marginLeft="6px";
+          sw.onclick=async()=>{const {error}=await sb.rpc("emp_signup_status",{t:T,sid:p.id,p_status:res?"main":"reserve"});if(error){toast("Резерв заработает после обновления базы");return}render()};
+          const rm=el("button","btn btn-ghost btn-sm","убрать");rm.type="button";rm.style.marginLeft="6px";rm.onclick=async()=>{await sb.rpc("emp_signup_remove",{t:T,sid:p.id});li.remove()};li.append(sw,rm);list.append(li)}
+        list.append(el("li","hint","Мест нет — новые попадают в резерв. Если основной отменит запись, бот сам предложит место первому из резерва."))});
       if(!past)btn("Изменить","btn-ghost",()=>shiftForm(e));
       box.append(acts,list);cab.append(box);
     }

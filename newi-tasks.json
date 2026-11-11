@@ -132,6 +132,16 @@
           "migration-7.sql"
         ]
       }
+    },
+    {
+      "id": "2026-11-11-sql-8",
+      "title": "База: резерв на сменах",
+      "do": "sql",
+      "args": {
+        "files": [
+          "migration-8.sql"
+        ]
+      }
     }
   ]
 }
