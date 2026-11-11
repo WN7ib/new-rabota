@@ -24,7 +24,7 @@ jobs:
             echo "::warning::Нет секрета SUPABASE_ACCESS_TOKEN — миграции не применены. Добавь его или выполни migration-3.sql и migration-5.sql вручную в Supabase → SQL Editor."
             exit 0
           fi
-          for f in migration-2-admin.sql migration-3.sql migration-4-bot.sql migration-5.sql; do
+          for f in migration-2-admin.sql migration-3.sql migration-4-bot.sql migration-5.sql migration-6.sql migration-7.sql; do
             [ -f "$f" ] || continue
             jq -Rs '{query: .}' "$f" > /tmp/q.json
             code=$(curl -s -o /tmp/r.txt -w '%{http_code}' -X POST "https://api.supabase.com/v1/projects/$PROJECT_REF/database/query" \

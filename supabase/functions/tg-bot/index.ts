@@ -307,6 +307,13 @@ async function onMessage(m: any) {
       city = city.trim().slice(0, 40);
       await setUser(chat, { city }); await send(chat, `Подписала на новые вакансии: ${city} 🔔\nОтписаться — /stop`, MENU); return;
     }
+    if (arg.startsWith("login_")) {
+      const r = await fetch(`${SB}/rest/v1/rpc/emp_login_confirm`, { method: "POST", headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ p_nonce: arg.slice(6), p_chat: chat, p_name: from.first_name ?? "", p_username: from.username ?? "" }) });
+      const ok = r.ok && (await r.text()).trim() !== "null";
+      await send(chat, ok ? "✅ Вход в кабинет работодателя подтверждён. Вернись на сайт — всё уже открыто.\nСюда буду присылать новые анкеты и отмены записей на твои смены." : "Ссылка входа устарела. Нажми «Войти через Telegram» на сайте ещё раз.", MENU);
+      return;
+    }
     if (arg.startsWith("ev_")) {
       const eid = arg.slice(3);
       const e = (await db("GET", `events?select=*&id=eq.${enc(eid)}&published=eq.true`))?.[0];

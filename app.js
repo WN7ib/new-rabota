@@ -46,7 +46,7 @@
     if(v.description)c.append(el("p","desc",v.description));
     const ct=el("div","contact");ct.append(el("span","lbl","Отклик"),el("code",null,v.contact||"не указан"));c.append(ct);
     const act=el("div","actions");
-    act.append(NR.respondButton(v));
+    act.append(NR.respondButton(v));if(v.employer_id)act.append(NR.applyButton(v));
     const more=el("button","link",state.open.has(v.id)?"Свернуть":"Подробнее");more.type="button";
     more.onclick=()=>{state.open.has(v.id)?state.open.delete(v.id):state.open.add(v.id);render()};
     const f=el("button","fav",state.favs.has(v.id)?"★ В избранном":"☆ В избранное");f.type="button";f.setAttribute("aria-pressed",state.favs.has(v.id));
@@ -130,6 +130,8 @@
     closeForm();$("#vacForm").reset();
     if(mine){
       const my=ls.get("nr-my",[]);my.unshift({id:mine.id,k:mine.manage_key,t:data.title,at:Date.now()});ls.set("nr-my",my.slice(0,30));
+      // вошёл в кабинет работодателя — вакансия сразу привязывается к аккаунту
+      {const t=ls.get("nr-emp","");if(t)sb.rpc("emp_claim",{t,vid:mine.id,k:mine.manage_key}).then(()=>{},()=>{})}
       manageDialog(mine.id,mine.manage_key,data.title);
     } else toast("Отправлено. Вакансия появится после проверки");
   });
@@ -159,7 +161,8 @@
     const timer=setTimeout(()=>{if(!state.ready)refreshMeta("Не удаётся загрузить вакансии. Проверь интернет.")},10000);
     const base="id,created_at,title,company,city,type,age_min,pay,remote,description,contact";
     const q=cols=>sb.from("vacancies").select(cols).eq("status","approved").or("expires_at.is.null,expires_at.gte."+today()).order("created_at",{ascending:false}).limit(500);
-    let {data,error}=await q(base+",pinned,pinned_until,verified,expires_at");
+    let {data,error}=await q(base+",pinned,pinned_until,verified,expires_at,employer_id");
+    if(error)({data,error}=await q(base+",pinned,pinned_until,verified,expires_at"));
     if(error)({data,error}=await q(base+",pinned,verified,expires_at"));
     if(error)({data,error}=await sb.from("vacancies").select(base).eq("status","approved").order("created_at",{ascending:false}).limit(500));
     clearTimeout(timer);state.ready=true;

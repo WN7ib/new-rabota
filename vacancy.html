@@ -28,7 +28,8 @@
   function fail(t){ page.textContent=""; const b=el("div","empty"); b.append(el("h3",null,t)); const a=el("a","btn btn-primary","Смотреть все вакансии"); a.href="./"; b.append(a); page.append(b) }
   if(!sb||!/^[0-9a-f-]{36}$/i.test(id)){fail("Вакансия не найдена");return}
   const base="id,created_at,title,company,city,type,age_min,pay,remote,description,contact";
-  let {data,error}=await sb.from("vacancies").select(base+",verified,expires_at").eq("id",id).eq("status","approved").maybeSingle();
+  let {data,error}=await sb.from("vacancies").select(base+",verified,expires_at,employer_id").eq("id",id).eq("status","approved").maybeSingle();
+  if(error)({data,error}=await sb.from("vacancies").select(base+",verified,expires_at").eq("id",id).eq("status","approved").maybeSingle());
   if(error)({data,error}=await sb.from("vacancies").select(base).eq("id",id).eq("status","approved").maybeSingle());
   if(!data){fail("Вакансия снята с публикации или не найдена");return}
   const v=data;
@@ -55,7 +56,7 @@
   if(v.description)box.append(el("p","desc",v.description));
   const ct=el("div","contact");ct.style.display="flex";ct.append(el("span","lbl","Отклик"),el("code",null,v.contact));box.append(ct);
   const act=el("div","actions");
-  if(!expired)act.append(NR.respondButton(v));
+  if(!expired){act.append(NR.respondButton(v));if(v.employer_id)act.append(NR.applyButton(v))}
   const share=el("button","fav","🔗 Скопировать ссылку");share.type="button";share.onclick=()=>NR.copy(location.href);
   const rep=el("button","subtle","Пожаловаться");rep.type="button";rep.style.marginLeft="auto";rep.onclick=()=>NR.reportDialog(v);
   act.append(share,rep);box.append(act);

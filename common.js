@@ -46,6 +46,38 @@
     return a;
   }
 
+  /** Анкета-отклик: уходит работодателю в кабинет и в Telegram (если у вакансии есть кабинет). */
+  function applyButton(v){
+    const b=el("button","btn btn-ghost btn-sm","📝 Отправить анкету"); b.type="button";
+    b.addEventListener("click",()=>applyDialog(v)); return b;
+  }
+  function applyDialog(v){
+    if(!sb){toast("Сайт не подключён к базе");return}
+    let pr={}; try{pr=JSON.parse(localStorage.getItem("nr-profile")||"{}")||{}}catch(_){}
+    const sh=el("div","sheet"); const f=el("form","form"); f.noValidate=true;
+    f.append(el("h2",null,"Анкета на «"+(v.title||"")+"»"),el("p","hint full","Работодатель увидит её в кабинете и получит уведомление. Ответит по твоему контакту."));
+    const fld=(lab,node,full)=>{const d=el("div","field"+(full?" full":""));d.append(el("label",null,lab),node);f.append(d);return node};
+    const inp=(val,max,ph)=>{const i=document.createElement("input");i.type="text";i.maxLength=max;i.value=val||"";if(ph)i.placeholder=ph;return i};
+    const name=fld("Имя",inp(pr.name,60,"Как к тебе обращаться")),age=fld("Возраст",inp(pr.age,2,"16"));age.inputMode="numeric";
+    const contact=fld("Контакт",inp(pr.contact||pr.tg,120,"@telegram или телефон"),true);
+    const msg=document.createElement("textarea");msg.maxLength=600;msg.placeholder="Пара слов о себе: когда можешь работать, опыт";msg.value=pr.about||"";fld("О себе",msg,true);
+    const err=el("p","err"); err.hidden=true; f.append(err);
+    const row=el("div","row"); const cancel=el("button","btn btn-ghost","Отмена"); cancel.type="button"; const send=el("button","btn btn-primary","Отправить анкету"); send.type="submit"; row.append(cancel,send); f.append(row);
+    sh.append(f); document.body.append(sh);
+    const close=()=>sh.remove(); cancel.onclick=close; sh.addEventListener("click",e=>{if(e.target===sh)close()});
+    f.addEventListener("submit",async e=>{ e.preventDefault();
+      const a=parseInt(age.value,10);
+      if(name.value.trim().length<2||contact.value.trim().length<3){err.textContent="Укажи имя и контакт.";err.hidden=false;return}
+      if(a&&a<(v.age_min||14)){err.textContent="На эту вакансию берут "+ageWord(v.age_min||14)+".";err.hidden=false;return}
+      send.disabled=true;
+      const {error}=await sb.rpc("apply",{vid:v.id,p_name:name.value.trim(),p_age:a||null,p_contact:contact.value.trim(),p_message:msg.value.trim()});
+      send.disabled=false;
+      if(error){err.textContent=/closed/.test(error.message)?"Вакансия уже закрыта.":/function|schema/.test(error.message)?"Анкеты скоро заработают. Пока откликнись по контакту.":"Не получилось отправить. Попробуй позже.";err.hidden=false;return}
+      try{pr.name=name.value.trim();if(a)pr.age=a;pr.contact=contact.value.trim();localStorage.setItem("nr-profile",JSON.stringify(pr))}catch(_){}
+      try{const h=JSON.parse(localStorage.getItem("nr-applied")||"[]").filter(x=>x.id!==v.id);h.unshift({id:v.id,t:v.title,c:v.city||(v.remote?"удалённо":""),at:Date.now(),form:1});localStorage.setItem("nr-applied",JSON.stringify(h.slice(0,50)))}catch(_){}
+      close(); toast("Анкета отправлена! Работодатель свяжется с тобой.") });
+  }
+
   /** Жалоба на вакансию. */
   function reportDialog(v){
     if(!sb){toast("Сайт не подключён к базе");return}
@@ -89,5 +121,5 @@
   // уходя со страницы — отправить изменения (избранное, отклики и т.д.)
   document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden"&&syncKey())syncPush()});
 
-  window.NR = {sb, el, toast, today, settings, contactLink, respondButton, reportDialog, botLink, copy, ageWord, expiryText, syncKey, syncPush, syncPull, syncBundle};
+  window.NR = {sb, el, toast, today, settings, contactLink, respondButton, applyButton, reportDialog, botLink, copy, ageWord, expiryText, syncKey, syncPush, syncPull, syncBundle};
 })();

@@ -75,7 +75,7 @@
   (async()=>{
     if(!sb){list.textContent="";list.append(el("div","empty","Сайт не подключён к базе."));return}
     settings=await NR.settings();
-    const {data,error}=await sb.from("events").select("*").gte("starts_at",new Date().toISOString()).order("starts_at").limit(100);
+    const {data:all,error}=await sb.from("events").select("*").gte("starts_at",new Date().toISOString()).order("starts_at").limit(150);const data=(all||[]).filter(x=>x.listed!==false);
     items=error?[]:data||[];
     const r=await sb.rpc("event_counts");(r.data||[]).forEach(x=>counts[x.event_id]=x.n);
     render();

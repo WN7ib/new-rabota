@@ -21,18 +21,29 @@
 .nums{display:flex;gap:18px;flex-wrap:wrap;margin:10px 0;color:var(--muted);font-size:14px}.nums b{color:var(--ink);font-size:18px;display:block}
 .acts{display:flex;gap:8px;flex-wrap:wrap}
 .addlink{display:flex;gap:8px;flex-wrap:wrap}.addlink input{flex:1 1 220px;min-width:0}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 4px}
+.me{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:space-between}
+.app h3{margin:0 0 2px;font-size:17px}.app .msg{white-space:pre-line;margin:8px 0}
+.st.new{background:var(--mark);color:var(--mark-ink)}.st.accepted{background:color-mix(in srgb,var(--good) 18%,transparent);color:var(--good)}
+.sgn{margin:8px 0 0;padding-left:18px}.sgn li{margin:4px 0}
+.badge{display:inline-block;min-width:18px;padding:0 6px;border-radius:999px;background:var(--danger);color:#fff;font-size:12px;margin-left:4px}
 </style>
 </head>
 <body>
 <header class="mininav"><div class="wrap"><a class="home" href="./"><img src="logo.png" alt="">New.работа</a><a href="./">← Вакансии</a></div></header>
 <main class="wrap page">
   <h1>Кабинет работодателя</h1>
-  <p class="lead">Здесь вакансии, которые ты разместил с этого телефона или по личной ссылке. Регистрация не нужна: доступ даёт ссылка, которую сайт показал после отправки вакансии.</p>
+  <div id="acc"></div>
+  <div class="tabs" id="tabs" hidden>
+    <button class="chip" type="button" data-t="vac" aria-pressed="true">Вакансии</button>
+    <button class="chip" type="button" data-t="apps">Анкеты</button>
+    <button class="chip" type="button" data-t="shifts">Смены и записи</button>
+  </div>
   <div class="cab" id="cab"></div>
   <div class="panel" style="margin-top:18px">
     <h2 style="margin-top:0">Открыть вакансию по ссылке</h2>
     <form class="addlink" id="addForm"><input id="addInput" type="text" placeholder="Вставь личную ссылку на вакансию" autocomplete="off"><button class="btn btn-primary" type="submit">Открыть</button></form>
-    <p class="hint">Ссылку потерял? Напиши нам через «О проекте» — проверим, что вакансия твоя, и пришлём новую.</p>
+    <p class="hint">Ссылку потерял? Войди через Telegram — все вакансии, привязанные к аккаунту, будут здесь. Или напиши нам через «О проекте».</p>
   </div>
   <p style="margin-top:20px"><a class="btn btn-mark" href="./#add">＋ Разместить ещё вакансию</a></p>
 </main>
@@ -52,10 +63,58 @@
   const fromHash=parse(location.hash); if(fromHash){remember(fromHash.id,fromHash.k);history.replaceState(null,"",location.pathname)}
   document.getElementById("addForm").addEventListener("submit",e=>{e.preventDefault();const p=parse(document.getElementById("addInput").value);if(!p){toast("Это не похоже на личную ссылку");return}remember(p.id,p.k);document.getElementById("addInput").value="";render()});
 
+  // ═════════ вход через Telegram ═════════
+  const acc=document.getElementById("acc"), tabsEl=document.getElementById("tabs");
+  let T=ls.get("nr-emp",""), ME=null, TAB=ls.get("nr-emp-tab","vac");
+  tabsEl.querySelectorAll("button").forEach(b=>b.onclick=()=>{TAB=b.dataset.t;ls.set("nr-emp-tab",TAB);render()});
+  function rnd(n){const a=new Uint8Array(n);crypto.getRandomValues(a);const c="ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";return Array.from(a,x=>c[x%c.length]).join("")}
+  async function login(btn){
+    const bot=(S.bot_username||"").replace(/^@/,"");
+    if(!bot){toast("Вход через Telegram скоро заработает");return}
+    const nonce=rnd(24);
+    const {error}=await sb.rpc("emp_login_start",{p_nonce:nonce});
+    if(error){toast(/function|schema/.test(error.message)?"Вход скоро заработает — модератор обновляет базу.":"Не получилось, попробуй ещё раз.");return}
+    const url="https://t.me/"+bot+"?start=login_"+nonce;
+    window.open(url,"_blank","noopener");
+    btn.disabled=true;btn.textContent="Жду подтверждения в Telegram…";
+    const hint=el("p","hint","Нажми «Старт» в боте. Если Telegram не открылся — ");const l=el("a",null,"открой ссылку");l.href=url;l.target="_blank";l.rel="noopener";hint.append(l,document.createTextNode("."));btn.after(hint);
+    for(let i=0;i<240;i++){await new Promise(r=>setTimeout(r,2500));
+      const {data}=await sb.rpc("emp_login_check",{p_nonce:nonce});
+      if(data){T=data;ls.set("nr-emp",T);
+        for(const it of ls.get("nr-my",[]))await sb.rpc("emp_claim",{t:T,vid:it.id,k:it.k}).then(()=>{},()=>{});
+        toast("Вошёл ✅");render();return}}
+    btn.disabled=false;btn.textContent="Войти через Telegram";hint.remove();toast("Время вышло, попробуй ещё раз");
+  }
+  async function account(){
+    acc.textContent="";
+    if(T){const {data}=await sb.rpc("emp_me",{t:T});ME=data&&data[0];if(!ME){T="";ls.set("nr-emp","")}}
+    if(!T){
+      const p=el("div","panel");p.append(el("h2",null,"Войти в кабинет"),el("p","hint","Через Telegram, без пароля: все вакансии, анкеты и смены — с любого устройства, а уведомления об откликах и отменах придут в бот."));
+      const b=el("button","btn btn-primary","Войти через Telegram");b.type="button";b.onclick=()=>login(b);p.append(b);
+      p.append(el("p","hint","Без входа здесь видны вакансии, размещённые с этого телефона или по личной ссылке."));acc.append(p);tabsEl.hidden=true;return false}
+    const box=el("div","panel me");const l=el("div");l.append(el("b",null,"👋 "+(ME.name||"Работодатель")+(ME.username?" (@"+ME.username+")":"")));
+    const ci=document.createElement("input");ci.type="text";ci.maxLength=60;ci.placeholder="Название компании";ci.value=ME.company||"";ci.style.marginTop="6px";
+    ci.onchange=()=>sb.rpc("emp_set_company",{t:T,p_company:ci.value}).then(()=>toast("Сохранено"));l.append(document.createElement("br"),ci);
+    const out=el("button","btn btn-ghost btn-sm","Выйти");out.type="button";out.onclick=async()=>{await sb.rpc("emp_logout",{t:T});T="";ls.set("nr-emp","");render()};
+    box.append(l,out);acc.append(box);tabsEl.hidden=false;
+    tabsEl.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.t===TAB)));
+    return true;
+  }
+
   async function render(){
     cab.textContent="";
-    const my=ls.get("nr-my",[]);
     if(!sb){cab.append(el("div","empty","Сайт не подключён к базе."));return}
+    const logged=await account();
+    if(logged&&TAB==="apps")return renderApps();
+    if(logged&&TAB==="shifts")return renderShifts();
+    if(logged){ // вакансии аккаунта: ключ управления берём из этого браузера или выпускаем новый
+      const {data:vs}=await sb.rpc("emp_vacancies",{t:T});
+      const my=ls.get("nr-my",[]);
+      for(const v of (vs||[])){if(!my.find(x=>x.id===v.id)){const {data:k}=await sb.rpc("emp_vacancy_key",{t:T,vid:v.id});if(k)remember(v.id,k,v.title)}}
+      const ids=new Set((vs||[]).map(v=>v.id));
+      ls.set("nr-my",ls.get("nr-my",[]).sort((a,b)=>(ids.has(b.id)?1:0)-(ids.has(a.id)?1:0)));
+    }
+    const my=ls.get("nr-my",[]);
     if(!my.length){const e=el("div","empty");e.append(el("h3",null,"Пока пусто"),el("p",null,"Разместишь вакансию — она появится здесь. Или вставь личную ссылку ниже."));cab.append(e);return}
     for(const it of my){
       const box=el("article","vac");cab.append(box);box.append(el("p","hint","Загружаю «"+(it.t||"вакансию")+"»…"));
@@ -89,6 +148,78 @@
         ol.append(el("b",null,"Заказы: "),document.createTextNode(os.map(o=>PROD[o.product]+" — "+OST[o.status]).join("; ")));box.append(ol);
         if(os.some(o=>o.status==="new"||o.status==="invoiced")&&S.pay_info){const pi=el("p","hint");pi.style.whiteSpace="pre-line";pi.textContent="Как оплатить: "+S.pay_info+"\nНомер заказа: "+os.find(o=>o.status!=="paid").id.slice(0,8);box.append(pi)}}
     }
+  }
+
+  // ═════════ анкеты ═════════
+  const AST={new:"новая",accepted:"принят",rejected:"отказ"};
+  async function renderApps(){
+    const {data,error}=await sb.rpc("emp_apps",{t:T});
+    if(error){cab.append(el("div","empty","Анкеты скоро заработают — модератор обновляет базу."));return}
+    if(!data||!data.length){const e=el("div","empty");e.append(el("h3",null,"Анкет пока нет"),el("p",null,"Когда соискатель нажмёт «📝 Отправить анкету» у твоей вакансии, она появится здесь, а уведомление придёт в Telegram."));cab.append(e);return}
+    for(const a of data){
+      const box=el("article","vac app");
+      box.append(el("span","st "+a.status,AST[a.status]||a.status),el("h3",null,a.name+(a.age?", "+a.age+" лет":"")),
+        el("div","where","на «"+a.vacancy_title+"» · "+new Date(a.created_at).toLocaleString("ru-RU",{day:"numeric",month:"long",hour:"2-digit",minute:"2-digit"})));
+      if(a.message)box.append(el("p","msg",a.message));
+      const acts=el("div","acts");const c=NR.contactLink(a.contact);
+      const cl=el(c.href?"a":"button","btn btn-sm btn-primary",c.href?c.label+": "+a.contact:"Скопировать контакт: "+a.contact);
+      if(c.href){cl.href=c.href;cl.target="_blank";cl.rel="noopener";cl.style.textDecoration="none"}else{cl.type="button";cl.onclick=()=>NR.copy(a.contact)}
+      acts.append(cl);
+      const st=(t,v)=>{const b=el("button","btn btn-sm btn-ghost",t);b.type="button";b.onclick=async()=>{await sb.rpc("emp_app_status",{t:T,aid:a.id,p_status:v});render()};acts.append(b)};
+      if(a.status!=="accepted")st("✅ Принять","accepted");if(a.status!=="rejected")st("✖ Отказать","rejected");
+      box.append(acts);cab.append(box);
+    }
+  }
+
+  // ═════════ смены ═════════
+  const when=d=>new Date(d).toLocaleString("ru-RU",{weekday:"short",day:"numeric",month:"long",hour:"2-digit",minute:"2-digit"});
+  async function renderShifts(){
+    const add=el("button","btn btn-primary","＋ Новая смена");add.type="button";add.onclick=()=>shiftForm(null);cab.append(add);
+    cab.append(el("p","hint","Создай смену и отправь людям ссылку: они записываются в боте, Неви напоминает им накануне и за 2 часа, а если кто-то отменит — сразу напишет тебе."));
+    const {data,error}=await sb.rpc("emp_events",{t:T});
+    if(error){cab.append(el("div","empty","Смены скоро заработают — модератор обновляет базу."));return}
+    const bot=(S.bot_username||"").replace(/^@/,"");
+    for(const e of (data||[])){
+      const past=new Date(e.starts_at)<new Date();
+      const box=el("article","vac");
+      box.append(el("span","st "+(past?"closed":"approved"),past?"прошла":e.n+(e.capacity?" из "+e.capacity:"")+" записались"),el("h3",null,e.title),
+        el("div","where",[when(e.starts_at),e.place,e.city].filter(Boolean).join(" · ")));
+      if(e.description)box.append(el("p","msg",e.description));
+      const acts=el("div","acts");
+      const btn=(t,cls,fn)=>{const b=el("button","btn btn-sm "+cls,t);b.type="button";b.onclick=fn;acts.append(b);return b};
+      if(bot&&!past)btn("🔗 Ссылка для записи","btn-primary",()=>NR.copy("https://t.me/"+bot+"?start=ev_"+e.id));
+      const list=el("ol","sgn");list.hidden=true;
+      btn("Кто записался ("+e.n+")","btn-ghost",async()=>{if(!list.hidden){list.hidden=true;return}list.textContent="";list.hidden=false;
+        const {data:ss}=await sb.rpc("emp_signups",{t:T,eid:e.id});
+        if(!ss||!ss.length){list.append(el("li",null,"Пока никого"));return}
+        for(const p of ss){const li=el("li");const c=NR.contactLink(p.contact);const a=el(c.href?"a":"span",null,p.contact);if(c.href){a.href=c.href;a.target="_blank";a.rel="noopener"}
+          li.append(document.createTextNode(p.name+(p.age?", "+p.age+" лет":"")+" — "),a);
+          const rm=el("button","btn btn-ghost btn-sm","убрать");rm.type="button";rm.style.marginLeft="6px";rm.onclick=async()=>{await sb.rpc("emp_signup_remove",{t:T,sid:p.id});li.remove()};li.append(rm);list.append(li)}});
+      if(!past)btn("Изменить","btn-ghost",()=>shiftForm(e));
+      box.append(acts,list);cab.append(box);
+    }
+  }
+  function shiftForm(e){
+    const sh=el("div","sheet"),f=el("form","form");f.noValidate=true;
+    f.append(el("h2",null,e?"Изменить смену":"Новая смена"));
+    const fld=(lab,node,full)=>{const d=el("div","field"+(full?" full":""));d.append(el("label",null,lab),node);f.append(d);return node};
+    const inp=(val,max,ph)=>{const i=document.createElement("input");i.type="text";i.maxLength=max;i.value=val||"";if(ph)i.placeholder=ph;return i};
+    const title=fld("Название",inp(e&&e.title,120,"Смена бариста, промо у ТЦ…"),true);
+    const at=document.createElement("input");at.type="datetime-local";
+    if(e){const d=new Date(e.starts_at);d.setMinutes(d.getMinutes()-d.getTimezoneOffset());at.value=d.toISOString().slice(0,16)}fld("Начало",at);
+    const cap=inp(e&&e.capacity,4,"не ограничено");cap.inputMode="numeric";fld("Сколько человек",cap);
+    const place=fld("Адрес",inp(e&&e.place,160,"ул. Ленина, 1, кафе «Ромашка»"),true),city=fld("Город",inp(e&&e.city,40,"Саратов"));
+    const desc=document.createElement("textarea");desc.maxLength=2000;desc.value=(e&&e.description)||"";desc.placeholder="Что делать, до скольки, что взять с собой, оплата";fld("Описание",desc,true);
+    const err=el("p","err");err.hidden=true;f.append(err);
+    const row=el("div","row");const c=el("button","btn btn-ghost","Отмена");c.type="button";c.onclick=()=>sh.remove();const s2=el("button","btn btn-primary","Сохранить");s2.type="submit";row.append(c,s2);f.append(row);
+    f.addEventListener("submit",async ev=>{ev.preventDefault();
+      if(title.value.trim().length<2||!at.value){err.textContent="Укажи название и время начала.";err.hidden=false;return}
+      const when2=new Date(at.value);if(when2<new Date()){err.textContent="Время уже прошло.";err.hidden=false;return}
+      s2.disabled=true;
+      const {error}=await sb.rpc("emp_event_save",{t:T,eid:e?e.id:null,p:{title:title.value.trim(),starts_at:when2.toISOString(),place:place.value.trim(),city:city.value.trim(),description:desc.value.trim(),capacity:parseInt(cap.value,10)||""}});
+      s2.disabled=false;if(error){err.textContent=/too many/.test(error.message)?"Слишком много смен за день.":"Не сохранилось, попробуй ещё раз.";err.hidden=false;return}
+      sh.remove();toast(e?"Сохранено":"Смена создана — скопируй ссылку для записи");render()});
+    sh.append(f);document.body.append(sh);sh.addEventListener("click",x=>{if(x.target===sh)sh.remove()});
   }
 
   const PROD={top7:"В топ на 7 дней",urgent:"Срочно + пост в канале",verify:"Значок «✓ проверен» на год",business:"Бизнес на месяц"};

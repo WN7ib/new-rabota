@@ -122,6 +122,16 @@
       "args": {
         "addr": "@Newrabotaa"
       }
+    },
+    {
+      "id": "2026-11-11-sql-7",
+      "title": "База: кабинет работодателя (вход через Telegram, анкеты, смены)",
+      "do": "sql",
+      "args": {
+        "files": [
+          "migration-7.sql"
+        ]
+      }
     }
   ]
 }
