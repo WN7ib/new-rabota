@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Согласие родителя · New.работа</title>
+<meta name="description" content="Согласие родителя на работу подростка 14–17 лет: заполни поля — готовый документ для печати или PDF.">
+<meta name="theme-color" content="#2F86F5">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="style.css?v=7">
+<style>
+.rs{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;margin-top:14px;align-items:start}
+@media (max-width:860px){.rs{grid-template-columns:minmax(0,1fr)}}
+.rs form{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.rs .full{grid-column:1/-1}
+.rs label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+.rs input,.rs textarea,.rs select{font:inherit;font-size:15px;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);width:100%;min-width:0}
+.rs textarea{min-height:76px;resize:vertical}
+.skills{display:flex;flex-wrap:wrap;gap:6px}
+.tips{background:var(--mark);color:var(--mark-ink);border-radius:var(--r);padding:12px 14px;display:flex;gap:12px;align-items:flex-start}
+.tips .ava{width:46px;height:46px;flex:none;background:#0A1224;border-radius:50%;padding:4px}
+.tips ul{margin:4px 0 0;padding-left:18px}
+.paper{background:#fff;color:#14202f;border-radius:6px;padding:28px 30px;box-shadow:0 6px 30px rgb(0 0 0 / .18);font-family:var(--f-body);line-height:1.45;position:sticky;top:12px}
+.paper h2{font-family:var(--f-display);font-size:22px;margin:0 0 2px;color:#14202f}
+.paper .sub{color:#4b5b70;font-size:14px}
+.paper h4{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#1F6FE0;margin:16px 0 4px;border-bottom:1px solid #dfe7f2;padding-bottom:3px}
+.paper p{margin:0;white-space:pre-line;font-size:14.5px}
+.paper .goal{font-weight:600;font-size:15.5px;margin-top:10px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+@media print{
+  body{background:#fff}.mininav,.foot,.no-print,.rs form,.tips,.bar,h1,.lead{display:none!important}
+  .rs{display:block;margin:0}.paper{box-shadow:none;padding:0;position:static}
+  @page{margin:16mm}
+}
+</style>
+</head>
+<body>
+<header class="mininav"><div class="wrap"><a class="home" href="./"><img src="logo.png" alt="">New.работа</a><a href="./">Вакансии →</a></div></header>
+<main class="wrap page wide">
+  <h1>Согласие родителя на работу</h1>
+  <p class="lead">Для подростков 14–17 лет. Заполни поля — справа готовый документ. Распечатай или сохрани в PDF, родитель подписывает и отдаёт работодателю. Данные никуда не отправляются.</p>
+  <div class="rs">
+    <div style="display:flex;flex-direction:column;gap:12px;min-width:0">
+      <div class="tips"><div class="ava" data-mascot></div><div><b>Что нужно знать</b><ul>
+        <li>В 14–15 лет: письменное согласие родителя <b>и</b> органа опеки, работа — лёгкая и в свободное от учёбы время (ст. 63 ТК РФ).</li>
+        <li>В 15 лет, если школу уже закончил, и в 16–17 лет согласие по закону не обязательно, но работодатели часто просят.</li>
+        <li>До 18 лет: сокращённый день, без ночных смен и сверхурочных (ст. 92, 94, 96 ТК РФ).</li>
+        <li>Это образец, не юридическая консультация. Работодатель может дать свою форму.</li></ul></div></div>
+      <form id="cf" autocomplete="on">
+        <label class="full">ФИО родителя (законного представителя)<input name="pn" maxlength="100" placeholder="Смирнова Ольга Петровна"></label>
+        <label>Паспорт родителя: серия и номер<input name="pp" maxlength="20" placeholder="6300 123456"></label>
+        <label>Кем и когда выдан<input name="pw" maxlength="120" placeholder="ГУ МВД по Саратовской обл., 01.02.2015"></label>
+        <label class="full">Адрес регистрации<input name="pa" maxlength="160" placeholder="г. Саратов, ул. …"></label>
+        <label>Кем приходится<select name="rel"><option>мать</option><option>отец</option><option>опекун</option><option>попечитель</option></select></label>
+        <label>Телефон родителя<input name="pt" maxlength="30" placeholder="+7 …"></label>
+        <label class="full">ФИО подростка<input name="cn" maxlength="100" placeholder="Смирнова Анна Игоревна"></label>
+        <label>Дата рождения подростка<input name="cb" type="date"></label>
+        <label>Город<input name="city" maxlength="40" placeholder="Саратов"></label>
+        <label class="full">Работодатель (организация или ИП)<input name="em" maxlength="140" placeholder="ООО «Кофейня», ИНН …"></label>
+        <label class="full">Работа<input name="job" maxlength="140" placeholder="помощник бариста"></label>
+        <label class="full">График<input name="sch" maxlength="140" placeholder="по выходным, не более 4 часов в день, с 10:00 до 14:00"></label>
+        <label>Срок<input name="term" maxlength="60" placeholder="с 15.11.2026 по 31.12.2026"></label>
+        <label>Дата документа<input name="dt" type="date"></label>
+      </form>
+    </div>
+    <div style="min-width:0">
+      <article class="paper" id="paper"></article>
+      <div class="bar no-print">
+        <button class="btn btn-primary" type="button" id="pdf">⬇ Сохранить в PDF / печать</button>
+        <button class="btn btn-ghost" type="button" id="clear">Очистить</button>
+      </div>
+      <p class="hint no-print">В окне печати выбери «Сохранить как PDF». Подпись — от руки на распечатке.</p>
+    </div>
+  </div>
+</main>
+<script src="config.js"></script>
+<script>
+(function(){
+  const f=document.getElementById("cf"),paper=document.getElementById("paper"),K="nr-consent";
+  try{const d=JSON.parse(localStorage.getItem(K)||"{}");for(const k in d){const i=f.elements[k];if(i)i.value=d[k]}}catch(_){}
+  if(!f.elements.dt.value)f.elements.dt.value=new Date().toISOString().slice(0,10);
+  const v=n=>(f.elements[n].value||"").trim(), line=(t,w)=>t?t:"_".repeat(w||24);
+  const ru=d=>{if(!d)return "«___» __________ 20__ г.";const x=new Date(d+"T12:00");return x.toLocaleDateString("ru-RU",{day:"numeric",month:"long",year:"numeric"})+" г."};
+  function age(){const b=v("cb");if(!b)return null;const d=new Date(b+"T12:00"),n=new Date();let a=n.getFullYear()-d.getFullYear();if(n<new Date(n.getFullYear(),d.getMonth(),d.getDate()))a--;return a}
+  function render(){
+    const a=age(),young=a!==null&&a<15;
+    paper.innerHTML="";
+    const h=(t,c)=>{const e=document.createElement(t);if(c)e.className=c;paper.append(e);return e};
+    h("h2").textContent="Согласие родителя (законного представителя)";
+    h("div","sub").textContent="на заключение трудового договора с несовершеннолетним";
+    const p=h("p");p.style.marginTop="16px";
+    p.textContent="Я, "+line(v("pn"),40)+", паспорт "+line(v("pp"),14)+", выдан "+line(v("pw"),30)+", зарегистрирован(а) по адресу: "+line(v("pa"),40)+
+      ", являясь законным представителем ("+v("rel")+") несовершеннолетнего(ей) "+line(v("cn"),40)+", "+(v("cb")?ru(v("cb")):"дата рождения ____________")+(a!==null?" ("+a+" лет)":"")+
+      ", даю согласие на заключение с ним (ней) трудового договора с работодателем "+line(v("em"),36)+" для выполнения работы: "+line(v("job"),30)+".";
+    const p2=h("p");p2.style.marginTop="10px";
+    p2.textContent="Условия: "+line(v("sch"),40)+"; срок: "+line(v("term"),24)+". Работа лёгкая, не причиняет вреда здоровью и не нарушает процесса обучения, выполняется в свободное от учёбы время, без ночных смен и сверхурочных работ, с соблюдением сокращённой продолжительности рабочего времени (ст. 63, 92, 94, 96 ТК РФ).";
+    const p3=h("p");p3.style.marginTop="10px";
+    p3.textContent="Согласие действует на указанный срок и может быть отозвано мной письменно. Контактный телефон: "+line(v("pt"),18)+".";
+    const p4=h("p");p4.style.marginTop="26px";
+    p4.textContent=(v("city")?"г. "+v("city")+", ":"")+ru(v("dt"))+"\n\n__________________ / "+(v("pn")?v("pn").split(/\s+/).map((w,i)=>i?w[0]+".":w).join(" "):"__________________")+"\n(подпись)";
+    if(young){const n=h("p");n.style.marginTop="18px";n.style.fontSize="13px";n.style.color="#8a4b00";n.textContent="Подростку меньше 15 лет: кроме этого согласия нужно согласие органа опеки и попечительства (ст. 63 ТК РФ). Его получает работодатель или родитель в опеке по месту жительства.";}
+    try{const d={};for(const e of f.elements)if(e.name)d[e.name]=e.value;localStorage.setItem(K,JSON.stringify(d))}catch(_){}
+  }
+  f.addEventListener("input",render);
+  document.getElementById("pdf").onclick=()=>window.print();
+  document.getElementById("clear").onclick=()=>{f.reset();try{localStorage.removeItem(K)}catch(_){}f.elements.dt.value=new Date().toISOString().slice(0,10);render()};
+  render();
+})();
+</script>
+<script src="mascot.js" defer></script>
+</body>
+</html>
