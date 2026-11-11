@@ -62,7 +62,7 @@
   act.append(share,rep);box.append(act);
   if(v.age_min<16)box.append(el("p","hint","Если тебе 14–15: понадобится согласие родителя и органа опеки. Как его оформить — в гиде подростку."));
   page.append(box);
-  // подсказка по Трудовому кодексу для несовершеннолетних (ст. 63, 92, 94, 96, 265 ТК РФ)
+  // подсказка по Трудовому кодексу для несовершеннолетних (ст. 63, 92, 94, 96, 265, 268 ТК РФ)
   if((v.age_min||16)<18){
     const tk=el("section","panel");tk.style.marginTop="16px";
     const young=(v.age_min||16)<16;
@@ -74,7 +74,7 @@
      young?"В 14–15 лет нужно письменное согласие родителя и органа опеки.":"Работодатель может попросить согласие родителя.",
      "Работа оформляется договором, оплата — не ниже, чем у взрослых за то же время работы."].filter(Boolean).forEach(t=>ul.append(el("li",null,t)));
     tk.append(ul);
-    const p=el("p","hint");p.append(document.createTextNode("Ст. 63, 92, 94, 96, 265 Трудового кодекса. "));const a=el("a",null,"Бланк согласия родителя →");a.href="consent.html";p.append(a);tk.append(p);
+    const p=el("p","hint");p.append(document.createTextNode("Ст. 63, 92, 94, 96, 265, 268 Трудового кодекса. "));const a=el("a",null,"Бланк согласия родителя →");a.href="consent.html";p.append(a);tk.append(p);
     page.append(tk);
   }
 
