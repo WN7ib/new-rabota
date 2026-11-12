@@ -142,6 +142,33 @@
           "migration-8.sql"
         ]
       }
+    },
+    {
+      "id": "2026-11-12-sql-9",
+      "title": "База: онлайн-оплата заказов продвижения (Platega)",
+      "do": "sql",
+      "args": {
+        "files": [
+          "migration-9.sql"
+        ]
+      }
+    },
+    {
+      "id": "2026-11-12-fn-pay",
+      "title": "Оплата на сайте: серверная функция pay (Platega, СБП и карта)",
+      "do": "fn_deploy",
+      "args": {
+        "slug": "pay",
+        "files": [
+          "supabase/functions/pay/index.ts"
+        ],
+        "verify_jwt": false,
+        "secrets": [
+          "PLATEGA_MERCHANT_ID",
+          "PLATEGA_SECRET"
+        ],
+        "secrets_how": "Ключи Platega для оплаты на сайте: зайди в личный кабинет Platega → Настройки → API, скопируй MerchantId и секретный ключ и отправь в личный бот Newi одной строкой: /platega MerchantId Секрет (сообщение я сразу удалю). Там же укажи адрес для уведомлений (Callback URL): https://htachxunemajeawnbccy.supabase.co/functions/v1/pay"
+      }
     }
   ]
 }

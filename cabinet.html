@@ -146,7 +146,11 @@
       const {data:os,error:oe}=await sb.rpc("my_orders",{vid:v.id,k:it.k});
       if(!oe&&os&&os.length){const ol=el("div","hint");ol.style.marginTop="8px";
         ol.append(el("b",null,"Заказы: "),document.createTextNode(os.map(o=>PROD[o.product]+" — "+OST[o.status]).join("; ")));box.append(ol);
-        if(os.some(o=>o.status==="new"||o.status==="invoiced")&&S.pay_info){const pi=el("p","hint");pi.style.whiteSpace="pre-line";pi.textContent="Как оплатить: "+S.pay_info+"\nНомер заказа: "+os.find(o=>o.status!=="paid").id.slice(0,8);box.append(pi)}}
+        const un=os.filter(o=>o.status==="new"||o.status==="invoiced");
+        for(const o of un){const pr=el("div","acts");pr.style.marginTop="6px";pr.append(el("span","hint","Заказ "+o.id.slice(0,8)+": "+PROD[o.product]+" — "+Number(o.price).toLocaleString("ru-RU")+" ₽ "));
+          const p1=el("button","btn btn-sm btn-primary","💳 Оплатить по СБП");p1.type="button";p1.onclick=()=>payNow(o,v.id,it.k,"sbp",p1);
+          const p2=el("button","btn btn-sm btn-ghost","Картой");p2.type="button";p2.onclick=()=>payNow(o,v.id,it.k,"card",p2);pr.append(p1,p2);box.append(pr)}
+        if(un.length&&S.pay_info){const pi=el("p","hint");pi.style.whiteSpace="pre-line";pi.textContent="Или по реквизитам: "+S.pay_info+"\nНомер заказа: "+un[0].id.slice(0,8);box.append(pi)}}
     }
   }
 
@@ -227,25 +231,49 @@
   }
 
   const PROD={top7:"В топ на 7 дней",urgent:"Срочно + пост в канале",verify:"Значок «✓ проверен» на год",business:"Бизнес на месяц"};
-  const OST={new:"принят, пришлём, как оплатить",invoiced:"ждёт оплаты",paid:"оплачен, включено ✅",cancelled:"отменён"};
+  const OST={new:"ждёт оплаты",invoiced:"ждёт оплаты",paid:"оплачен, включено ✅",cancelled:"отменён"};
   const PDEF={top7:199,urgent:299,verify:490,business:990};
   const PDESC={top7:"Вакансия закреплена вверху списка 7 дней.",urgent:"Закрепление на 3 дня, повторный пост в Telegram-канале и рассылка подписчикам города.",verify:"Проверим компанию и поставим значок доверия — на него откликаются чаще.",business:"Значок ✓ и закрепление на 14 дней, приоритетная проверка."};
   let S={};
+  // ═════════ онлайн-оплата (Platega, СБП/карта): ключи только на сервере, в функции pay ═════════
+  const PAY_FN=NR_CONFIG.supabaseUrl+"/functions/v1/pay";
+  async function payCall(body){
+    try{const r=await fetch(PAY_FN,{method:"POST",headers:{"Content-Type":"application/json",apikey:NR_CONFIG.supabaseKey,Authorization:"Bearer "+NR_CONFIG.supabaseKey},body:JSON.stringify(body)});
+      let j={};try{j=await r.json()}catch(e){}return {ok:r.ok,code:r.status,...j}}catch(e){return {ok:false,code:0,error:"net"}}
+  }
+  async function payNow(o,vid,k,method,btn){
+    if(btn)btn.disabled=true;
+    const r=await payCall({action:"create",order:o.id,vid,k,method});
+    if(btn)btn.disabled=false;
+    if(r.ok&&r.url){ls.set("nr-pay",{order:o.id,vid,k,at:Date.now()});location.href=r.url;return}
+    if(r.error==="already_paid"){toast("Заказ уже оплачен ✅");render();return}
+    if(r.error==="not_configured"||r.error==="net"||(r.code===404&&r.error!=="not_found"))toast(S.pay_info?"Онлайн-оплата скоро заработает. Пока — по реквизитам ниже.":"Онлайн-оплата скоро заработает. Мы пришлём, как оплатить.");
+    else toast("Не получилось открыть оплату, попробуй ещё раз или выбери другой способ.");
+  }
+  // вернулись со страницы оплаты: сверяю заказ с Platega (если уведомление ещё не дошло)
+  (async()=>{const m=location.hash.match(/(paid|payfail)=([0-9a-f-]{36})/i);if(!m)return;history.replaceState(null,"",location.pathname);
+    const pend=ls.get("nr-pay",null);if(m[1]==="payfail"){toast("Оплата не прошла. Можно попробовать ещё раз.");return}
+    if(!pend||pend.order!==m[2]){toast("Спасибо! Проверяем оплату — услуга включится сама.");return}
+    toast("Проверяем оплату…");
+    for(let i=0;i<6;i++){const r=await payCall({action:"check",order:pend.order,vid:pend.vid,k:pend.k});
+      if(r.status==="paid"){ls.set("nr-pay",null);toast("Оплачено ✅ Услуга включилась.");render();return}
+      await new Promise(x=>setTimeout(x,5000))}
+    toast("Платёж ещё обрабатывается. Услуга включится сама, как только банк подтвердит.");render()})();
   function promote(v,k){
     const sh=el("div","sheet"),f=el("form","form");f.noValidate=true;
-    f.append(el("h2",null,"Продвинуть «"+v.title+"»"),el("p","hint full","Выбери услугу. После заказа пришлём, как оплатить, а после оплаты услуга включится сама."));
+    f.append(el("h2",null,"Продвинуть «"+v.title+"»"),el("p","hint full","Выбери услугу. Оплата по СБП или картой сразу после заказа, услуга включится сама."));
     let pick="top7";const list=el("div","full");list.style.cssText="display:flex;flex-direction:column;gap:8px";
     Object.keys(PROD).forEach(p=>{const price=(S.prices&&S.prices[p]!=null)?S.prices[p]:PDEF[p];const lab=el("label","check");lab.style.alignItems="flex-start";
       const r=document.createElement("input");r.type="radio";r.name="prod";r.value=p;r.checked=p===pick;r.onchange=()=>pick=p;
       const t=el("span");t.append(el("b",null,PROD[p]+" — "+price.toLocaleString("ru-RU")+" ₽"),document.createElement("br"),el("small",null,PDESC[p]));lab.append(r,t);list.append(lab)});
     f.append(list);
-    const d=el("div","field full");const ci=document.createElement("input");ci.maxLength=120;ci.placeholder="@telegram, телефон или почта";ci.value=v.contact||"";d.append(el("label",null,"Куда прислать, как оплатить"),ci);f.append(d);
+    const d=el("div","field full");const ci=document.createElement("input");ci.maxLength=120;ci.placeholder="@telegram, телефон или почта";ci.value=v.contact||"";d.append(el("label",null,"Контакт для чека и связи"),ci);f.append(d);
     const err=el("p","err");err.hidden=true;f.append(err);
     const row=el("div","row");const c=el("button","btn btn-ghost","Отмена");c.type="button";c.onclick=()=>sh.remove();const s=el("button","btn btn-primary","Заказать");s.type="submit";row.append(c,s);f.append(row);
     f.addEventListener("submit",async e=>{e.preventDefault();if(ci.value.trim().length<3){err.textContent="Укажи контакт.";err.hidden=false;return}
       s.disabled=true;const {data,error}=await sb.rpc("order_create",{vid:v.id,k,p_product:pick,p_contact:ci.value.trim()});s.disabled=false;
       if(error){err.textContent=/too many/.test(error.message)?"У этой вакансии уже есть неоплаченные заказы.":/function|schema/.test(error.message)?"Заказы скоро заработают — модератор обновляет сайт.":"Не получилось, попробуй ещё раз.";err.hidden=false;return}
-      sh.remove();toast("Заказ принят! Номер "+data[0].id.slice(0,8)+". Пришлём, как оплатить.");render()});
+      sh.remove();toast("Заказ принят! Номер "+data[0].id.slice(0,8)+". Оплатить можно ниже, в карточке вакансии.");render()});
     sh.append(f);document.body.append(sh);sh.addEventListener("click",x=>{if(x.target===sh)sh.remove()});
   }
 
