@@ -1,0 +1,25 @@
+name: verify
+
+# Подтверждение сайта в Яндекс.Вебмастере / Google: телефон кладёт код в настройки, здесь он вписывается в index.html.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "41 * * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  meta:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node tools/verify.mjs
+      - name: Сохранить
+        run: |
+          if git diff --quiet -- index.html; then echo "без изменений"; exit 0; fi
+          git config user.name "new-rabota-bot"; git config user.email "actions@users.noreply.github.com"
+          git add index.html && git commit -m "Код подтверждения поисковика" && git push

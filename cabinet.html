@@ -199,10 +199,21 @@
         for(const p of ss){const li=el("li");const c=NR.contactLink(p.contact);const a=el(c.href?"a":"span",null,p.contact);if(c.href){a.href=c.href;a.target="_blank";a.rel="noopener"}
           const res=p.status==="reserve";
           li.append(el("b",null,res?"🕓 резерв · ":"✅ "),document.createTextNode(p.name+(p.age?", "+p.age+" лет":"")+" — "),a);
+          // надёжность: сколько смен отработал у всех работодателей и неявки (без чужих личных данных)
+          if(p.reliable)li.append(el("span","st approved"," ✓ надёжный"));
+          if(p.came||p.missed)li.append(el("span","hint"," · смен: "+(p.came||0)+(p.missed?" · неявок: "+p.missed:"")));
+          if(past){
+            // после смены: отметить явку — из этого складывается значок «✓ надёжный»
+            const mk=(t,v)=>{const b=el("button","btn btn-sm "+(p.attended===v?"btn-primary":"btn-ghost"),t);b.type="button";b.style.marginLeft="6px";
+              b.onclick=async()=>{const {error}=await sb.rpc("emp_mark",{t:T,sid:p.id,came:v});if(error){toast("Отметки заработают после обновления базы");return}toast(v?"Отмечено: пришёл":"Отмечено: не пришёл — бот мягко напомнит предупреждать заранее");render()};return b};
+            li.append(mk("пришёл",true),mk("не пришёл",false));
+          }else{
           const sw=el("button","btn btn-ghost btn-sm",res?"сделать основным":"в резерв");sw.type="button";sw.style.marginLeft="6px";
           sw.onclick=async()=>{const {error}=await sb.rpc("emp_signup_status",{t:T,sid:p.id,p_status:res?"main":"reserve"});if(error){toast("Резерв заработает после обновления базы");return}render()};
-          const rm=el("button","btn btn-ghost btn-sm","убрать");rm.type="button";rm.style.marginLeft="6px";rm.onclick=async()=>{await sb.rpc("emp_signup_remove",{t:T,sid:p.id});li.remove()};li.append(sw,rm);list.append(li)}
-        list.append(el("li","hint","Мест нет — новые попадают в резерв. Если основной отменит запись, бот сам предложит место первому из резерва."))});
+          const rm=el("button","btn btn-ghost btn-sm","убрать");rm.type="button";rm.style.marginLeft="6px";rm.onclick=async()=>{await sb.rpc("emp_signup_remove",{t:T,sid:p.id});li.remove()};li.append(sw,rm)}
+          list.append(li)}
+        if(past)list.append(el("li","hint","Отметь, кто пришёл: три смены подряд без неявок — значок «✓ надёжный», такие люди первыми получают место из резерва. Неявка не бан — просто ниже в очереди."));
+        else list.append(el("li","hint","Мест нет — новые попадают в резерв. Если основной отменит запись, бот сам предложит место первому из резерва (надёжным — первыми)."))});
       if(!past)btn("Изменить","btn-ghost",()=>shiftForm(e));
       box.append(acts,list);cab.append(box);
     }
