@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>New.работа — мини-приложение</title>
+<meta name="robots" content="noindex">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" type="image/png" href="favicon.png">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+/* Цвета берутся из темы Telegram (светлая/тёмная), снаружи Telegram — свои */
+:root{
+  --bg:var(--tg-theme-bg-color,#fff);--bg2:var(--tg-theme-secondary-bg-color,#f1f4f9);
+  --tx:var(--tg-theme-text-color,#17202e);--hint:var(--tg-theme-hint-color,#76808f);
+  --link:var(--tg-theme-link-color,#2F86F5);--btn:var(--tg-theme-button-color,#2F86F5);
+  --btx:var(--tg-theme-button-text-color,#fff);--card:var(--tg-theme-section-bg-color,var(--bg));
+  --sep:color-mix(in srgb,var(--hint) 25%,transparent);
+}
+@media (prefers-color-scheme:dark){:root:not(.tg){--bg:#17212b;--bg2:#0e1621;--tx:#f5f5f5;--hint:#8a97a6;--card:#17212b}}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg2);color:var(--tx);font:15px/1.4 -apple-system,system-ui,"Segoe UI",Roboto,sans-serif;-webkit-tap-highlight-color:transparent}
+button,input{font:inherit;color:inherit}
+.top{position:sticky;top:0;z-index:5;background:var(--bg);padding:10px 12px 8px;border-bottom:1px solid var(--sep)}
+.row{display:flex;gap:8px}
+.in{flex:1;min-width:0;border:0;border-radius:10px;background:var(--bg2);padding:9px 12px;outline:none}
+.in::placeholder{color:var(--hint)}
+.chips{display:flex;gap:6px;overflow-x:auto;padding-top:8px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;border:1px solid var(--sep);background:transparent;border-radius:16px;padding:5px 11px;font-size:14px;cursor:pointer;white-space:nowrap}
+.chip.on{background:var(--btn);color:var(--btx);border-color:var(--btn)}
+.status{color:var(--hint);font-size:13px;padding:8px 14px 0}
+.list{padding:8px 10px 90px;display:flex;flex-direction:column;gap:8px}
+.card{background:var(--card);border-radius:14px;padding:12px 14px;cursor:pointer}
+.card h3{margin:0 0 2px;font-size:16px;line-height:1.3}
+.where{color:var(--hint);font-size:13px}
+.pay{font-weight:600;margin-top:4px}
+.tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.t{font-size:12px;border-radius:8px;padding:2px 7px;background:var(--bg2);color:var(--hint)}
+.t.ok{color:#1f9d55}.t.pin{color:#d97706}
+.empty{text-align:center;color:var(--hint);padding:40px 20px}
+.detail{padding:12px 14px 100px;background:var(--bg);min-height:100vh}
+.detail h2{margin:4px 0;font-size:20px;line-height:1.25}
+.detail .desc{white-space:pre-wrap;margin:12px 0}
+.box{background:var(--bg2);border-radius:12px;padding:10px 12px;margin:10px 0;font-size:14px}
+.box b{display:block;margin-bottom:4px}
+.box ul{margin:4px 0 0;padding-left:18px}
+.btn{display:block;width:100%;border:0;border-radius:12px;padding:12px;margin-top:8px;background:var(--btn);color:var(--btx);font-weight:600;cursor:pointer;text-align:center;text-decoration:none}
+.btn.ghost{background:var(--bg2);color:var(--link)}
+.foot{text-align:center;color:var(--hint);font-size:13px;padding:6px 0 20px}
+.foot a{color:var(--link)}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div id="listView">
+  <div class="top">
+    <div class="row">
+      <input class="in" id="q" type="search" placeholder="Курьер, кафе, промоутер…" enterkeyhint="search">
+      <input class="in" id="city" type="text" placeholder="Город" style="max-width:38%">
+    </div>
+    <div class="chips" id="chips"></div>
+  </div>
+  <div class="status" id="status">Загружаю вакансии…</div>
+  <div class="list" id="list"></div>
+  <div class="foot">Работодатель? <a href="#" id="addLink">Разместить вакансию</a> · <a href="#" id="siteLink">Сайт</a></div>
+</div>
+<div id="detailView" class="detail" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+(function(){
+  const tg=window.Telegram&&Telegram.WebApp&&Telegram.WebApp.initData!==undefined?Telegram.WebApp:null;
+  const inTg=!!(tg&&tg.platform&&tg.platform!=="unknown");
+  if(inTg){document.documentElement.classList.add("tg");tg.ready();tg.expand();try{tg.setHeaderColor("bg_color");tg.setBackgroundColor("secondary_bg_color")}catch(_){}}
+  const {sb,el,today}=window.NR;
+  const SITE=new URL(".",location.href).href;
+  const $=s=>document.getElementById(s);
+  const norm=s=>(s||"").toString().toLowerCase().replace(/ё/g,"е").trim();
+  const haptic=t=>{try{tg&&tg.HapticFeedback.selectionChanged()}catch(_){}};
+
+  // ── хранилище: облако Telegram (видно на всех устройствах человека), иначе браузер ──
+  const store={
+    get(k){return new Promise(res=>{
+      if(inTg&&tg.CloudStorage&&tg.isVersionAtLeast&&tg.isVersionAtLeast("6.9")){try{tg.CloudStorage.getItem(k,(e,v)=>res(e?null:v||null));return}catch(_){}}
+      try{res(localStorage.getItem("nr-tg-"+k))}catch(_){res(null)}})},
+    set(k,v){
+      if(inTg&&tg.CloudStorage&&tg.isVersionAtLeast&&tg.isVersionAtLeast("6.9")){try{tg.CloudStorage.setItem(k,v,()=>{})}catch(_){}}
+      try{localStorage.setItem("nr-tg-"+k,v)}catch(_){}}
+  };
+
+  const S={items:[],q:"",city:"",age:0,remote:false,fav:false,favs:new Set(),ready:false};
+  const AGES=[14,15,16,17,18];
+
+  function chips(){
+    const c=$("chips");c.textContent="";
+    const add=(label,on,fn)=>{const b=el("button","chip"+(on?" on":""),label);b.type="button";b.onclick=()=>{haptic();fn();save();chips();render()};c.append(b)};
+    AGES.forEach(a=>add(a===18?"мне 18+":"мне "+a,S.age===a,()=>S.age=S.age===a?0:a));
+    add("🏠 Удалённо",S.remote,()=>S.remote=!S.remote);
+    add("★ Избранное"+(S.favs.size?" "+S.favs.size:""),S.fav,()=>S.fav=!S.fav);
+  }
+  function save(){store.set("age",String(S.age||""));store.set("city",S.city);store.set("remote",S.remote?"1":"");store.set("favs",[...S.favs].slice(-80).join(","))}
+
+  function filtered(){
+    const q=norm(S.q),c=norm(S.city);
+    return S.items.filter(v=>{
+      if(S.fav&&!S.favs.has(String(v.id)))return false;
+      if(S.age&&(+v.age_min||14)>S.age)return false;
+      if(S.remote&&!v.remote)return false;
+      if(c&&!v.remote&&!norm(v.city).includes(c))return false;
+      if(q){const h=norm([v.title,v.company,v.description,v.city,v.type].join(" "));if(!q.split(/\s+/).every(w=>h.includes(w)))return false}
+      return true;
+    }).sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0));
+  }
+  const word=n=>{const m=n%10,h=n%100;return n+" "+(m===1&&h!==11?"вакансия":m>=2&&m<=4&&(h<12||h>14)?"вакансии":"вакансий")};
+
+  function tags(v){
+    const t=el("div","tags");
+    if(v.pinned)t.append(el("span","t pin","📌 закреплена"));
+    if(v.verified)t.append(el("span","t ok","✓ проверен"));
+    t.append(el("span","t","с "+(v.age_min||14)+" лет"),el("span","t",v.type||"Подработка"));
+    if(v.remote)t.append(el("span","t","удалённо"));
+    if(v.expires_at)t.append(el("span","t",NR.expiryText(v.expires_at)));
+    return t;
+  }
+  function render(){
+    const list=$("list");list.textContent="";
+    if(!S.ready)return;
+    const items=filtered();
+    $("status").textContent=S.items.length?word(items.length)+(S.city?" · "+S.city:""):"";
+    if(!items.length){
+      const e=el("div","empty");
+      e.append(el("div",null,S.items.length?"Ничего не нашлось. Убери часть фильтров или попробуй другой город.":"Вакансий пока нет — загляни позже."));
+      list.append(e);return;
+    }
+    items.slice(0,200).forEach(v=>{
+      const c=el("div","card");
+      c.append(el("h3",null,v.title||"Без названия"),el("div","where",[v.company,v.remote&&!v.city?"Удалённо":v.city].filter(Boolean).join(" · ")),el("div","pay",v.pay||"по договорённости"),tags(v));
+      c.onclick=()=>open(v);
+      list.append(c);
+    });
+  }
+
+  // ── подсказка по ТК РФ для 14–17 лет ──
+  function lawBox(v){
+    const a=+v.age_min||14; if(a>=18)return null;
+    const b=el("div","box");b.append(el("b",null,"⚖️ Если тебе 14–17 лет (ТК РФ)"));
+    const ul=el("ul");
+    ["С 14 лет — лёгкая работа в свободное от учёбы время, с письменного согласия родителя (ст. 63).",
+     "В неделю: до 16 лет — не больше 24 ч, 16–17 лет — не больше 35 ч (ст. 92).",
+     "В день: 14–15 лет — до 4 ч, 15–16 — до 5 ч, 16–17 — до 7 ч; в дни учёбы — до 2,5 ч (до 16 лет) и до 4 ч (16–17) (ст. 94).",
+     "Нельзя: ночью с 22 до 6, сверхурочно, в выходные и в командировках (ст. 96, 268), на вредной и опасной работе (ст. 265)."
+    ].forEach(s=>ul.append(el("li",null,s)));
+    b.append(ul);
+    const l=el("a",null,"Согласие родителей — бланк");l.href="#";l.style.color="var(--link)";l.onclick=e=>{e.preventDefault();go(SITE+"consent.html")};
+    b.append(l);return b;
+  }
+  function go(url){
+    if(inTg){ if(/^https:\/\/t\.me\//.test(url))tg.openTelegramLink(url); else tg.openLink(url) }
+    else window.open(url,"_blank","noopener");
+  }
+  function respond(v){
+    const c=NR.contactLink(v.contact);
+    if(sb&&v.id)sb.rpc("vacancy_click",{vid:v.id}).then(()=>{},()=>{});
+    if(c.href&&/^https|^mailto/.test(c.href))go(c.href);
+    else if(c.href&&c.href.startsWith("tel:"))location.href=c.href;
+    if(c.copy)NR.copy(c.copy);
+  }
+
+  let cur=null;
+  function open(v){
+    cur=v;haptic();
+    const d=$("detailView");d.textContent="";
+    d.append(el("h2",null,v.title||"Без названия"),el("div","where",[v.company,v.remote&&!v.city?"Удалённо":v.city].filter(Boolean).join(" · ")),el("div","pay",v.pay||"по договорённости"),tags(v));
+    if(v.description)d.append(el("div","desc",v.description));
+    const ct=el("div","box");ct.append(el("b",null,"Как откликнуться"),el("div",null,v.contact||"контакт не указан"));d.append(ct);
+    const law=lawBox(v);if(law)d.append(law);
+    const sh=el("div","box");sh.append(el("b",null,"🛡 Осторожно"),el("div",null,"Честный работодатель не просит денег за обучение или форму,, не просит оформить на себя карту или сим-карту и не платит «только наличными курьером». Сомневаешься — пожалуйся на сайте."));d.append(sh);
+    const fav=S.favs.has(String(v.id));
+    const bf=el("button","btn ghost",fav?"★ В избранном":"☆ В избранное");bf.type="button";
+    bf.onclick=()=>{const id=String(v.id);S.favs.has(id)?S.favs.delete(id):S.favs.add(id);save();chips();open(v)};
+    const bs=el("button","btn ghost","↗ Поделиться с другом");bs.type="button";
+    bs.onclick=()=>go("https://t.me/share/url?url="+encodeURIComponent(SITE+"vacancy.html?id="+v.id)+"&text="+encodeURIComponent(v.title||""));
+    const bw=el("button","btn ghost",v.employer_id?"📝 Анкета и подробности на сайте":"Открыть на сайте");bw.type="button";
+    bw.onclick=()=>go(SITE+"vacancy.html?id="+encodeURIComponent(v.id));
+    d.append(bf,bs,bw);
+    if(!inTg){const br=el("button","btn","✉ Откликнуться");br.type="button";br.onclick=()=>respond(v);d.prepend(br);const bb=el("button","btn ghost","← Назад");bb.type="button";bb.onclick=close;d.prepend(bb)}
+    $("listView").hidden=true;d.hidden=false;window.scrollTo(0,0);
+    if(inTg){tg.BackButton.show();tg.MainButton.setText("✉ Откликнуться");tg.MainButton.show()}
+  }
+  function close(){
+    cur=null;$("detailView").hidden=true;$("listView").hidden=false;
+    if(inTg){tg.BackButton.hide();tg.MainButton.hide()}
+  }
+  if(inTg){tg.BackButton.onClick(close);tg.MainButton.onClick(()=>{if(cur)respond(cur)})}
+
+  let qt;$("q").oninput=e=>{clearTimeout(qt);qt=setTimeout(()=>{S.q=e.target.value;render()},200)};
+  $("city").onchange=e=>{S.city=e.target.value.trim();save();render()};
+  $("city").oninput=e=>{clearTimeout(qt);qt=setTimeout(()=>{S.city=e.target.value.trim();render()},300)};
+  $("addLink").onclick=e=>{e.preventDefault();go(SITE+"#add")};
+  $("siteLink").onclick=e=>{e.preventDefault();go(SITE)};
+
+  async function load(){
+    const [age,city,remote,favs]=await Promise.all(["age","city","remote","favs"].map(k=>store.get(k)));
+    S.age=+age||0;S.remote=remote==="1";S.favs=new Set((favs||"").split(",").filter(Boolean));
+    // город из ссылки бота: t.me/бот?startapp=city_Москва или tg.html?city=…
+    const sp=(inTg&&tg.initDataUnsafe&&tg.initDataUnsafe.start_param)||"";
+    const urlCity=new URLSearchParams(location.search).get("city")||(sp.startsWith("city_")?decodeURIComponent(sp.slice(5)).replace(/_/g," "):"");
+    S.city=urlCity||city||"";$("city").value=S.city;
+    chips();
+    if(!sb){S.ready=true;$("status").textContent="Сайт не подключён к базе";return}
+    const base="id,created_at,title,company,city,type,age_min,pay,remote,description,contact";
+    const q=cols=>sb.from("vacancies").select(cols).eq("status","approved").or("expires_at.is.null,expires_at.gte."+today()).order("created_at",{ascending:false}).limit(500);
+    let {data,error}=await q(base+",pinned,pinned_until,verified,expires_at,employer_id");
+    if(error)({data,error}=await q(base+",pinned,verified,expires_at"));
+    if(error)({data,error}=await sb.from("vacancies").select(base).eq("status","approved").order("created_at",{ascending:false}).limit(500));
+    S.ready=true;
+    if(error){$("status").textContent="Вакансии сейчас недоступны. Попробуй позже.";return}
+    S.items=(data||[]).map(v=>{if(v.pinned&&v.pinned_until&&new Date(v.pinned_until)<new Date())v.pinned=false;return v});
+    render();
+    // открыть конкретную вакансию: startapp=v_<id>
+    if(sp.startsWith("v_")){const v=S.items.find(x=>String(x.id)===sp.slice(2));if(v)open(v)}
+  }
+  load();
+})();
+</script>
+</body>
+</html>
