@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<title>Карта вакансий · New.работа</title>
-<meta name="description" content="Карта вакансий для молодёжи от 14 лет: где сейчас есть работа и подработка по городам России.">
+<title>Карта вакансий и смен · New.работа</title>
+<meta name="description" content="Карта вакансий, смен и мероприятий для молодёжи от 14 лет: что есть рядом с тобой, по городам России.">
 <meta name="theme-color" content="#2F86F5">
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -17,15 +17,27 @@
 .pin{background:var(--accent);color:var(--accent-ink);border-radius:999px;font:600 13px var(--f-body);display:grid;place-items:center;border:2px solid #fff;box-shadow:0 2px 8px rgb(0 0 0 / .3)}
 .leaflet-popup-content{font:14px var(--f-body);margin:12px 14px}
 .leaflet-popup-content a.mini{margin-top:6px}
-.cities{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+.cities,.tools{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+.pin.ev{background:var(--good);color:#fff}
+.me{width:18px;height:18px;border-radius:50%;background:var(--danger);border:3px solid #fff;box-shadow:0 0 0 2px var(--danger)}
+.near{margin-top:14px;display:grid;gap:8px}
+.near a{display:flex;justify-content:space-between;gap:12px;padding:10px 14px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);color:var(--ink);text-decoration:none}
+.near small{color:var(--muted)}
 </style>
 </head>
 <body>
 <header class="mininav"><div class="wrap"><a class="home" href="./"><img src="logo.png" alt="">New.работа</a><a href="./">Списком →</a></div></header>
 <main class="wrap page wide">
-  <h1>Карта вакансий</h1>
+  <h1>Карта вакансий и смен</h1>
   <p class="lead" id="sum">Загружаю вакансии…</p>
-  <div id="map" role="region" aria-label="Карта вакансий"></div>
+  <div class="tools" id="tools">
+    <button class="chip" type="button" data-show="all" aria-pressed="true">всё</button>
+    <button class="chip" type="button" data-show="vac" aria-pressed="false">вакансии</button>
+    <button class="chip" type="button" data-show="ev" aria-pressed="false">смены и мероприятия</button>
+    <button class="chip" type="button" id="nearBtn">📍 Рядом со мной</button>
+  </div>
+  <div class="near" id="near" hidden></div>
+  <div id="map" role="region" aria-label="Карта вакансий и смен"></div>
   <div class="cities" id="cities"></div>
 </main>
 <footer class="foot"><div class="wrap"><span>© 2026 New.работа<span id="support"></span></span><span>Карта © участники OpenStreetMap</span></div></footer>
@@ -44,6 +56,68 @@
   const map=hasMap?L.map("map",{scrollWheelZoom:false}).setView([52.5,47],5):null;
   if(hasMap)L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:17,attribution:"© OpenStreetMap"}).addTo(map);
   else document.getElementById("map").hidden=true;
+  const word=(n,a,b,c)=>n%10===1&&n%100!==11?a:n%10>=2&&n%10<=4&&(n%100<10||n%100>=20)?b:c;
+  const coord=k=>C[k]||C[k.split(/[ ,(]/)[0]];
+  // расстояние по прямой, км
+  const km=(a,b)=>{const r=Math.PI/180,d1=(b[0]-a[0])*r,d2=(b[1]-a[1])*r,x=Math.sin(d1/2)**2+Math.cos(a[0]*r)*Math.cos(b[0]*r)*Math.sin(d2/2)**2;return 6371*2*Math.asin(Math.sqrt(x))};
+  const fmt=d=>new Date(d).toLocaleString("ru-RU",{day:"numeric",month:"long",hour:"2-digit",minute:"2-digit"});
+  const by={};let remote=0,unknown=0,show="all",me=null;
+  const group=c=>{const k=norm(c);return by[k]=by[k]||{key:k,name:c,vac:[],ev:[],c:coord(k)}};
+  const layerV=hasMap?L.layerGroup().addTo(map):null,layerE=hasMap?L.layerGroup().addTo(map):null;
+  function box(g,what){
+    const d=document.createElement("div");
+    if(what==="vac"){
+      const n=g.vac.length;d.append(el("b",null,g.name+": "+n+" "+word(n,"вакансия","вакансии","вакансий")));
+      g.vac.slice(0,6).forEach(v=>{const a=el("a","mini");a.href="vacancy.html?id="+v.id;a.append(el("b",null,v.title),el("span",null,[v.pay||"по договорённости","с "+v.age_min+" лет"].join(" · ")));d.append(a)});
+      if(n>6){const a=el("a",null,"Все вакансии города →");a.href="./?city="+encodeURIComponent(g.name);d.append(a)}
+    }else{
+      const n=g.ev.length;d.append(el("b",null,g.name+": "+n+" "+word(n,"смена или событие","смены и события","смен и событий")));
+      g.ev.slice(0,6).forEach(e=>{const a=el("a","mini");a.href="events.html#e-"+e.id;a.append(el("b",null,e.title),el("span",null,[e.kind,fmt(e.starts_at),e.place].filter(Boolean).join(" · ")));d.append(a)});
+      if(n>6){const a=el("a",null,"Все мероприятия →");a.href="events.html";d.append(a)}
+    }
+    return d;
+  }
+  function pin(g,what){
+    const n=g[what].length,sz=Math.min(54,26+n*3),c=what==="ev"&&g.vac.length&&show==="all"?[g.c[0]-0.04,g.c[1]+0.06]:g.c;
+    return L.marker(c,{icon:L.divIcon({className:"",html:'<div class="pin'+(what==="ev"?" ev":"")+'" style="width:'+sz+'px;height:'+sz+'px">'+n+'</div>',iconSize:[sz,sz]}),title:g.name}).bindPopup(box(g,what));
+  }
+  function draw(){
+    if(!hasMap)return;
+    layerV.clearLayers();layerE.clearLayers();
+    for(const g of Object.values(by)){if(!g.c)continue;
+      if(show!=="ev"&&g.vac.length)pin(g,"vac").addTo(layerV);
+      if(show!=="vac"&&g.ev.length)pin(g,"ev").addTo(layerE)}
+  }
+  function fit(){
+    if(!hasMap)return;
+    const pts=Object.values(by).filter(g=>g.c&&(show!=="ev"&&g.vac.length||show!=="vac"&&g.ev.length)).map(g=>g.c);
+    if(me){const near=pts.slice().sort((a,b)=>km(me,a)-km(me,b)).slice(0,3);map.fitBounds([me,...near],{padding:[40,40],maxZoom:10});return}
+    if(pts.length>1)map.fitBounds(pts,{padding:[40,40],maxZoom:8});else if(pts.length===1)map.setView(pts[0],9);
+  }
+  function nearList(){
+    const box=document.getElementById("near");box.textContent="";box.hidden=false;
+    const gs=Object.values(by).filter(g=>g.c&&(show!=="ev"&&g.vac.length||show!=="vac"&&g.ev.length)).map(g=>({g,d:km(me,g.c)})).sort((a,b)=>a.d-b.d).slice(0,5);
+    if(!gs.length){box.append(el("p","hint","Рядом пока ничего нет. Посмотри удалёнку: ")); const a=el("a",null,"вакансии удалённо →");a.href="./?remote=1";box.lastChild.append(a);return}
+    box.append(el("p","hint","Ближе всего к тебе (по городам, расстояние по прямой):"));
+    for(const {g,d} of gs){
+      const a=el("a");a.href=show==="ev"||!g.vac.length?"events.html":"./?city="+encodeURIComponent(g.name);
+      const parts=[];if(show!=="ev"&&g.vac.length)parts.push(g.vac.length+" "+word(g.vac.length,"вакансия","вакансии","вакансий"));if(show!=="vac"&&g.ev.length)parts.push(g.ev.length+" "+word(g.ev.length,"смена/событие","смены/события","смен/событий"));
+      a.append(el("span",null,g.name+" — "+parts.join(", ")),el("small",null,d<3?"твой город":"≈ "+Math.round(d)+" км"));box.append(a);
+    }
+  }
+  document.querySelectorAll("#tools [data-show]").forEach(b=>b.onclick=()=>{show=b.dataset.show;document.querySelectorAll("#tools [data-show]").forEach(x=>x.setAttribute("aria-pressed",x===b));draw();fit();if(me)nearList()});
+  const nb=document.getElementById("nearBtn");
+  function locate(){
+    if(!navigator.geolocation){NR.toast("Браузер не умеет определять место — выбери город ниже.");return}
+    nb.disabled=true;nb.textContent="📍 Ищу тебя…";
+    navigator.geolocation.getCurrentPosition(p=>{
+      nb.disabled=false;nb.textContent="📍 Рядом со мной";nb.setAttribute("aria-pressed","true");
+      me=[p.coords.latitude,p.coords.longitude];
+      if(hasMap){if(window._me)window._me.remove();window._me=L.marker(me,{icon:L.divIcon({className:"",html:'<div class="me"></div>',iconSize:[18,18]}),title:"Ты здесь"}).addTo(map).bindPopup("Ты здесь")}
+      nearList();fit();
+    },()=>{nb.disabled=false;nb.textContent="📍 Рядом со мной";NR.toast("Не получилось узнать, где ты. Разреши доступ к месту или выбери город ниже.")},{enableHighAccuracy:false,timeout:12000,maximumAge:600000});
+  }
+  nb.onclick=locate;
   (async()=>{
     const sum=document.getElementById("sum");
     if(!sb){sum.textContent="Сайт не подключён к базе.";return}
@@ -51,24 +125,18 @@
     let {data,error}=await sb.from("vacancies").select("id,title,city,remote,pay,age_min,expires_at").eq("status","approved").order("created_at",{ascending:false}).limit(1000);
     if(error)({data}=await sb.from("vacancies").select("id,title,city,remote,pay,age_min").eq("status","approved").limit(1000));
     const rows=(data||[]).filter(v=>!v.expires_at||v.expires_at>=today);
-    const by={};let remote=0,unknown=0;
-    for(const v of rows){if(!v.city){if(v.remote)remote++;continue}const k=norm(v.city);(by[k]=by[k]||{name:v.city,list:[]}).list.push(v)}
-    const pts=[];
-    for(const k in by){
-      const g=by[k],c=C[k]||C[k.split(/[ ,(]/)[0]];if(!c){unknown+=g.list.length;continue}
-      if(!hasMap)continue;
-      const n=g.list.length,sz=Math.min(54,26+n*3);
-      const m=L.marker(c,{icon:L.divIcon({className:"",html:'<div class="pin" style="width:'+sz+'px;height:'+sz+'px">'+n+'</div>',iconSize:[sz,sz]}),title:g.name}).addTo(map);
-      const box=document.createElement("div");box.append(el("b",null,g.name+": "+n+" "+(n%10===1&&n%100!==11?"вакансия":n%10>=2&&n%10<=4&&(n%100<10||n%100>=20)?"вакансии":"вакансий")));
-      g.list.slice(0,6).forEach(v=>{const a=el("a","mini");a.href="vacancy.html?id="+v.id;a.append(el("b",null,v.title),el("span",null,[v.pay||"по договорённости","с "+v.age_min+" лет"].join(" · ")));box.append(a)});
-      if(n>6){const a=el("a",null,"Все вакансии города →");a.href="./?city="+encodeURIComponent(g.name);box.append(a)}
-      m.bindPopup(box);pts.push(c);
-    }
-    if(hasMap&&pts.length>1)map.fitBounds(pts,{padding:[40,40],maxZoom:8});else if(hasMap&&pts.length===1)map.setView(pts[0],9);
-    sum.textContent=rows.length?("Сейчас "+rows.length+" вакансий"+(remote?", из них "+remote+" полностью удалённо":"")+". Нажми на кружок, чтобы увидеть вакансии города."):"Пока вакансий нет — загляни позже.";
+    // смены и мероприятия: только опубликованные в общем списке и ещё не прошедшие (как на странице events.html)
+    const er=await sb.from("events").select("id,title,starts_at,place,city,kind,listed").gte("starts_at",new Date().toISOString()).order("starts_at").limit(300);
+    const evs=(er.data||[]).filter(e=>e.listed!==false&&e.city);
+    for(const v of rows){if(!v.city){if(v.remote)remote++;continue}const g=group(v.city);g.vac.push(v);if(!g.c)unknown++}
+    for(const e of evs){const g=group(e.city);g.ev.push(e)}
+    draw();fit();
+    const ne=evs.length;
+    sum.textContent=rows.length||ne?("Сейчас "+rows.length+" "+word(rows.length,"вакансия","вакансии","вакансий")+(remote?" (из них "+remote+" удалённо)":"")+(ne?" и "+ne+" "+word(ne,"смена или мероприятие","смены и мероприятия","смен и мероприятий"):"")+". Синие кружки — вакансии, зелёные — смены и мероприятия. Нажми на кружок, чтобы увидеть, что там есть."):"Пока вакансий нет — загляни позже.";
     const cs=document.getElementById("cities");
-    Object.values(by).sort((a,b)=>b.list.length-a.list.length).forEach(g=>{const a=el("a","chip",g.name+" · "+g.list.length);a.href="./?city="+encodeURIComponent(g.name);a.style.textDecoration="none";cs.append(a)});
+    Object.values(by).sort((a,b)=>(b.vac.length+b.ev.length)-(a.vac.length+a.ev.length)).forEach(g=>{const a=el("a","chip",g.name+" · "+[g.vac.length?g.vac.length+"":"",g.ev.length?"🟢 "+g.ev.length:""].filter(Boolean).join(" + "));a.href=g.vac.length?"./?city="+encodeURIComponent(g.name):"events.html";a.style.textDecoration="none";cs.append(a)});
     if(remote){const a=el("a","chip","Удалённо · "+remote);a.href="./?remote=1";a.style.textDecoration="none";cs.append(a)}
+    if(/[?&]near=1/.test(location.search))locate();
   })();
 })();
 </script>

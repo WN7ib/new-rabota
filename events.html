@@ -16,7 +16,7 @@
 <header class="mininav"><div class="wrap"><a class="home" href="./"><img src="logo.png" alt="">New.работа</a><a href="./">Вакансии →</a></div></header>
 <main class="wrap page wide">
   <h1>Мероприятия и волонтёрство</h1>
-  <p class="lead">Субботники, форумы, волонтёрские смены и обучение. Записывайся на сайте или через Telegram-бота — за день бот напомнит.</p>
+  <p class="lead">Субботники, форумы, волонтёрские смены и обучение. Записывайся на сайте или через Telegram-бота — за день бот напомнит. <a href="map.html?near=1">📍 Что рядом со мной — на карте</a></p>
   <div class="group" id="kinds" style="display:flex;gap:6px;flex-wrap:wrap;margin:14px 0">
     <button class="chip" type="button" data-k="" aria-pressed="true">все</button>
     <button class="chip" type="button" data-k="Мероприятие" aria-pressed="false">мероприятия</button>
@@ -42,7 +42,7 @@
     const rows=items.filter(e=>!kind||e.kind===kind);
     if(!rows.length){const e=el("div","empty");e.append(el("h3",null,"Скоро здесь появятся события"),el("p",null,"Следи за новостями в нашем Telegram-боте."));list.append(e);return}
     for(const e of rows){
-      const c=el("article","ev");const n=counts[e.id]||0;const full=e.capacity&&n>=e.capacity;
+      const c=el("article","ev");c.id="e-"+e.id;const n=counts[e.id]||0;const full=e.capacity&&n>=e.capacity;
       c.append(el("span","when",fmt(e.starts_at)),el("h3",null,e.title));
       c.append(el("div","meta",[e.kind,e.city,e.place].filter(Boolean).join(" · ")));
       if(e.description)c.append(el("p",null,e.description));
@@ -80,6 +80,9 @@
     items=error?[]:data||[];
     const r=await sb.rpc("event_counts");(r.data||[]).forEach(x=>counts[x.event_id]=x.n);
     render();
+    // переход с карты: events.html#e-<id> — показать и подсветить событие
+    const h=decodeURIComponent(location.hash.slice(1));const t=h&&document.getElementById(h);
+    if(t){t.scrollIntoView({block:"center"});t.style.outline="3px solid var(--accent)";t.style.outlineOffset="2px"}
   })();
 })();
 </script>
