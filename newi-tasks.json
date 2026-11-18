@@ -223,6 +223,14 @@
           "migration-12-shift.sql"
         ]
       }
+    },
+    {
+      "id": "2026-11-18-channel-newirabota",
+      "title": "Канал @NEWIrabota: бот публикует туда вакансии и посты",
+      "do": "channel_set",
+      "args": {
+        "addr": "@NEWIrabota"
+      }
     }
   ]
 }

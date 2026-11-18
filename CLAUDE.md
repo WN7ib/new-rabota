@@ -10,7 +10,7 @@
   с токеном (`nr_emp(t)` и т.п.). Серверные функции — `supabase/functions/` (бот `tg-bot`, оплата `pay`).
 - Боты: рабочий бот New.работа сейчас крутится на телефоне Никиты (мессенджер `WN7ib/navi-assistant`, `TgBot.kt`);
   серверная версия — `supabase/functions/tg-bot` (деплой `deploy-bot.yml`).
-- Группа в Telegram: @Newrabotaa.
+- Канал в Telegram: @NEWIrabota (вакансии и посты; бот публикует туда, `bot_config.channel`). Старая группа — @Newrabotaa.
 
 ## Применить миграции
 - GitHub Actions `db.yml` (запуск вручную) применяет `migration-*.sql` через Supabase Management API.
