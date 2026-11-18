@@ -241,6 +241,7 @@ td.n{font-family:var(--f-mono);white-space:nowrap}
 .ev h3{margin:0;font-size:18px;text-wrap:balance}.ev p{margin:0}
 .ev .meta{color:var(--muted);font-size:14px}
 .ev .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.ev .friend{background:var(--mark);color:var(--mark-ink);padding:8px 12px;border-radius:10px;font-weight:600}
 .stars{color:#F5A524;letter-spacing:1px}
 .rev{border-top:1px solid var(--line);padding-top:10px;margin-top:10px}
 .rev p{margin:4px 0 0}

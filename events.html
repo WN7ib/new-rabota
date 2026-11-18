@@ -10,7 +10,7 @@
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
-<link rel="stylesheet" href="style.css?v=7">
+<link rel="stylesheet" href="style.css?v=8">
 </head>
 <body>
 <header class="mininav"><div class="wrap"><a class="home" href="./"><img src="logo.png" alt="">New.работа</a><a href="./">Вакансии →</a></div></header>
@@ -35,6 +35,10 @@
 (function(){
   const {sb,el,toast}=NR; const list=document.getElementById("list");
   let items=[],counts={},kind="",settings={};
+  // «Пойти с другом»: ?from=Имя#e-<id> — друг открыл приглашение
+  const qs=new URLSearchParams(location.search);const from=(qs.get("from")||"").replace(/[\u0000-\u001f<>]/g,"").trim().slice(0,30);
+  const mine=()=>{try{return new Set(JSON.parse(localStorage.getItem("nr-events")||"[]").map(x=>x.id))}catch(_){return new Set()}};
+  const myName=()=>{try{return localStorage.getItem("nr-name")||""}catch(_){return ""}};
   const fmt=d=>new Date(d).toLocaleString("ru-RU",{weekday:"short",day:"numeric",month:"long",hour:"2-digit",minute:"2-digit"});
   document.querySelectorAll("#kinds .chip").forEach(b=>b.onclick=()=>{kind=b.dataset.k;document.querySelectorAll("#kinds .chip").forEach(x=>x.setAttribute("aria-pressed",x===b));render()});
   function render(){
@@ -43,6 +47,7 @@
     if(!rows.length){const e=el("div","empty");e.append(el("h3",null,"Скоро здесь появятся события"),el("p",null,"Следи за новостями в нашем Telegram-боте."));list.append(e);return}
     for(const e of rows){
       const c=el("article","ev");c.id="e-"+e.id;const n=counts[e.id]||0;const full=e.capacity&&n>=e.capacity;
+      if(from&&location.hash==="#e-"+e.id)c.append(el("p","friend",from+" идёт и зовёт тебя с собой 👫"));
       c.append(el("span","when",fmt(e.starts_at)),el("h3",null,e.title));
       c.append(el("div","meta",[e.kind,e.city,e.place].filter(Boolean).join(" · ")));
       if(e.description)c.append(el("p",null,e.description));
@@ -50,6 +55,7 @@
       const a=el("div","acts");
       const b=el("button","btn btn-primary btn-sm",full?"Мест нет":"Записаться");b.type="button";b.disabled=!!full;b.onclick=()=>signup(e);a.append(b);
       const bl=NR.botLink(settings.bot_username);if(bl&&!full){const t=el("a","btn btn-ghost btn-sm","Через Telegram");t.href="https://t.me/"+String(settings.bot_username).replace(/^@/,"")+"?start=ev_"+e.id;t.target="_blank";t.rel="noopener";t.style.textDecoration="none";a.append(t)}
+      if(mine().has(e.id)){const fr=el("button","btn btn-ghost btn-sm","👫 Позвать друга");fr.type="button";fr.onclick=()=>invite(e);a.append(fr)}
       if(e.link){const l=el("a","btn btn-ghost btn-sm","Подробнее ↗");l.href=e.link;l.target="_blank";l.rel="noopener";l.style.textDecoration="none";a.append(l)}
       c.append(a);list.append(c);
     }
@@ -60,6 +66,7 @@
     const fld=(lab,i,full)=>{const d=el("div","field"+(full?" full":""));d.append(el("label",null,lab),i);f.append(d);return i};
     const mk=(ph,max,type)=>{const i=document.createElement("input");i.type=type||"text";i.maxLength=max;i.placeholder=ph;return i};
     const name=fld("Имя",mk("Как к тебе обращаться",60)),age=fld("Возраст",mk("16",2,"number")),contact=fld("Телеграм или телефон",mk("@username или +7…",120),true);
+    if(from&&location.hash==="#e-"+e.id)f.append(el("p","hint full","Тебя позвал(а) "+from+". Хочешь в одну смену — скажи об этом организаторам, когда они свяжутся."));
     f.append(el("p","hint full","Контакт увидят только организаторы, чтобы связаться по мероприятию."));
     const err=el("p","err");err.hidden=true;f.append(err);
     const row=el("div","row");const c=el("button","btn btn-ghost","Отмена");c.type="button";c.onclick=()=>sh.remove();const s=el("button","btn btn-primary","Записаться");s.type="submit";row.append(c,s);f.append(row);
@@ -68,10 +75,31 @@
       s.disabled=true;const a=parseInt(age.value,10);
       const {data,error}=await sb.rpc("event_signup",{eid:e.id,p_name:name.value.trim(),p_contact:contact.value.trim(),p_age:a>=10&&a<=99?a:null});s.disabled=false;
       if(error){err.textContent=/full/.test(error.message)?"Мест больше нет.":/closed/.test(error.message)?"Запись закрыта.":"Не получилось, попробуй ещё раз.";err.hidden=false;return}
-      if(data===-1){sh.remove();toast("Мест нет — ты в резерве. Если кто-то откажется, организаторы свяжутся с тобой.");return}
-      counts[e.id]=data;sh.remove();render();toast("Ты записан(а)! Организаторы свяжутся с тобой.");
-      try{const m=JSON.parse(localStorage.getItem("nr-events")||"[]").filter(x=>x.id!==e.id);m.unshift({id:e.id,t:e.title,at:e.starts_at,p:e.place||""});localStorage.setItem("nr-events",JSON.stringify(m.slice(0,30)))}catch(_){} });
+      try{localStorage.setItem("nr-name",name.value.trim().split(/\s+/)[0].slice(0,30))}catch(_){}
+      if(data===-1){sh.remove();done(e,"Мест нет — ты в резерве","Если кто-то откажется, организаторы свяжутся с тобой. Позови друга — вдвоём в резерве веселее.");return}
+      counts[e.id]=data;sh.remove();
+      try{const m=JSON.parse(localStorage.getItem("nr-events")||"[]").filter(x=>x.id!==e.id);m.unshift({id:e.id,t:e.title,at:e.starts_at,p:e.place||""});localStorage.setItem("nr-events",JSON.stringify(m.slice(0,30)))}catch(_){}
+      render();done(e,"Ты записан(а)!","Организаторы свяжутся с тобой. Вдвоём веселее — позови друга."); });
     sh.append(f);document.body.append(sh);sh.addEventListener("click",x=>{if(x.target===sh)sh.remove()});name.focus();
+  }
+  // После записи: «Позвать друга» / «Готово»
+  function done(e,title,text){
+    const sh=el("div","sheet"),f=el("div","form");f.append(el("h2",null,title),el("p","hint full",text));
+    const row=el("div","row");const ok=el("button","btn btn-ghost","Готово");ok.type="button";ok.onclick=()=>sh.remove();
+    const fr=el("button","btn btn-primary","👫 Позвать друга");fr.type="button";fr.onclick=()=>{sh.remove();invite(e)};row.append(ok,fr);f.append(row);
+    sh.append(f);document.body.append(sh);sh.addEventListener("click",x=>{if(x.target===sh)sh.remove()});fr.focus();
+  }
+  function inviteUrl(e){const n=myName();return location.origin+location.pathname+(n?"?from="+encodeURIComponent(n):"")+"#e-"+e.id}
+  async function invite(e){
+    const url=inviteUrl(e),text="Пойдём вместе: «"+e.title+"», "+fmt(e.starts_at)+(e.place?", "+e.place:"")+". Записаться:";
+    if(navigator.share){try{await navigator.share({title:e.title,text,url});return}catch(x){if(x&&x.name==="AbortError")return}}
+    const sh=el("div","sheet"),f=el("div","form");f.append(el("h2",null,"Позвать друга"),el("p","hint full","Отправь другу ссылку — он запишется на это же событие."));
+    const row=el("div","row");
+    const tg=el("a","btn btn-primary","Telegram");tg.href="https://t.me/share/url?url="+encodeURIComponent(url)+"&text="+encodeURIComponent(text);tg.target="_blank";tg.rel="noopener";tg.style.textDecoration="none";
+    const vk=el("a","btn btn-ghost","ВКонтакте");vk.href="https://vk.com/share.php?url="+encodeURIComponent(url)+"&title="+encodeURIComponent(text);vk.target="_blank";vk.rel="noopener";vk.style.textDecoration="none";
+    const cp=el("button","btn btn-ghost","Скопировать ссылку");cp.type="button";cp.onclick=()=>NR.copy(url);
+    const x=el("button","btn btn-ghost","Закрыть");x.type="button";x.onclick=()=>sh.remove();
+    row.append(tg,vk,cp,x);f.append(row);sh.append(f);document.body.append(sh);sh.addEventListener("click",z=>{if(z.target===sh)sh.remove()});
   }
   (async()=>{
     if(!sb){list.textContent="";list.append(el("div","empty","Сайт не подключён к базе."));return}
