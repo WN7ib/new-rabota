@@ -61,8 +61,15 @@
     if(!items.length){
       const box=el("div","empty");
       if(!state.items.length){
-        box.append(el("h3",null,"Вакансий пока нет"),el("p",null,"Здесь появятся предложения от работодателей. Знаешь кафе, магазин или проект, которому нужны люди? Размести первую вакансию, это займёт минуту."));
-        if(state.settings.submissions_open!==false){const b=el("button","btn btn-primary","＋ Разместить вакансию");b.type="button";b.onclick=openForm;box.append(b)}
+        box.className="empty empty-biz";
+        box.append(el("h3",null,"Вакансии скоро появятся"),el("p",null,"Мы только запустились. Подпишись на бота — пришлём первые вакансии и смены в твоём городе."));
+        const acts=el("div","acts");
+        {const link=NR.botLink(state.settings.bot_username,state.city);if(link){const a=el("a","btn btn-primary","🔔 Подписаться в Telegram");a.href=link;a.target="_blank";a.rel="noopener";acts.append(a)}}
+        box.append(acts,el("h3",null,"Ищете сотрудников 14–25 лет?"),el("p",null,"Разместите вакансию бесплатно или закажите «Смену под ключ»: найдём человека, проконтролируем выход и бесплатно заменим, если он не придёт."));
+        const acts2=el("div","acts");
+        if(state.settings.submissions_open!==false){const b=el("button","btn btn-primary","＋ Разместить смену или вакансию");b.type="button";b.onclick=chooseForm;acts2.append(b)}
+        {const a=el("a","btn btn-ghost","Условия для работодателей");a.href="business.html";acts2.append(a)}
+        box.append(acts2);
       }else{
         box.append(el("h3",null,"Ничего не нашлось"),el("p",null,"Попробуй убрать часть фильтров или поискать в другом городе."));
         const b=el("button","btn btn-ghost","Сбросить фильтры");b.type="button";b.onclick=resetFilters;box.append(b);
@@ -72,10 +79,10 @@
     updateSub();
   }
   function countText(){const n=filtered().length;const m=n%10,h=n%100;return n+" "+(m===1&&h!==11?"вакансия":m>=2&&m<=4&&(h<12||h>14)?"вакансии":"вакансий")}
-  function refreshMeta(msg){statusEl.textContent=msg||(state.ready?countText():"Загружаю вакансии…")}
+  function refreshMeta(msg){statusEl.textContent=msg||(state.ready?(state.items.length?countText():""):"Загружаю вакансии…")}
   function updateSub(){
     const link=NR.botLink(state.settings.bot_username,state.city);
-    $("#subCta").hidden=!link; if(!link)return;
+    $("#subCta").hidden=!link||!state.items.length; if(!link)return;   // пустая лента — подписка уже в блоке ниже
     $("#subLink").href=link;
     $("#subText").textContent=state.city.trim()?"🔔 Новые вакансии в «"+state.city.trim()+"» — бот пришлёт в Telegram":"🔔 Новые вакансии в Telegram — бот пришлёт сам";
   }
@@ -103,7 +110,18 @@
   const sheet=$("#sheet"),err=$("#formErr");
   function openForm(){ if(!sb){toast("Сайт ещё не подключён к базе");return} err.hidden=true;sheet.hidden=false;$("#f-title").focus() }
   function closeForm(){sheet.hidden=true}
-  $("#openForm").onclick=openForm;$("#cancelForm").onclick=closeForm;
+  function chooseForm(){
+    const sh=el("div","sheet"),f=el("div","form");
+    f.append(el("h2",null,"Что разместить?"));
+    const pick=el("div","pick");
+    const a=el("button");a.type="button";a.append(el("b",null,"📄 Обычная вакансия — бесплатно"),el("span",null,"Подработка, стажировка или постоянная работа. Откликаются сами, отклики — в кабинет по ссылке."));
+    a.onclick=()=>{sh.remove();openForm()};
+    const b=el("a","hot");b.href="business.html#shift";b.append(el("b",null,"⚡ Разовая смена под ключ — "+((state.settings.prices||{}).shift??1000).toLocaleString("ru-RU")+" ₽ за выход"),el("span",null,"Подберём человека, подтвердим выход через бота, заменим бесплатно. Разово, на неделю, месяц или свой срок."));
+    pick.append(a,b);f.append(pick);
+    const row=el("div","row");const c=el("button","btn btn-ghost","Отмена");c.type="button";c.onclick=()=>sh.remove();row.append(c);f.append(row);
+    sh.append(f);document.body.append(sh);sh.addEventListener("click",e=>{if(e.target===sh)sh.remove()});
+  }
+  $("#openForm").onclick=chooseForm;$("#cancelForm").onclick=closeForm;
   sheet.addEventListener("click",e=>{if(e.target===sheet)closeForm()});
   document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!sheet.hidden)closeForm()});
   $("#vacForm").addEventListener("submit",async e=>{
@@ -154,6 +172,7 @@
     if(s.tagline)$("#tagline").textContent=s.tagline;
     const bn=$("#banner");if(s.banner_on&&s.banner){bn.textContent=s.banner;bn.hidden=false}else bn.hidden=true;
     if(s.submissions_open===false)$("#openForm").hidden=true;
+    if(s.prices&&+s.prices.shift>=0)$$("[data-price=shift]").forEach(e=>e.textContent=(+s.prices.shift).toLocaleString("ru-RU"));
   }
   async function load(){
     if(!sb){state.ready=true;render();refreshMeta("Сайт ещё не подключён к базе");return}
@@ -369,6 +388,7 @@
   $("#askForm").addEventListener("submit",e=>{e.preventDefault();const i=$("#askInput");userSays(i.value);i.value=""});
 
   if(location.hash==="#add"){ls.set("nr-chosen",1);setMode(ls.get("nr-mode","off"));setTimeout(openForm,300)}
+  if(location.hash==="#post"){ls.set("nr-chosen",1);setMode(ls.get("nr-mode","off"));setTimeout(chooseForm,300)}
   else if(location.hash==="#newi"){ls.set("nr-chosen",1);setMode("newi",true)}
   else if(ls.get("nr-chosen",0)){setMode(ls.get("nr-mode","off"))}
   else{setMode("off");$("#gate").hidden=false}

@@ -9,7 +9,7 @@ async function q(path) {
 }
 const today = new Date().toISOString().slice(0, 10);
 const pages = [["", "hourly", "1.0"], ["events.html", "daily", "0.8"], ["map.html", "daily", "0.6"], ["resume.html", "monthly", "0.7"],
-  ["guide.html", "monthly", "0.7"], ["about.html", "monthly", "0.3"]];
+  ["guide.html", "monthly", "0.7"], ["business.html", "monthly", "0.8"], ["about.html", "monthly", "0.3"]];
 const vac = await q("vacancies?select=id,created_at,expires_at&status=eq.approved&order=created_at.desc&limit=5000");
 const live = vac.filter((v) => !v.expires_at || v.expires_at >= today);
 const x = (s) => s.replace(/&/g, "&amp;");

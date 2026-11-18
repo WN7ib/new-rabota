@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Работодателям · New.работа</title>
+<meta name="description" content="Сотрудники 14–25 лет на смены и подработку. «Смена под ключ»: подберём человека, проконтролируем выход, заменим бесплатно. 1 000 ₽ за выход — только после подтверждения кандидата.">
+<meta name="theme-color" content="#2F86F5">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:title" content="New.работа — работодателям">
+<meta property="og:description" content="Смена под ключ: человек на смену, контроль выхода и бесплатная замена. 1 000 ₽ за выход.">
+<meta property="og:image" content="icon-512.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="style.css?v=8">
+<style>
+.biz-hero{background:linear-gradient(135deg,var(--hero-a),var(--hero-b));color:var(--on-hero)}
+.biz-hero .wrap{padding-block:28px 32px}
+.biz-hero h1{font-family:var(--f-display);font-weight:800;font-size:clamp(26px,6vw,40px);line-height:1.1;margin:0 0 10px;text-wrap:balance}
+.biz-hero p{margin:0 0 18px;font-size:17px;max-width:56ch;opacity:.95}
+.biz-hero .cta{display:flex;flex-wrap:wrap;gap:10px}
+.biz-hero .btn-ghost{border-color:rgb(255 255 255 / .6);color:var(--on-hero)}
+.biz{padding-block:8px 56px}
+.biz h2{font-family:var(--f-display);font-weight:600;font-size:clamp(19px,4.5vw,24px);margin:30px 0 12px;text-wrap:balance}
+.offer{background:var(--surface);border:2px solid var(--accent);border-radius:18px;padding:18px 20px;display:grid;gap:14px}
+.offer .price{font-family:var(--f-display);font-weight:800;font-size:clamp(24px,6vw,32px);color:var(--accent)}
+.offer .price small{font-family:var(--f-body);font-weight:500;font-size:15px;color:var(--muted)}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin:0;padding:0;list-style:none;counter-reset:s}
+.steps li{background:var(--bg);border-radius:12px;padding:12px 14px 12px 46px;position:relative;font-size:14.5px;counter-increment:s}
+.steps li::before{content:counter(s);position:absolute;left:12px;top:11px;width:24px;height:24px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-weight:700;font-size:13px;display:grid;place-items:center}
+.plans{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.plan{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;display:flex;flex-direction:column;gap:8px}
+.plan.hot{border:2px solid var(--accent)}
+.plan h3{margin:0;font-size:17px}
+.plan .pp{font-family:var(--f-display);font-weight:800;font-size:22px}
+.plan .pp small{font-family:var(--f-body);font-weight:500;font-size:13px;color:var(--muted)}
+.plan p{margin:0;color:var(--muted);font-size:14px;flex:1}
+.plan .promo{background:var(--mark);color:var(--mark-ink);border-radius:8px;padding:6px 10px;font-size:13px;font-weight:600}
+.plan .btn{justify-content:center;text-decoration:none}
+.sform{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:18px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.sform .full{grid-column:1/-1}
+.sform input,.sform select,.sform textarea{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 12px;min-width:0}
+.sform textarea{min-height:80px;resize:vertical}
+.sform input[type=checkbox]{width:20px;height:20px;flex:none;padding:0;margin:0}
+.sform .check{justify-content:flex-start;align-self:start;padding:6px 2px}
+.sform .hint{font-size:13px;color:var(--muted);margin:0}
+.days{display:flex;flex-wrap:wrap;gap:6px}
+.days .chip:disabled{opacity:.4;cursor:not-allowed}
+.calc{grid-column:1/-1;background:var(--mark);color:var(--mark-ink);border-radius:12px;padding:14px 16px;display:grid;gap:4px;font-size:15px}
+.calc b{font-size:17px}
+.calc .dates{font-size:13px;opacity:.85}
+.warn{grid-column:1/-1;color:var(--danger);font-size:14px;margin:0}
+.ack{grid-column:1/-1;display:flex;gap:10px;align-items:flex-start;font-size:14px;background:var(--bg);border-radius:12px;padding:12px}
+.ack input{width:20px;height:20px;flex:none;margin-top:2px}
+.sform .row{grid-column:1/-1;display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+.faq details{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin-bottom:8px}
+.faq summary{font-weight:600;cursor:pointer}
+.faq p{margin:8px 0 0;color:var(--muted)}
+@media (max-width:560px){.sform{grid-template-columns:1fr;padding:14px}.sform>*{grid-column:1/-1}}
+</style>
+</head>
+<body>
+<header class="mininav"><div class="wrap"><a class="home" href="./"><img src="logo.png" alt="">New.работа</a><a href="cabinet.html">Кабинет работодателя →</a></div></header>
+
+<section class="biz-hero"><div class="wrap">
+  <h1>Нужны люди на смену? Найдём за вас</h1>
+  <p>Подростки и студенты 14–25 лет на разовые смены, подработку и стажировки. Платите только за результат: когда человек подтвердил выход.</p>
+  <div class="cta"><a class="btn btn-mark" href="#shift" style="text-decoration:none">Заказать смену под ключ</a><a class="btn btn-ghost" href="./#add" style="text-decoration:none">Разместить вакансию бесплатно</a></div>
+</div></section>
+
+<main class="wrap biz">
+  <h2 id="offer">Смена под ключ</h2>
+  <div class="offer">
+    <div class="price"><span data-price="shift">1 000</span> ₽ <small>за выход одного человека · оплата после подтверждения кандидата</small></div>
+    <ol class="steps">
+      <li>Оставляете заявку: даты, дни недели, время и ставку работнику</li>
+      <li>Мы подбираем человека и подтверждаем выход через Telegram-бота</li>
+      <li>Человек подтвердил — переводите нам <span data-price="shift">1 000</span> ₽ за выход по СБП, присылаем чек самозанятого</li>
+      <li>Ставку за смену платите работнику сами, после смены: наличными или переводом</li>
+    </ol>
+    <p class="hint" style="margin:0">🔁 <b>Гарантия замены:</b> если подтверждённый человек не вышел, найдём замену бесплатно. Деньги работников через нас не проходят.</p>
+  </div>
+
+  <h2 id="plans">Тарифы</h2>
+  <div class="plans">
+    <div class="plan"><h3>Базовый</h3><div class="pp">0 ₽</div><p>Размещение вакансии после проверки, отклики приходят в кабинет по личной ссылке.</p><a class="btn btn-ghost" href="./#add">Разместить</a></div>
+    <div class="plan"><h3>Топ-7</h3><div class="pp"><span data-price="top7">390</span> ₽</div><p>Вакансия закреплена вверху списка на 7 дней.</p><div class="promo">🎁 Первым 10 компаниям — бесплатно за отзыв</div><a class="btn btn-ghost" href="cabinet.html">Заказать в кабинете</a></div>
+    <div class="plan"><h3>Срочно</h3><div class="pp"><span data-price="urgent">490</span> ₽</div><p>Метка «Срочно» и рассылка подходящим кандидатам в Telegram-боте.</p><a class="btn btn-ghost" href="cabinet.html">Заказать в кабинете</a></div>
+    <div class="plan"><h3>Проверенная компания</h3><div class="pp"><span data-price="verify">690</span> ₽</div><p>Значок ✓ проверки на всех ваших вакансиях — подросткам и родителям спокойнее.</p><a class="btn btn-ghost" href="cabinet.html">Заказать в кабинете</a></div>
+    <div class="plan hot"><h3>Смена под ключ</h3><div class="pp"><span data-price="shift">1 000</span> ₽ <small>/ выход</small></div><p>Подбор человека, контроль выхода через бота, гарантия бесплатной замены. Можно разово, на неделю, месяц или свой срок.</p><a class="btn btn-primary" href="#shift">Заказать</a></div>
+    <div class="plan"><h3>Бизнес</h3><div class="pp"><span data-price="business">1 990</span> ₽ <small>/ мес</small></div><p>До 5 вакансий в топе, проверка компании, приоритет в рассылках.</p><a class="btn btn-ghost" href="cabinet.html">Заказать в кабинете</a></div>
+  </div>
+
+  <h2 id="shift">Заявка на смену под ключ</h2>
+  <form class="sform" id="sf" novalidate>
+    <div class="field"><label for="s-company">Компания</label><input id="s-company" maxlength="80" placeholder="Кофейня «Зерно»" autocomplete="organization"></div>
+    <div class="field"><label for="s-contact">Ваш контакт</label><input id="s-contact" maxlength="120" placeholder="@telegram или +7 900 000-00-00" autocomplete="tel"></div>
+    <div class="field"><label for="s-city">Город</label><input id="s-city" maxlength="60" list="cities" placeholder="Саратов"></div>
+    <div class="field"><label for="s-address">Адрес точки</label><input id="s-address" maxlength="200" placeholder="ул. Московская, 1"></div>
+    <div class="field full"><label for="s-task">Что нужно делать</label><textarea id="s-task" maxlength="600" placeholder="Раздавать листовки у входа, помогать на кассе, выкладка товара…"></textarea></div>
+
+    <div class="field full"><label>Срок</label>
+      <div class="group" id="s-term">
+        <button class="chip" type="button" data-term="once" aria-pressed="true">Разовая смена</button>
+        <button class="chip" type="button" data-term="week" aria-pressed="false">Неделя</button>
+        <button class="chip" type="button" data-term="month" aria-pressed="false">Месяц</button>
+        <button class="chip" type="button" data-term="custom" aria-pressed="false">Свой срок</button>
+      </div></div>
+    <div class="field"><label for="s-start" id="s-start-l">Дата смены</label><input id="s-start" type="date"></div>
+    <div class="field" id="s-len-f" hidden><label for="s-len">Сколько дней длится контракт</label><input id="s-len" type="number" min="1" max="62" value="14" inputmode="numeric"></div>
+    <div class="field full" id="s-days-f" hidden><label>Дни недели</label>
+      <div class="days" id="s-days">
+        <button class="chip" type="button" data-d="1" aria-pressed="true">Пн</button><button class="chip" type="button" data-d="2" aria-pressed="true">Вт</button><button class="chip" type="button" data-d="3" aria-pressed="true">Ср</button><button class="chip" type="button" data-d="4" aria-pressed="true">Чт</button><button class="chip" type="button" data-d="5" aria-pressed="true">Пт</button><button class="chip" type="button" data-d="6" aria-pressed="false">Сб</button><button class="chip" type="button" data-d="0" aria-pressed="false">Вс</button>
+      </div><p class="hint" id="s-wknd" hidden>Сб и Вс недоступны для работников младше 18 — ст. 268 ТК РФ.</p></div>
+    <div class="field"><label for="s-from">Время с</label><input id="s-from" type="time" value="10:00" min="06:00" max="22:00" step="900"></div>
+    <div class="field"><label for="s-to">до</label><input id="s-to" type="time" value="14:00" min="06:00" max="22:00" step="900"></div>
+    <div class="field"><label for="s-age">Возраст работника</label>
+      <select id="s-age"><option value="14">с 14 лет (до 4 ч в день)</option><option value="16" selected>с 16 лет (до 7 ч в день)</option><option value="18">с 18 лет (до 12 ч)</option></select></div>
+    <div class="field"><label for="s-people">Сколько человек</label><input id="s-people" type="number" min="1" max="10" value="1" inputmode="numeric"></div>
+    <div class="field full"><label for="s-pay">Ставка работнику на руки за смену, ₽</label><input id="s-pay" type="number" min="100" max="100000" step="50" placeholder="2000" inputmode="numeric"></div>
+    <label class="check full" style="white-space:normal"><input type="checkbox" id="s-friend"> Можно откликнуться вдвоём с другом</label>
+    <label class="check full" style="white-space:normal"><input type="checkbox" id="s-urgent"> Срочно — человек нужен через 2 часа</label>
+
+    <div class="calc" id="s-calc" aria-live="polite"></div>
+    <p class="warn" id="s-warn" hidden></p>
+
+    <label class="ack"><input type="checkbox" id="s-ack"><span>Подтверждаю: работа лёгкая, без алкоголя, табака и вейпов, не ночью (с 22:00 до 6:00), без вреда здоровью и учёбе. Для 14–17 лет соблюдаю нормы часов по ТК РФ (ст. 92, 94, 265, 268) и беру согласие родителя, если работнику 14–15 лет.</span></label>
+    <input type="text" id="s-website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px">
+    <p class="err" id="s-err" hidden></p>
+    <div class="row"><button class="btn btn-primary" type="submit" id="s-send">Отправить заявку</button></div>
+    <p class="hint full">Заявка бесплатна. Комиссию оплачиваете только после того, как кандидат подтвердит выход. Отправляя заявку, вы соглашаетесь с <a href="about.html#rules">правилами</a>.</p>
+  </form>
+
+  <h2>Вопросы</h2>
+  <div class="faq">
+    <details><summary>Как платить комиссию?</summary><p id="payInfo">Переводом по СБП после подтверждения кандидата. Пришлём реквизиты в Telegram или по телефону и чек самозанятого.</p></details>
+    <details><summary>Если нужен человек каждый день?</summary><p>Выберите «Неделя», «Месяц» или «Свой срок» и отметьте дни недели. Каждый выход — отдельные <span data-price="shift">1 000</span> ₽ за человека, оплачиваются по мере подтверждения.</p></details>
+    <details><summary>А если человек не пришёл?</summary><p>Напишите нам — найдём замену бесплатно. Платить второй раз за этот выход не нужно.</p></details>
+    <details><summary>Можно ли брать подростков?</summary><p>Да, с 14 лет на лёгкий труд: не ночью, не в выходные, не больше 4 ч в день для 14–15 и 7 ч для 16–17 лет. Для 14–15 лет нужно согласие родителя — у нас есть <a href="consent.html">готовый бланк</a>.</p></details>
+  </div>
+</main>
+
+<footer class="foot"><div class="wrap"><span>© 2026 New.работа<span id="support"></span></span><span><a href="./" style="color:var(--muted)">Вакансии</a> · <a href="cabinet.html" style="color:var(--muted)">Кабинет работодателя</a> · <a href="about.html#rules" style="color:var(--muted)">Правила</a></span></div></footer>
+<datalist id="cities"><option value="Саратов"><option value="Энгельс"><option value="Балаково"><option value="Москва"><option value="Санкт-Петербург"><option value="Самара"><option value="Волгоград"><option value="Казань"><option value="Пенза"><option value="Воронеж"></datalist>
+<div class="toast" id="toast" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+(function(){
+  const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
+  const {sb, el, toast} = window.NR;
+  const P={shift:1000,top7:390,urgent:490,verify:690,business:1990}; let S={};
+  const rub=n=>Math.round(n).toLocaleString("ru-RU")+" ₽";
+  const ls={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+  NR.settings().then(s=>{S=s||{};Object.assign(P,Object.fromEntries(Object.entries(S.prices||{}).filter(([,v])=>+v>=0)));
+    $$("[data-price]").forEach(e=>e.textContent=(+P[e.dataset.price]).toLocaleString("ru-RU"));
+    if(S.pay_info)$("#payInfo").textContent=S.pay_info; calc()});
+
+  // ── график
+  let term="once";
+  const pad=n=>String(n).padStart(2,"0");
+  const ymd=d=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+  const tomorrow=()=>{const t=new Date();t.setDate(t.getDate()+1);$("#s-start").value=ymd(t);$("#s-start").min=ymd(new Date())};tomorrow();
+  $$("#s-term .chip").forEach(b=>b.onclick=()=>{term=b.dataset.term;$$("#s-term .chip").forEach(x=>x.setAttribute("aria-pressed",x===b));
+    $("#s-days-f").hidden=term==="once";$("#s-len-f").hidden=term!=="custom";$("#s-start-l").textContent=term==="once"?"Дата смены":"Дата начала";calc()});
+  $$("#s-days .chip").forEach(b=>b.onclick=()=>{b.setAttribute("aria-pressed",b.getAttribute("aria-pressed")!=="true");calc()});
+  const DN=["Вс","Пн","Вт","Ср","Чт","Пт","Сб"];
+  function teen(){return +$("#s-age").value<18}
+  function weekdays(){return [...$$("#s-days .chip")].filter(b=>b.getAttribute("aria-pressed")==="true"&&!b.disabled).map(b=>+b.dataset.d)}
+  function dates(){
+    const v=$("#s-start").value;if(!v)return[];
+    const [y,m,d]=v.split("-").map(Number);const start=new Date(y,m-1,d);
+    if(term==="once")return[start];
+    let end=new Date(start);
+    if(term==="week")end.setDate(end.getDate()+6);
+    else if(term==="month"){end.setMonth(end.getMonth()+1);end.setDate(end.getDate()-1)}
+    else end.setDate(end.getDate()+Math.min(Math.max(+$("#s-len").value||1,1),62)-1);
+    const wd=weekdays(),out=[];
+    for(const x=new Date(start);x<=end;x.setDate(x.getDate()+1))if(wd.includes(x.getDay()))out.push(new Date(x));
+    return out;
+  }
+  const hours=()=>{const a=$("#s-from").value,b=$("#s-to").value;if(!a||!b)return 0;const [h1,m1]=a.split(":").map(Number),[h2,m2]=b.split(":").map(Number);return ((h2*60+m2)-(h1*60+m1))/60};
+  function problems(ds){
+    const p=[],age=+$("#s-age").value,h=hours(),max=age===14?4:age===16?7:12;
+    const a=$("#s-from").value,b=$("#s-to").value;
+    if(!a||!b||h<=0)p.push("Укажите время: «до» позже, чем «с».");
+    else{if(a<"06:00"||b>"22:00")p.push("Смена только с 06:00 до 22:00 — ночью работать нельзя.");
+      if(h>max)p.push("Для работника "+(age<18?"с "+age+" лет":"18+")+" смена не длиннее "+max+" ч в день (сейчас "+h.toFixed(1).replace(".0","")+" ч).");
+      if(h<1)p.push("Смена от 1 часа.");}
+    if(!ds.length)p.push(term==="once"?"Выберите дату смены.":"Выберите хотя бы один день недели.");
+    if(ds.length>62)p.push("Не больше 62 выходов в одной заявке — разбейте на две.");
+    const today=new Date();today.setHours(0,0,0,0);
+    if(ds.length&&ds[0]<today)p.push("Дата уже прошла.");
+    if(ds.length&&(ds[ds.length-1]-today)/864e5>99)p.push("Заявка — максимум на 100 дней вперёд.");
+    if(age<18&&ds.some(d=>d.getDay()===0||d.getDay()===6))p.push("Работникам младше 18 нельзя в субботу и воскресенье (ст. 268 ТК РФ).");
+    if(age<18&&term!=="once"){const per=weekdays().length*h,lim=age===14?24:35;if(per>lim)p.push("В неделю получается "+per+" ч, а для "+age+"–"+(age===14?15:17)+" лет можно не больше "+lim+" ч (ст. 92 ТК РФ).")}
+    return p;
+  }
+  function calc(){
+    const age=+$("#s-age").value;
+    $$("#s-days .chip").forEach(b=>{const we=b.dataset.d==="0"||b.dataset.d==="6";b.disabled=we&&age<18;if(b.disabled)b.setAttribute("aria-pressed","false")});
+    $("#s-wknd").hidden=age>=18;
+    const ds=dates(),n=ds.length,ppl=Math.min(Math.max(+$("#s-people").value||1,1),10),pay=+$("#s-pay").value||0,fee=P.shift*ppl;
+    const box=$("#s-calc");box.textContent="";
+    const line=(t,b)=>{const d=el("div");if(b){d.append(el("b",null,t))}else d.textContent=t;box.append(d)};
+    line("Выходов: "+n+(ppl>1?" × "+ppl+" чел.":"")+(hours()>0?" · по "+hours().toFixed(1).replace(".0","")+" ч":""));
+    line("Работнику после смены: "+(pay?rub(pay)+(ppl>1?" каждому":""):"— укажите ставку")+" — платите ему сами");
+    line("Комиссия New.работа после подтверждения кандидата: "+rub(fee)+" за выход"+(n>1?" · всего "+rub(fee*n)+" за "+n+" выход"+(n%10===1&&n%100!==11?"":n%10>=2&&n%10<=4&&(n%100<12||n%100>14)?"а":"ов"):""),true);
+    if(n>1){const f=ds.slice(0,8).map(d=>DN[d.getDay()]+" "+d.getDate()+"."+pad(d.getMonth()+1)).join(", ");const dd=el("div","dates",f+(n>8?" … ещё "+(n-8):""));box.append(dd)}
+    const pr=problems(ds),w=$("#s-warn");w.hidden=!pr.length;w.textContent=pr.join(" ");
+    return {ds,pr,ppl,pay};
+  }
+  ["#s-start","#s-len","#s-from","#s-to","#s-age","#s-people","#s-pay"].forEach(id=>$(id).addEventListener("input",calc));
+  calc();
+
+  // ── отправка
+  $("#sf").addEventListener("submit",async e=>{
+    e.preventDefault();const err=$("#s-err");err.hidden=true;
+    if($("#s-website").value)return;
+    if(!sb){toast("Сайт ещё не подключён к базе");return}
+    const {ds,pr,ppl,pay}=calc();const v=id=>$(id).value.trim();
+    const miss=[];if(v("#s-company").length<2)miss.push("компанию");if(v("#s-contact").length<3)miss.push("контакт");if(v("#s-address").length<5)miss.push("адрес точки");if(!(pay>=100))miss.push("ставку работнику (от 100 ₽)");
+    if(miss.length){err.textContent="Заполните: "+miss.join(", ")+".";err.hidden=false;return}
+    if(pr.length){err.textContent=pr[0];err.hidden=false;$("#s-warn").scrollIntoView({behavior:"smooth",block:"center"});return}
+    if(!$("#s-ack").checked){err.textContent="Поставьте галочку подтверждения условий работы.";err.hidden=false;return}
+    const [fh,fm]=$("#s-from").value.split(":").map(Number);
+    const starts=ds.map(d=>new Date(d.getFullYear(),d.getMonth(),d.getDate(),fh,fm).toISOString());
+    const T={once:"Разовая смена",week:"Неделя",month:"Месяц",custom:"Свой срок ("+$("#s-len").value+" дн.)"}[term];
+    const days=term==="once"?"":" · "+[1,2,3,4,5,6,0].filter(x=>weekdays().includes(x)).map(x=>DN[x]).join(" ");
+    const p={company:v("#s-company"),contact:v("#s-contact"),city:v("#s-city"),address:v("#s-address"),task:v("#s-task"),starts,
+      time_from:$("#s-from").value,time_to:$("#s-to").value,age_min:+$("#s-age").value,people:ppl,worker_pay:pay,
+      with_friend:$("#s-friend").checked,is_urgent:$("#s-urgent").checked,safe_ack:true,
+      schedule:(T+days+" · "+$("#s-from").value+"–"+$("#s-to").value).slice(0,200)};
+    const btn=$("#s-send");btn.disabled=true;btn.textContent="Отправляю…";
+    const {data,error}=await sb.rpc("shift_order_create",{t:ls.get("nr-emp","")||null,p});
+    btn.disabled=false;btn.textContent="Отправить заявку";
+    if(error){const m=error.message||"";err.textContent=/too many/.test(m)?"Слишком много заявок за сутки. Напишите нам в бота.":/night/.test(m)?"Смена только с 06:00 до 22:00.":/too long/.test(m)?"Смена слишком длинная для выбранного возраста.":/bad date/.test(m)?"Проверьте даты: не раньше сегодняшнего дня и не дальше 100 дней.":"Не получилось отправить. Попробуйте ещё раз или напишите нам в бота.";err.hidden=false;return}
+    const n=(data||[]).length,fee=P.shift*ppl;
+    const bot=String(S.bot_username||"").replace(/^@/,"");
+    const sh=el("div","sheet"),f=el("div","form");
+    f.append(el("h2",null,"Заявка принята ✅"),
+      el("p","full",(n>1?"Выходов в графике: "+n+". ":"")+"Подберём человека и напишем вам: "+p.contact+". Когда кандидат подтвердит выход, пришлём реквизиты: "+rub(fee)+" за выход"+(n>1?" — оплачиваете по мере смен":"")+"."),
+      el("p","hint full","Ставку "+rub(pay)+" платите работнику сами после смены. Если человек не выйдет — заменим бесплатно."));
+    const row=el("div","row");
+    if(bot){const a=el("a","btn btn-primary","Открыть бота New.работа");a.href="https://t.me/"+bot;a.target="_blank";a.rel="noopener";a.style.textDecoration="none";row.append(a)}
+    const ok=el("button","btn btn-ghost","Готово");ok.type="button";ok.onclick=()=>sh.remove();row.append(ok);f.append(row);
+    sh.append(f);document.body.append(sh);sh.addEventListener("click",ev=>{if(ev.target===sh)sh.remove()});
+    $("#sf").reset();tomorrow();$("#s-from").value="10:00";$("#s-to").value="14:00";calc();
+  });
+})();
+</script>
+</body>
+</html>

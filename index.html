@@ -17,7 +17,7 @@
 <meta name="darkreader-lock">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
-<link rel="stylesheet" href="style.css?v=7">
+<link rel="stylesheet" href="style.css?v=8">
 
 </head>
 <body>
@@ -36,6 +36,7 @@
           <button type="button" id="modeOff" aria-pressed="true">Обычный</button>
           <button type="button" id="modeNewi" aria-pressed="false">С Newi</button>
         </div>
+        <a href="business.html" class="nav-biz">💼 Работодателям</a>
         <a href="profile.html">👤 Профиль</a>
         <a href="events.html">Мероприятия</a>
         <a href="map.html">Карта</a>
@@ -43,7 +44,7 @@
         <a href="guide.html">Гид подростку</a>
         <a href="about.html">О проекте</a>
       </nav>
-      <button class="btn btn-mark" id="openForm" type="button">＋ Разместить вакансию</button>
+      <button class="btn btn-mark" id="openForm" type="button">＋ Разместить смену или вакансию</button>
     </div>
   </div>
 </header>
@@ -130,6 +131,7 @@
 <main class="wrap" id="main">
   <section aria-labelledby="listTitle">
     <div class="notice" id="banner" hidden></div>
+    <a class="biz-strip" href="business.html"><span>💼 <b>Работодателям:</b> смена под ключ — найдём человека на смену, <span data-price="shift">1 000</span> ₽ за выход, замена бесплатно</span><span class="go">Подробнее →</span></a>
     <div class="sub-cta" id="subCta" hidden><span id="subText">🔔 Новые вакансии в Telegram — бот пришлёт сам</span><a class="respond" id="subLink" href="#" target="_blank" rel="noopener">Подписаться</a></div>
     <div class="meta"><strong id="listTitle">Вакансии</strong><span class="status" id="status">Загружаю вакансии…</span></div>
     <div class="list" id="list"></div>
@@ -204,6 +206,6 @@
 <script src="config.js"></script>
 <script src="common.js"></script>
 <script src="mascot.js?v=3"></script>
-<script src="app.js?v=5"></script>
+<script src="app.js?v=6"></script>
 </body>
 </html>
