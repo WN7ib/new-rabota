@@ -87,11 +87,11 @@
   <h2 id="plans">Тарифы</h2>
   <div class="plans">
     <div class="plan"><h3>Базовый</h3><div class="pp">0 ₽</div><p>Размещение вакансии после проверки, отклики приходят в кабинет по личной ссылке.</p><a class="btn btn-ghost" href="./#add">Разместить</a></div>
-    <div class="plan"><h3>Топ-7</h3><div class="pp"><span data-price="top7">390</span> ₽</div><p>Вакансия закреплена вверху списка на 7 дней.</p><div class="promo">🎁 Первым 10 компаниям — бесплатно за отзыв</div><a class="btn btn-ghost" href="cabinet.html">Заказать в кабинете</a></div>
-    <div class="plan"><h3>Срочно</h3><div class="pp"><span data-price="urgent">490</span> ₽</div><p>Метка «Срочно» и рассылка подходящим кандидатам в Telegram-боте.</p><a class="btn btn-ghost" href="cabinet.html">Заказать в кабинете</a></div>
-    <div class="plan"><h3>Проверенная компания</h3><div class="pp"><span data-price="verify">690</span> ₽</div><p>Значок ✓ проверки на всех ваших вакансиях — подросткам и родителям спокойнее.</p><a class="btn btn-ghost" href="cabinet.html">Заказать в кабинете</a></div>
-    <div class="plan hot"><h3>Смена под ключ</h3><div class="pp"><span data-price="shift">1 000</span> ₽ <small>/ выход</small></div><p>Подбор человека, контроль выхода через бота, гарантия бесплатной замены. Можно разово, на неделю, месяц или свой срок.</p><a class="btn btn-primary" href="#shift">Заказать</a></div>
-    <div class="plan"><h3>Бизнес</h3><div class="pp"><span data-price="business">1 990</span> ₽ <small>/ мес</small></div><p>До 5 вакансий в топе, проверка компании, приоритет в рассылках.</p><a class="btn btn-ghost" href="cabinet.html">Заказать в кабинете</a></div>
+    <div class="plan"><h3>В топ 7 дней</h3><div class="pp"><span data-price="top7">500</span> ₽</div><p>Вакансия закреплена вверху списка на 7 дней.</p><div class="promo">🎁 Первым 10 компаниям — бесплатно за отзыв</div><a class="btn btn-ghost" href="cabinet.html">Заказать в кабинете</a></div>
+    <div class="plan"><h3>Срочно + канал</h3><div class="pp"><span data-price="urgent">750</span> ₽</div><p>Метка «Срочно», пост в канале @NEWIrabota и рассылка подходящим кандидатам в Telegram-боте.</p><a class="btn btn-ghost" href="cabinet.html">Заказать в кабинете</a></div>
+    <div class="plan hot"><h3>Смена под ключ</h3><div class="pp"><span data-price="shift">1 000</span> ₽ <small>/ выход</small></div><p>Подбор конкретного человека на смену, контроль выхода через бота, гарантия бесплатной замены. Разово, на неделю, месяц или свой срок.</p><a class="btn btn-primary" href="#shift">Заказать</a></div>
+    <div class="plan"><h3>Проверка ✓ (год)</h3><div class="pp"><span data-price="verify">1 500</span> ₽</div><p>Значок «Проверенная компания» на всех ваших вакансиях — подросткам и родителям спокойнее.</p><a class="btn btn-ghost" href="cabinet.html">Заказать в кабинете</a></div>
+    <div class="plan"><h3>Бизнес (месяц)</h3><div class="pp"><span data-price="business">2 000</span> ₽ <small>/ мес</small></div><p>До 5 вакансий в топе, значок проверки, приоритет в рассылках.</p><a class="btn btn-ghost" href="cabinet.html">Заказать в кабинете</a></div>
   </div>
 
   <h2 id="shift">Заявка на смену под ключ</h2>
@@ -101,6 +101,15 @@
     <div class="field"><label for="s-city">Город</label><input id="s-city" maxlength="60" list="cities" placeholder="Саратов"></div>
     <div class="field"><label for="s-address">Адрес точки</label><input id="s-address" maxlength="200" placeholder="ул. Московская, 1"></div>
     <div class="field full"><label for="s-task">Что нужно делать</label><textarea id="s-task" maxlength="600" placeholder="Раздавать листовки у входа, помогать на кассе, выкладка товара…"></textarea></div>
+
+    <div class="field full"><label>Формат</label>
+      <div class="group" id="s-type">
+        <button class="chip" type="button" data-type="hourly" aria-pressed="true">Обычная смена</button>
+        <button class="chip" type="button" data-type="split" aria-pressed="false">Сплит 4 + 4 ч (14–17 лет)</button>
+        <button class="chip" type="button" data-type="task" aria-pressed="false">Разовая задача (ГПХ / самозанятый)</button>
+        <button class="chip" type="button" data-type="adult" aria-pressed="false">Полная смена 8–12 ч (18+)</button>
+      </div><p class="hint" id="s-type-h"></p></div>
+    <div class="field full" id="s-res-f" hidden><label for="s-res">Результат: что сдать и в каком объёме</label><input id="s-res" maxlength="300" placeholder="Раздать 500 листовок у ТЦ; 3 макета для сторис"></div>
 
     <div class="field full"><label>Срок</label>
       <div class="group" id="s-term">
@@ -114,13 +123,13 @@
     <div class="field full" id="s-days-f" hidden><label>Дни недели</label>
       <div class="days" id="s-days">
         <button class="chip" type="button" data-d="1" aria-pressed="true">Пн</button><button class="chip" type="button" data-d="2" aria-pressed="true">Вт</button><button class="chip" type="button" data-d="3" aria-pressed="true">Ср</button><button class="chip" type="button" data-d="4" aria-pressed="true">Чт</button><button class="chip" type="button" data-d="5" aria-pressed="true">Пт</button><button class="chip" type="button" data-d="6" aria-pressed="false">Сб</button><button class="chip" type="button" data-d="0" aria-pressed="false">Вс</button>
-      </div><p class="hint" id="s-wknd" hidden>Сб и Вс недоступны для работников младше 18 — ст. 268 ТК РФ.</p></div>
-    <div class="field"><label for="s-from">Время с</label><input id="s-from" type="time" value="10:00" min="06:00" max="22:00" step="900"></div>
+      </div><p class="hint" id="s-wknd" hidden>Сб и Вс можно, если у работника два других выходных в неделю. В государственные праздники до 18 лет работать нельзя (ст. 112, 268 ТК РФ).</p></div>
+    <div class="field"><label for="s-from" id="s-from-l">Время с</label><input id="s-from" type="time" value="10:00" min="06:00" max="22:00" step="900"></div>
     <div class="field"><label for="s-to">до</label><input id="s-to" type="time" value="14:00" min="06:00" max="22:00" step="900"></div>
-    <div class="field"><label for="s-age">Возраст работника</label>
+    <div class="field" id="s-age-f"><label for="s-age">Возраст работника</label>
       <select id="s-age"><option value="14">с 14 лет (до 4 ч в день)</option><option value="16" selected>с 16 лет (до 7 ч в день)</option><option value="18">с 18 лет (до 12 ч)</option></select></div>
-    <div class="field"><label for="s-people">Сколько человек</label><input id="s-people" type="number" min="1" max="10" value="1" inputmode="numeric"></div>
-    <div class="field full"><label for="s-pay">Ставка работнику на руки за смену, ₽</label><input id="s-pay" type="number" min="100" max="100000" step="50" placeholder="2000" inputmode="numeric"></div>
+    <div class="field" id="s-people-f"><label for="s-people">Сколько человек</label><input id="s-people" type="number" min="1" max="10" value="1" inputmode="numeric"></div>
+    <div class="field full"><label for="s-pay" id="s-pay-l">Ставка работнику на руки за смену, ₽</label><input id="s-pay" type="number" min="100" max="100000" step="50" value="2000" inputmode="numeric"></div>
     <label class="check full" style="white-space:normal"><input type="checkbox" id="s-friend"> Можно откликнуться вдвоём с другом</label>
     <label class="check full" style="white-space:normal"><input type="checkbox" id="s-urgent"> Срочно — человек нужен через 2 часа</label>
 
@@ -140,7 +149,8 @@
     <details><summary>Как платить комиссию?</summary><p id="payInfo">Переводом по СБП после подтверждения кандидата. Пришлём реквизиты в Telegram или по телефону и чек самозанятого.</p></details>
     <details><summary>Если нужен человек каждый день?</summary><p>Выберите «Неделя», «Месяц» или «Свой срок» и отметьте дни недели. Каждый выход — отдельные <span data-price="shift">1 000</span> ₽ за человека, оплачиваются по мере подтверждения.</p></details>
     <details><summary>А если человек не пришёл?</summary><p>Напишите нам — найдём замену бесплатно. Платить второй раз за этот выход не нужно.</p></details>
-    <details><summary>Можно ли брать подростков?</summary><p>Да, с 14 лет на лёгкий труд: не ночью, не в выходные, не больше 4 ч в день для 14–15 и 7 ч для 16–17 лет. Для 14–15 лет нужно согласие родителя — у нас есть <a href="consent.html">готовый бланк</a>.</p></details>
+    <details><summary>Можно ли брать подростков?</summary><p>Да, с 14 лет на лёгкий труд: не ночью и не в государственные праздники. В день — до 4 ч (14 лет), 5 ч (15 лет), 7 ч (16–17 лет); в учебный год у школьников вдвое меньше. Суббота и воскресенье могут быть рабочими днями по графику, если у подростка два других выходных. Для 14–15 лет нужно согласие родителя — у нас есть <a href="consent.html">готовый бланк</a>.</p></details>
+    <details><summary>Нужен человек на 8 часов, а подросткам столько нельзя?</summary><p><b>Сплит 4 + 4:</b> смену делим на две половины — утром выходит один школьник, вечером другой, у каждого законная короткая смена. Комиссия одна — <span data-price="shift">1 000</span> ₽ за пару. <b>Полная смена 18+:</b> подберём студента, до 12 ч. <b>Разовая задача:</b> если нужен результат (раздать листовки, сделать дизайн), а не присутствие по графику, — договор ГПХ или самозанятость с оплатой за результат. Если человек работает по вашему графику на точке под контролем, это трудовые отношения и нормы часов действуют.</p></details>
   </div>
 </main>
 
@@ -155,15 +165,38 @@
 (function(){
   const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
   const {sb, el, toast} = window.NR;
-  const P={shift:1000,top7:390,urgent:490,verify:690,business:1990}; let S={};
+  const P={shift:1000,top7:500,urgent:750,verify:1500,business:2000}; let S={};
   const rub=n=>Math.round(n).toLocaleString("ru-RU")+" ₽";
   const ls={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
   NR.settings().then(s=>{S=s||{};Object.assign(P,Object.fromEntries(Object.entries(S.prices||{}).filter(([,v])=>+v>=0)));
     $$("[data-price]").forEach(e=>e.textContent=(+P[e.dataset.price]).toLocaleString("ru-RU"));
     if(S.pay_info)$("#payInfo").textContent=S.pay_info; calc()});
 
+  // ── формат смены
+  let type="hourly",term="once";
+  const TYPE={hourly:"Обычная смена",split:"Сплит 4+4",task:"Разовая задача",adult:"Полная смена 18+"};
+  const TH={hourly:"Один человек на всё время смены. Длительность — по возрасту работника.",
+    split:"Указанное время делится на две половины: утром выходит один подросток, вечером другой. Например, 10:00–18:00 → 10–14 и 14–18. Комиссия одна на пару.",
+    task:"Оплата за результат, а не за часы: раздать листовки, помочь на ивенте, сделать дизайн. Время — окно, когда можно выполнять. Договор ГПХ или самозанятость (с 14 лет — с согласия родителя).",
+    adult:"Только кандидаты 18+ (студенты): смена до 12 часов."};
+  function setType(t){
+    type=t;$$("#s-type .chip").forEach(x=>x.setAttribute("aria-pressed",x.dataset.type===t));
+    $("#s-type-h").textContent=TH[t];
+    $("#s-res-f").hidden=t!=="task";$("#s-people-f").hidden=t==="split";$("#s-age-f").hidden=t==="adult";
+    $("#s-from-l").textContent=t==="task"?"Можно выполнять с":"Время с";
+    $("#s-pay-l").textContent=t==="task"?"Оплата исполнителю за задачу на руки, ₽":t==="split"?"Ставка каждому из двоих на руки, ₽":"Ставка работнику на руки за смену, ₽";
+    const age=$("#s-age");[...age.options].forEach(o=>o.disabled=t==="split"&&o.value==="18");
+    if(t==="split"&&age.value==="18")age.value="16";
+    if(t==="split"&&$("#s-from").value==="10:00"&&$("#s-to").value==="14:00")$("#s-to").value="18:00";
+    if(t!=="split"&&t!=="adult"&&t!=="task"&&$("#s-to").value==="18:00"&&$("#s-from").value==="10:00")$("#s-to").value="14:00";
+    if(t==="adult"&&$("#s-to").value==="14:00")$("#s-to").value="18:00";
+    if(!payTouched)$("#s-pay").value=t==="split"?1000:2000;
+    calc();
+  }
+  let payTouched=false;$("#s-pay").addEventListener("input",()=>payTouched=true);
+  $$("#s-type .chip").forEach(b=>b.onclick=()=>setType(b.dataset.type));
+
   // ── график
-  let term="once";
   const pad=n=>String(n).padStart(2,"0");
   const ymd=d=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
   const tomorrow=()=>{const t=new Date();t.setDate(t.getDate()+1);$("#s-start").value=ymd(t);$("#s-start").min=ymd(new Date())};tomorrow();
@@ -171,8 +204,10 @@
     $("#s-days-f").hidden=term==="once";$("#s-len-f").hidden=term!=="custom";$("#s-start-l").textContent=term==="once"?"Дата смены":"Дата начала";calc()});
   $$("#s-days .chip").forEach(b=>b.onclick=()=>{b.setAttribute("aria-pressed",b.getAttribute("aria-pressed")!=="true");calc()});
   const DN=["Вс","Пн","Вт","Ср","Чт","Пт","Сб"];
-  function teen(){return +$("#s-age").value<18}
-  function weekdays(){return [...$$("#s-days .chip")].filter(b=>b.getAttribute("aria-pressed")==="true"&&!b.disabled).map(b=>+b.dataset.d)}
+  const HOL=["01-01","01-02","01-03","01-04","01-05","01-06","01-07","01-08","02-23","03-08","05-01","05-09","06-12","11-04"];
+  const isHol=d=>HOL.includes(pad(d.getMonth()+1)+"-"+pad(d.getDate()));
+  const ageNow=()=>type==="adult"?18:+$("#s-age").value;
+  function weekdays(){return [...$$("#s-days .chip")].filter(b=>b.getAttribute("aria-pressed")==="true").map(b=>+b.dataset.d)}
   function dates(){
     const v=$("#s-start").value;if(!v)return[];
     const [y,m,d]=v.split("-").map(Number);const start=new Date(y,m-1,d);
@@ -186,72 +221,96 @@
     return out;
   }
   const hours=()=>{const a=$("#s-from").value,b=$("#s-to").value;if(!a||!b)return 0;const [h1,m1]=a.split(":").map(Number),[h2,m2]=b.split(":").map(Number);return ((h2*60+m2)-(h1*60+m1))/60};
+  const hh=x=>(Math.round(x*10)/10).toString().replace(".",",");
+  const addMin=(t,min)=>{const [h,m]=t.split(":").map(Number);const x=h*60+m+min;return pad(Math.floor(x/60))+":"+pad(x%60)};
+  const perPerson=()=>type==="split"?hours()/2:hours();
   function problems(ds){
-    const p=[],age=+$("#s-age").value,h=hours(),max=age===14?4:age===16?7:12;
+    const p=[],age=ageNow(),h=hours(),hp=perPerson(),max=age===14?4:age===16?7:12;
     const a=$("#s-from").value,b=$("#s-to").value;
     if(!a||!b||h<=0)p.push("Укажите время: «до» позже, чем «с».");
-    else{if(a<"06:00"||b>"22:00")p.push("Смена только с 06:00 до 22:00 — ночью работать нельзя.");
-      if(h>max)p.push("Для работника "+(age<18?"с "+age+" лет":"18+")+" смена не длиннее "+max+" ч в день (сейчас "+h.toFixed(1).replace(".0","")+" ч).");
-      if(h<1)p.push("Смена от 1 часа.");}
+    else{
+      if(a<"06:00"||b>"22:00")p.push("Только с 06:00 до 22:00 — ночью работать нельзя.");
+      if(type==="split"&&h<2)p.push("Для сплита укажите общее время от 2 часов.");
+      else if(type==="split"&&hp>max)p.push("В сплите у каждого половина — "+hh(hp)+" ч, а с "+age+" лет можно не больше "+max+" ч в день. Сократите общее время до "+max*2+" ч.");
+      else if(type!=="split"&&type!=="task"&&h>max)p.push("Для работника "+(age<18?"с "+age+" лет":"18+")+" смена не длиннее "+max+" ч в день (сейчас "+hh(h)+" ч)."+(age<18&&h<=8?" Выберите «Сплит 4 + 4» или «Полная смена 18+».":""));
+      if(type!=="task"&&type!=="split"&&h<1)p.push("Смена от 1 часа.");
+    }
     if(!ds.length)p.push(term==="once"?"Выберите дату смены.":"Выберите хотя бы один день недели.");
     if(ds.length>62)p.push("Не больше 62 выходов в одной заявке — разбейте на две.");
     const today=new Date();today.setHours(0,0,0,0);
     if(ds.length&&ds[0]<today)p.push("Дата уже прошла.");
     if(ds.length&&(ds[ds.length-1]-today)/864e5>99)p.push("Заявка — максимум на 100 дней вперёд.");
-    if(age<18&&ds.some(d=>d.getDay()===0||d.getDay()===6))p.push("Работникам младше 18 нельзя в субботу и воскресенье (ст. 268 ТК РФ).");
-    if(age<18&&term!=="once"){const per=weekdays().length*h,lim=age===14?24:35;if(per>lim)p.push("В неделю получается "+per+" ч, а для "+age+"–"+(age===14?15:17)+" лет можно не больше "+lim+" ч (ст. 92 ТК РФ).")}
+    if(age<18){const hd=ds.filter(isHol);if(hd.length)p.push(hd.slice(0,3).map(d=>d.getDate()+"."+pad(d.getMonth()+1)).join(", ")+" — государственный праздник: до 18 лет работать нельзя (ст. 268 ТК РФ). Уберите эти дни или выберите формат 18+.")}
+    if(age<18&&term!=="once"&&type!=="task"){const per=weekdays().length*hp,lim=age===14?24:35;if(per>lim)p.push("В неделю у одного человека получается "+hh(per)+" ч, а до "+(age===14?16:18)+" лет можно не больше "+lim+" ч (ст. 92 ТК РФ).")}
     return p;
   }
   function calc(){
-    const age=+$("#s-age").value;
-    $$("#s-days .chip").forEach(b=>{const we=b.dataset.d==="0"||b.dataset.d==="6";b.disabled=we&&age<18;if(b.disabled)b.setAttribute("aria-pressed","false")});
+    const age=ageNow();
     $("#s-wknd").hidden=age>=18;
-    const ds=dates(),n=ds.length,ppl=Math.min(Math.max(+$("#s-people").value||1,1),10),pay=+$("#s-pay").value||0,fee=P.shift*ppl;
+    const ds=dates(),n=ds.length,ppl=type==="split"?2:Math.min(Math.max(+$("#s-people").value||1,1),10),pay=+$("#s-pay").value||0;
+    const fee=type==="split"?P.shift:P.shift*ppl;
     const box=$("#s-calc");box.textContent="";
     const line=(t,b)=>{const d=el("div");if(b){d.append(el("b",null,t))}else d.textContent=t;box.append(d)};
-    line("Выходов: "+n+(ppl>1?" × "+ppl+" чел.":"")+(hours()>0?" · по "+hours().toFixed(1).replace(".0","")+" ч":""));
-    line("Работнику после смены: "+(pay?rub(pay)+(ppl>1?" каждому":""):"— укажите ставку")+" — платите ему сами");
-    line("Комиссия New.работа после подтверждения кандидата: "+rub(fee)+" за выход"+(n>1?" · всего "+rub(fee*n)+" за "+n+" выход"+(n%10===1&&n%100!==11?"":n%10>=2&&n%10<=4&&(n%100<12||n%100>14)?"а":"ов"):""),true);
-    if(n>1){const f=ds.slice(0,8).map(d=>DN[d.getDay()]+" "+d.getDate()+"."+pad(d.getMonth()+1)).join(", ");const dd=el("div","dates",f+(n>8?" … ещё "+(n-8):""));box.append(dd)}
+    const wN=n%10===1&&n%100!==11?"":n%10>=2&&n%10<=4&&(n%100<12||n%100>14)?"а":"ов";
+    const total=n>1?" · всего "+rub(fee*n)+" за "+n+" выход"+wN:"";
+    if(type==="split"){
+      const a=$("#s-from").value,b=$("#s-to").value,mid=a&&b&&hours()>0?addMin(a,Math.round(hours()*30)):"";
+      line("Выйдут 2 кандидата по "+hh(perPerson())+" ч"+(mid?" ("+a+"–"+mid+" и "+mid+"–"+b+")":"")+": по "+(pay?rub(pay):"…")+" каждому после смены (всего "+(pay?rub(pay*2):"…")+")"+(n>1?" · смен: "+n:""));
+      line("Комиссия New.работа: "+rub(fee)+(n>1?" за смену"+total:""),true);
+    }else if(type==="task"){
+      line("Задача"+(n>1?": "+n+" дат"+(n%10===1&&n%100!==11?"а":n%10>=2&&n%10<=4&&(n%100<12||n%100>14)?"ы":""):"")+(ppl>1?" × "+ppl+" исполн.":"")+" · окно "+$("#s-from").value+"–"+$("#s-to").value);
+      line("Исполнителю за результат: "+(pay?rub(pay)+(ppl>1?" каждому":""):"— укажите сумму")+" — платите сами после сдачи");
+      line("Комиссия New.работа после подтверждения исполнителя: "+rub(fee)+(n>1?" за дату"+total:""),true);
+    }else{
+      line("Выходов: "+n+(ppl>1?" × "+ppl+" чел.":"")+(hours()>0?" · по "+hh(hours())+" ч":"")+(type==="adult"?" · 18+":""));
+      line("Работнику после смены: "+(pay?rub(pay)+(ppl>1?" каждому":""):"— укажите ставку")+" — платите ему сами");
+      line("Комиссия New.работа после подтверждения кандидата: "+rub(fee)+" за выход"+total,true);
+    }
+    if(n>1){const f=ds.slice(0,8).map(d=>DN[d.getDay()]+" "+d.getDate()+"."+pad(d.getMonth()+1)).join(", ");box.append(el("div","dates",f+(n>8?" … ещё "+(n-8):"")))}
+    // мягкая подсказка: в учебный год у школьников норма вдвое меньше (ст. 94)
+    const school=ds.some(d=>{const m=d.getMonth()+1;return m>=9||m<=5});
+    if(age<18&&type!=="task"&&school&&perPerson()>(age===14?2.5:4))box.append(el("div","dates","ℹ️ Если работник учится, в учебный год у него норма меньше: до 2,5 ч (до 16 лет) и до 4 ч (16–17) в день. Подберём того, кому подходит: каникулы, колледж, вуз."));
     const pr=problems(ds),w=$("#s-warn");w.hidden=!pr.length;w.textContent=pr.join(" ");
-    return {ds,pr,ppl,pay};
+    return {ds,pr,ppl,pay,fee};
   }
   ["#s-start","#s-len","#s-from","#s-to","#s-age","#s-people","#s-pay"].forEach(id=>$(id).addEventListener("input",calc));
-  calc();
+  setType("hourly");
 
   // ── отправка
   $("#sf").addEventListener("submit",async e=>{
     e.preventDefault();const err=$("#s-err");err.hidden=true;
     if($("#s-website").value)return;
     if(!sb){toast("Сайт ещё не подключён к базе");return}
-    const {ds,pr,ppl,pay}=calc();const v=id=>$(id).value.trim();
-    const miss=[];if(v("#s-company").length<2)miss.push("компанию");if(v("#s-contact").length<3)miss.push("контакт");if(v("#s-address").length<5)miss.push("адрес точки");if(!(pay>=100))miss.push("ставку работнику (от 100 ₽)");
+    const {ds,pr,ppl,pay,fee}=calc();const v=id=>$(id).value.trim();
+    const miss=[];if(v("#s-company").length<2)miss.push("компанию");if(v("#s-contact").length<3)miss.push("контакт");if(v("#s-address").length<5)miss.push("адрес точки");
+    if(type==="task"&&v("#s-res").length<3)miss.push("результат задачи");if(!(pay>=100))miss.push(type==="task"?"оплату за задачу (от 100 ₽)":"ставку работнику (от 100 ₽)");
     if(miss.length){err.textContent="Заполните: "+miss.join(", ")+".";err.hidden=false;return}
     if(pr.length){err.textContent=pr[0];err.hidden=false;$("#s-warn").scrollIntoView({behavior:"smooth",block:"center"});return}
     if(!$("#s-ack").checked){err.textContent="Поставьте галочку подтверждения условий работы.";err.hidden=false;return}
     const [fh,fm]=$("#s-from").value.split(":").map(Number);
     const starts=ds.map(d=>new Date(d.getFullYear(),d.getMonth(),d.getDate(),fh,fm).toISOString());
-    const T={once:"Разовая смена",week:"Неделя",month:"Месяц",custom:"Свой срок ("+$("#s-len").value+" дн.)"}[term];
+    const T={once:"Разово",week:"Неделя",month:"Месяц",custom:"Свой срок ("+$("#s-len").value+" дн.)"}[term];
     const days=term==="once"?"":" · "+[1,2,3,4,5,6,0].filter(x=>weekdays().includes(x)).map(x=>DN[x]).join(" ");
-    const p={company:v("#s-company"),contact:v("#s-contact"),city:v("#s-city"),address:v("#s-address"),task:v("#s-task"),starts,
-      time_from:$("#s-from").value,time_to:$("#s-to").value,age_min:+$("#s-age").value,people:ppl,worker_pay:pay,
+    const p={shift_type:type,company:v("#s-company"),contact:v("#s-contact"),city:v("#s-city"),address:v("#s-address"),task:v("#s-task"),result:type==="task"?v("#s-res"):"",starts,
+      time_from:$("#s-from").value,time_to:$("#s-to").value,age_min:ageNow(),people:ppl,worker_pay:pay,
       with_friend:$("#s-friend").checked,is_urgent:$("#s-urgent").checked,safe_ack:true,
-      schedule:(T+days+" · "+$("#s-from").value+"–"+$("#s-to").value).slice(0,200)};
+      schedule:(TYPE[type]+" · "+T+days+" · "+$("#s-from").value+"–"+$("#s-to").value).slice(0,200)};
     const btn=$("#s-send");btn.disabled=true;btn.textContent="Отправляю…";
     const {data,error}=await sb.rpc("shift_order_create",{t:ls.get("nr-emp","")||null,p});
     btn.disabled=false;btn.textContent="Отправить заявку";
-    if(error){const m=error.message||"";err.textContent=/too many/.test(m)?"Слишком много заявок за сутки. Напишите нам в бота.":/night/.test(m)?"Смена только с 06:00 до 22:00.":/too long/.test(m)?"Смена слишком длинная для выбранного возраста.":/bad date/.test(m)?"Проверьте даты: не раньше сегодняшнего дня и не дальше 100 дней.":"Не получилось отправить. Попробуйте ещё раз или напишите нам в бота.";err.hidden=false;return}
-    const n=(data||[]).length,fee=P.shift*ppl;
+    if(error){const m=error.message||"";err.textContent=/too many/.test(m)?"Слишком много заявок за сутки. Напишите нам в бота.":/night/.test(m)?"Только с 06:00 до 22:00.":/too long/.test(m)?"Смена слишком длинная для выбранного возраста.":/holiday/.test(m)?"В государственные праздники до 18 лет работать нельзя.":/need result/.test(m)?"Опишите результат задачи.":/bad date/.test(m)?"Проверьте даты: не раньше сегодняшнего дня и не дальше 100 дней.":"Не получилось отправить. Попробуйте ещё раз или напишите нам в бота.";err.hidden=false;return}
+    const n=(data||[]).length;
     const bot=String(S.bot_username||"").replace(/^@/,"");
     const sh=el("div","sheet"),f=el("div","form");
+    const who=type==="split"?"двух человек":type==="task"?"исполнителя":"человека";
     f.append(el("h2",null,"Заявка принята ✅"),
-      el("p","full",(n>1?"Выходов в графике: "+n+". ":"")+"Подберём человека и напишем вам: "+p.contact+". Когда кандидат подтвердит выход, пришлём реквизиты: "+rub(fee)+" за выход"+(n>1?" — оплачиваете по мере смен":"")+"."),
-      el("p","hint full","Ставку "+rub(pay)+" платите работнику сами после смены. Если человек не выйдет — заменим бесплатно."));
+      el("p","full",(n>1?"Дат в графике: "+n+". ":"")+"Подберём "+who+" и напишем вам: "+p.contact+". Когда кандидат подтвердит выход, пришлём реквизиты: "+rub(fee)+(type==="split"?" за смену (за пару)":" за выход")+(n>1?" — оплачиваете по мере смен":"")+"."),
+      el("p","hint full",(type==="split"?"По "+rub(pay)+" каждому из двоих":type==="task"?rub(pay)+" за результат":"Ставку "+rub(pay))+" платите сами"+(type==="task"?" после сдачи работы":" после смены")+". Если человек не выйдет — заменим бесплатно."));
     const row=el("div","row");
     if(bot){const a=el("a","btn btn-primary","Открыть бота New.работа");a.href="https://t.me/"+bot;a.target="_blank";a.rel="noopener";a.style.textDecoration="none";row.append(a)}
     const ok=el("button","btn btn-ghost","Готово");ok.type="button";ok.onclick=()=>sh.remove();row.append(ok);f.append(row);
     sh.append(f);document.body.append(sh);sh.addEventListener("click",ev=>{if(ev.target===sh)sh.remove()});
-    $("#sf").reset();tomorrow();$("#s-from").value="10:00";$("#s-to").value="14:00";calc();
+    $("#sf").reset();tomorrow();$("#s-from").value="10:00";$("#s-to").value="14:00";payTouched=false;setType("hourly");
   });
 })();
 </script>

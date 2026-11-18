@@ -295,10 +295,10 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
         <div class="field"><label for="st-bot">Ник рабочего бота для подписки (без @)</label><input id="st-bot" type="text" maxlength="40" placeholder="NewRabotaBot"></div>
         <div class="field"><label for="st-metrika">Номер счётчика Яндекс.Метрики</label><input id="st-metrika" type="text" inputmode="numeric" maxlength="12" placeholder="например 98765432"></div>
         <div class="field"><label>Цены продвижения, ₽</label><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px">
-          <label style="font-size:13px">В топ 7 дней<input id="pr-top7" type="number" min="0" placeholder="390"></label>
-          <label style="font-size:13px">Срочно + рассылка<input id="pr-urgent" type="number" min="0" placeholder="490"></label>
-          <label style="font-size:13px">Проверка ✓ (год)<input id="pr-verify" type="number" min="0" placeholder="690"></label>
-          <label style="font-size:13px">Бизнес (месяц)<input id="pr-business" type="number" min="0" placeholder="1990"></label>
+          <label style="font-size:13px">В топ 7 дней<input id="pr-top7" type="number" min="0" placeholder="500"></label>
+          <label style="font-size:13px">Срочно + канал<input id="pr-urgent" type="number" min="0" placeholder="750"></label>
+          <label style="font-size:13px">Проверка ✓ (год)<input id="pr-verify" type="number" min="0" placeholder="1500"></label>
+          <label style="font-size:13px">Бизнес (месяц)<input id="pr-business" type="number" min="0" placeholder="2000"></label>
           <label style="font-size:13px">Смена под ключ (за 1 выход)<input id="pr-shift" type="number" min="0" placeholder="1000"></label></div></div>
         <div class="field"><label for="st-pay">Как оплатить (видит работодатель после заказа)</label><textarea id="st-pay" maxlength="500" placeholder="Перевод по СБП на номер +7…, получатель …. В комментарии укажи номер заказа. Чек пришлём из «Мой налог»."></textarea></div>
         <div class="field"><label for="st-about">Текст «О проекте» (пусто — стандартный)</label><textarea id="st-about" maxlength="600"></textarea></div>
@@ -589,6 +589,7 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
 
   // заказы продвижения
   const PROD={top7:"В топ на 7 дней",urgent:"Срочно + пост в канале",verify:"Проверка ✓ на год",business:"Бизнес на месяц",shift:"Смена под ключ"};
+  const SHT={hourly:"обычная смена",split:"сплит 4+4 — два человека по половине смены",task:"разовая задача (ГПХ / самозанятый), оплата за результат",adult:"полная смена, только 18+"};
   const SHST={search:"🔎 ищем человека",confirmed:"🤝 кандидат подтвердил выход",done:"✅ отработал",no_show:"⚠️ не вышел — нужна замена",replaced:"🔁 замена вышла",cancelled:"✖ отменена"};
   let otab="new",okind="all";
   $$("#ordtabs .chip").forEach(b=>b.onclick=()=>{otab=b.dataset.o;$$("#ordtabs .chip").forEach(x=>x.setAttribute("aria-pressed",x===b));loadOrders()});
@@ -630,12 +631,14 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
     c.append(left,el("div","date",new Date(o.created_at).toLocaleString("ru-RU",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})));
     const lines=[
       "Статус: "+(SHST[o.shift_status]||o.shift_status),
+      "Формат: "+(SHT[o.shift_type]||SHT.hourly),
+      o.result?"Результат: "+o.result:"",
       o.schedule?"График: "+o.schedule:"",
       o.age_min?"Возраст: с "+o.age_min+" лет":"",
       "Адрес: "+[o.city,o.address].filter(Boolean).join(", "),
       o.task?"Задача: "+o.task:"",
-      "Работнику на руки: "+rub(o.worker_pay)+(o.people>1?" × "+o.people+" чел.":"")+" — платит бизнес сам",
-      "Комиссия New.работа: "+rub(o.price)+(o.people>1?" ("+rub(o.price/o.people)+" × "+o.people+")":""),
+      (o.shift_type==="task"?"Исполнителю за результат: ":"Работнику на руки: ")+rub(o.worker_pay)+(o.people>1?" × "+o.people+" чел.":"")+" — платит бизнес сам",
+      "Комиссия New.работа: "+rub(o.price)+(o.shift_type==="split"?" (за пару)":o.people>1?" ("+rub(o.price/o.people)+" × "+o.people+")":""),
       [o.with_friend?"👫 можно вдвоём с другом":"",o.is_urgent?"🔥 срочно (через 2 часа)":""].filter(Boolean).join(" · "),
       o.candidate?"Кто выходит: "+o.candidate:"",
       "Связь: "+(o.contact||"—"),
@@ -662,7 +665,7 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
       if(!confirm("Показать эту смену в «Мероприятиях»? Подростки запишутся через бота. Контакт работодателя не публикуется."))return;
       const t=(o.time_from&&o.time_to?o.time_from+"–"+o.time_to:o.shift_hours?o.shift_hours+" ч":"");
       const desc=[o.task,t?"Время: "+t:"",o.worker_pay?"Оплата: "+rub(o.worker_pay)+" за смену, на руки после смены":"",o.age_min?"Возраст: с "+o.age_min+" лет":"",o.with_friend?"Можно вдвоём с другом 👫":"",o.is_urgent?"Срочно 🔥":"","Запись через бота New.работа — мы подтвердим выход."].filter(Boolean).join("\n");
-      const row={title:("Смена: "+(o.task||o.company||"подработка")).slice(0,120),starts_at:o.shift_at,place:(o.address||"").slice(0,160)||null,city:(o.city||"").slice(0,40)||null,kind:"Смена",description:desc.slice(0,2000),capacity:o.people*(o.with_friend?2:1),published:true};
+      const row={title:((o.shift_type==="adult"?"18+ · ":"")+(o.shift_type==="task"?"Задача: ":"Смена: ")+(o.task||o.company||"подработка")).slice(0,120),starts_at:o.shift_at,place:(o.address||"").slice(0,160)||null,city:(o.city||"").slice(0,40)||null,kind:"Смена",description:desc.slice(0,2000),capacity:o.people*(o.with_friend?2:1),published:true};
       const {data,error}=await sb.from("events").insert(row).select("id").single();
       if(error){toast("Не получилось: "+error.message);return}
       upd({admin_note:((o.admin_note?o.admin_note+"\n":"")+"Опубликовано: events.html#e-"+data.id).slice(0,600)},"Опубликовано в «Мероприятиях»")});

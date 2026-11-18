@@ -86,15 +86,16 @@
     },
     {
       "id": "2026-11-10-prices",
-      "title": "Цены продвижения по умолчанию",
+      "title": "Цены продвижения по умолчанию (500 / 750 / 1500 / 2000, смена 1000)",
       "do": "site_settings",
       "args": {
         "data": {
           "prices": {
-            "top7": 199,
-            "urgent": 299,
-            "verify": 490,
-            "business": 990
+            "top7": 500,
+            "urgent": 750,
+            "verify": 1500,
+            "business": 2000,
+            "shift": 1000
           }
         }
       }
@@ -216,11 +217,13 @@
     },
     {
       "id": "2026-11-18-sql-12",
-      "title": "База: «Смена под ключ» — 1 000 ₽ за каждый выход, новые цены тарифов, починка «Заказов»",
+      "title": "База: «Смена под ключ» по графику и форматам (сплит, задача, 18+), новые цены",
       "do": "sql",
       "args": {
         "files": [
-          "migration-12-shift.sql"
+          "migration-12-shift.sql",
+          "migration-13-shift-schedule.sql",
+          "migration-14-shift-formats.sql"
         ]
       }
     },

@@ -123,6 +123,8 @@
       <button class="chip" type="button" data-type="Полная">полная</button>
       <button class="chip" type="button" data-type="Разовая">разовая</button>
       <button class="chip" type="button" data-type="__proj">проекты и волонтёрство</button>
+      <button class="chip" type="button" data-flag="weekend" aria-pressed="false">в выходные (Сб–Вс)</button>
+      <button class="chip" type="button" data-flag="split" aria-pressed="false">сплит 4 часа</button>
       <button class="chip" type="button" data-fav="1" aria-pressed="false">★ избранное</button>
     </div>
   </div>
@@ -143,19 +145,23 @@
       <p>По Трудовому кодексу работать можно с 14 лет: лёгкий труд, без вреда здоровью и учёбе. До 16 нужно согласие родителя и органа опеки, договор подписываешь сам.</p>
       <div style="overflow-x:auto">
       <table>
-        <thead><tr><th>Возраст</th><th>В неделю</th><th>В день, каникулы</th></tr></thead>
+        <thead><tr><th>Возраст</th><th>В неделю</th><th>В день, каникулы</th><th>В день, учебный год</th></tr></thead>
         <tbody>
-          <tr><td>14–15</td><td class="n">24 ч</td><td class="n">до 4 ч</td></tr>
-          <tr><td>16–17</td><td class="n">35 ч</td><td class="n">до 7 ч</td></tr>
+          <tr><td>14</td><td class="n">24 ч</td><td class="n">до 4 ч</td><td class="n">до 2,5 ч</td></tr>
+          <tr><td>15</td><td class="n">24 ч</td><td class="n">до 5 ч</td><td class="n">до 2,5 ч</td></tr>
+          <tr><td>16–17</td><td class="n">35 ч</td><td class="n">до 7 ч</td><td class="n">до 4 ч</td></tr>
         </tbody>
       </table>
       </div>
       <ul>
-        <li>В учебный год, если совмещаешь со школой, норма вдвое меньше: 12 и 17,5 ч в неделю.</li>
-        <li>Нельзя: ночью, сверхурочно, в выходные, на вредной работе, с алкоголем и табаком.</li>
+        <li>В учебный год, если совмещаешь со школой, норма вдвое меньше: 12 и 17,5 ч в неделю — и в будни, и в субботу с воскресеньем.</li>
+        <li>Нельзя: ночью (с 22 до 6), сверхурочно, в государственные праздники, на вредной работе, с алкоголем и табаком.</li>
+        <li><b>Суббота и воскресенье — можно</b>, если по твоему графику это рабочие дни, а два других дня в неделе — выходные.</li>
+        <li><b>Смена 8 часов?</b> Её делят на две по 4 ч для двух ребят (сплит) — так законно. Целую смену 8–12 ч берут только с 18 лет.</li>
+        <li><b>Разовая задача</b> (раздать листовки, дизайн) — можно по договору ГПХ или как самозанятый с 14 лет с согласия родителя: платят за результат. Если работаешь по графику на точке — это трудовой договор, и нормы часов выше действуют.</li>
         <li>Отпуск 31 день, испытательный срок не ставится.</li>
       </ul>
-      <p class="src">ТК РФ, ст. 63, 92, 94, 265, 267, 268.</p>
+      <p class="src">ТК РФ, ст. 63, 92, 94, 112, 265, 267, 268; ГК РФ, ст. 26; закон о НПД (422-ФЗ).</p>
     </div>
     <div class="box">
       <h2>Как не попасть на обман</h2>
@@ -188,6 +194,8 @@
     <div class="field"><label for="f-exp">Актуально</label>
       <select id="f-exp"><option value="14">2 недели</option><option value="30" selected>месяц</option><option value="60">2 месяца</option><option value="90">3 месяца</option></select></div>
     <label class="check" style="align-self:end"><input type="checkbox" id="f-remote"> Можно удалённо</label>
+    <label class="check full" style="white-space:normal"><input type="checkbox" id="f-weekend"> Работа в выходные (Сб–Вс)</label>
+    <label class="check full" style="white-space:normal"><input type="checkbox" id="f-split"> Сплит-смены по 4 часа (утро / вечер — для 14–17 лет)</label>
     <div class="field full"><label for="f-desc">Что делать и график</label><textarea id="f-desc" maxlength="1200" placeholder="Сб–Вс с 10 до 15. Готовить кофе, принимать заказы. Научим с нуля."></textarea></div>
     <div class="field full"><label for="f-contact">Как откликнуться</label><input id="f-contact" type="text" maxlength="120" placeholder="Telegram @zerno_hr или +7 900 000-00-00"></div>
     <p class="hint full">Вакансия появится на сайте после проверки модератором, обычно в течение суток. Для 14–15 лет указывай только лёгкую работу. Отправляя вакансию, ты соглашаешься с <a href="about.html#rules">правилами размещения</a>.</p>
@@ -206,6 +214,6 @@
 <script src="config.js"></script>
 <script src="common.js"></script>
 <script src="mascot.js?v=3"></script>
-<script src="app.js?v=7"></script>
+<script src="app.js?v=8"></script>
 </body>
 </html>

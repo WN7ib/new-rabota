@@ -3,7 +3,7 @@
   const {sb, el, toast, today} = window.NR;
   const list=$("#list"), statusEl=$("#status");
   const PROJ=["Стажировка","Проект","Волонтёрство"];
-  const state={settings:{},items:[],q:"",city:"",remote:false,age:0,type:"",fav:false,favs:new Set(),open:new Set(),ready:false};
+  const state={settings:{},items:[],q:"",city:"",remote:false,age:0,type:"",fav:false,weekend:false,split:false,favs:new Set(),open:new Set(),ready:false};
   const ls={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
   state.favs=new Set(ls.get("nr-favs",[]));
   const saveFavs=()=>ls.set("nr-favs",[...state.favs]);
@@ -22,6 +22,8 @@
       else if(state.type&&v.type!==state.type)return false;
       if(state.age&&(+v.age_min||14)>state.age)return false;
       if(state.remote&&!v.remote)return false;
+      if(state.weekend&&!v.weekend)return false;
+      if(state.split&&!v.split)return false;
       if(c&&!v.remote&&!norm(v.city).includes(c))return false;
       if(q){const hay=norm([v.title,v.company,v.description,v.city,v.type].join(" "));if(!q.split(/\s+/).every(w=>hay.includes(w)))return false}
       return true;
@@ -40,6 +42,8 @@
     if(v.verified)tags.append(el("span","t t-ok","✓ работодатель проверен"));
     tags.append(el("span","t t-age","с "+(v.age_min||14)+" лет"),el("span","t",v.type||"Подработка"));
     if(v.remote)tags.append(el("span","t t-remote","удалённо"));
+    if(v.weekend)tags.append(el("span","t","в выходные"));
+    if(v.split)tags.append(el("span","t","сплит 4 ч"));
     if(v.expires_at)tags.append(el("span","date t-exp",NR.expiryText(v.expires_at)));
     tags.append(el("span","date",ago(v.created_at)));
     c.append(tags);
@@ -69,7 +73,7 @@
         box.append(acts,el("h3",null,"Ищете сотрудников 14–25 лет?"),el("p",null,"Разместите вакансию бесплатно или закажите «Смену под ключ»: найдём человека, проконтролируем выход и бесплатно заменим, если он не придёт."));
         const acts2=el("div","acts");
         if(state.settings.submissions_open!==false){const b=el("button","btn btn-primary","＋ Разместить смену или вакансию");b.type="button";b.onclick=chooseForm;acts2.append(b)}
-        {const a=el("a","btn btn-ghost","Условия для работодателей");a.href="business.html";acts2.append(a)}
+        {const a=el("a","btn btn-ghost","⚡ Заказать смену под ключ");a.href="business.html#shift";acts2.append(a)}
         box.append(acts2);
       }else{
         box.append(el("h3",null,"Ничего не нашлось"),el("p",null,"Попробуй убрать часть фильтров или поискать в другом городе."));
@@ -90,9 +94,10 @@
 
   function setAge(a){state.age=a;$$("#ageGroup .chip").forEach(x=>x.setAttribute("aria-pressed",+x.dataset.age===a))}
   function resetFilters(){
-    state.q=state.city="";state.remote=false;state.type="";state.fav=false;setAge(0);
+    state.q=state.city="";state.remote=false;state.type="";state.fav=false;state.weekend=state.split=false;setAge(0);
+    $$("#typeGroup .chip[data-flag]").forEach(b=>b.setAttribute("aria-pressed","false"));
     $("#q").value="";$("#city").value="";$("#remote").checked=false;
-    $$("#typeGroup .chip").forEach(b=>b.setAttribute("aria-pressed",b.dataset.type===""&&!b.dataset.fav));
+    $$("#typeGroup .chip:not([data-flag])").forEach(b=>b.setAttribute("aria-pressed",b.dataset.type===""&&!b.dataset.fav));
     render();refreshMeta();
   }
   $("#searchForm").addEventListener("submit",e=>e.preventDefault());
@@ -102,7 +107,8 @@
   $$("#ageGroup .chip").forEach(b=>b.onclick=()=>{setAge(+b.dataset.age);render();refreshMeta()});
   $$("#typeGroup .chip").forEach(b=>b.onclick=()=>{
     if(b.dataset.fav){state.fav=!state.fav;b.setAttribute("aria-pressed",state.fav)}
-    else{state.type=b.dataset.type;$$("#typeGroup .chip:not([data-fav])").forEach(x=>x.setAttribute("aria-pressed",x===b))}
+    else if(b.dataset.flag){const k=b.dataset.flag;state[k]=!state[k];b.setAttribute("aria-pressed",state[k])}
+    else{state.type=b.dataset.type;$$("#typeGroup .chip:not([data-fav]):not([data-flag])").forEach(x=>x.setAttribute("aria-pressed",x===b))}
     render();refreshMeta()});
   {const c=ls.get("nr-city","");if(c){$("#city").value=c;state.city=c}}
   {const q=new URLSearchParams(location.search);const qc=q.get("city");if(qc){$("#city").value=qc;state.city=qc;ls.set("nr-chosen",1)}if(q.get("remote")==="1"){state.remote=true;$("#remote").checked=true;ls.set("nr-chosen",1)}}
@@ -131,7 +137,7 @@
     if(Date.now()-ls.get("nr-last",0)<60000){err.textContent="Подожди минуту перед следующей вакансией.";err.hidden=false;return}
     const v=id=>$(id).value.trim();
     const exp=new Date(Date.now()+(+$("#f-exp").value)*864e5);
-    const data={title:v("#f-title"),company:v("#f-company")||null,city:v("#f-city")||null,type:$("#f-type").value,age_min:+$("#f-age").value,pay:v("#f-pay")||null,remote:$("#f-remote").checked,description:v("#f-desc")||null,contact:v("#f-contact"),status:"pending",expires_at:exp.toISOString().slice(0,10)};
+    const data={title:v("#f-title"),company:v("#f-company")||null,city:v("#f-city")||null,type:$("#f-type").value,age_min:+$("#f-age").value,pay:v("#f-pay")||null,remote:$("#f-remote").checked,weekend:$("#f-weekend").checked,split:$("#f-split").checked,description:v("#f-desc")||null,contact:v("#f-contact"),status:"pending",expires_at:exp.toISOString().slice(0,10)};
     const miss=[];if(data.title.length<2)miss.push("должность");if(!data.city&&!data.remote)miss.push("город или «удалённо»");if(data.contact.length<3)miss.push("контакт для отклика");
     if(miss.length){err.textContent="Заполни: "+miss.join(", ")+".";err.hidden=false;return}
     const btn=$("#submitForm");btn.disabled=true;btn.textContent="Отправляю…";
