@@ -21,7 +21,7 @@
 1. На GitHub создай пустой репозиторий `new-rabota` (Public).
 2. Залей туда эти файлы (или дай доступ Claude, он зальёт сам).
 3. Settings → Pages → Source: «Deploy from a branch», ветка `main`, папка `/ (root)` → Save.
-4. Через минуту сайт откроется по адресу `https://wn7ib.github.io/new-rabota/`.
+4. Через минуту сайт откроется по адресу `https://new-rabota.ru/` (домен в REG.RU, файл `CNAME`; старый адрес `wn7ib.github.io/new-rabota` перенаправляет сюда).
 
 ## 3. Свой домен и DNS
 

@@ -2,7 +2,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 const cfg = readFileSync("config.js", "utf8");
 const url = cfg.match(/supabaseUrl\s*:\s*"([^"]+)"/)[1], key = cfg.match(/supabaseKey\s*:\s*"([^"]+)"/)[1];
-const SITE = "https://wn7ib.github.io/new-rabota/";
+const SITE = "https://new-rabota.ru/";
 async function q(path) {
   try { const r = await fetch(`${url}/rest/v1/${path}`, { headers: { apikey: key, Authorization: `Bearer ${key}` } }); return r.ok ? await r.json() : []; }
   catch { return []; }

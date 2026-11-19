@@ -3,4 +3,4 @@ Disallow: /admin.html
 Disallow: /cabinet.html
 Allow: /
 
-Sitemap: https://wn7ib.github.io/new-rabota/sitemap.xml
+Sitemap: https://new-rabota.ru/sitemap.xml
