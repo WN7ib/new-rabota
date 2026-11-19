@@ -13,7 +13,7 @@ const KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const MID = Deno.env.get("PLATEGA_MERCHANT_ID") ?? "";
 const SECRET = Deno.env.get("PLATEGA_SECRET") ?? "";
 const API = (Deno.env.get("PLATEGA_URL") ?? "https://app.platega.io").replace(/\/$/, "");
-const SITE = Deno.env.get("SITE_URL") ?? "https://wn7ib.github.io/new-rabota/";
+const SITE = Deno.env.get("SITE_URL") ?? "https://new-rabota.ru/";
 const TG = Deno.env.get("TG_TOKEN") ?? "";
 
 const CORS = {

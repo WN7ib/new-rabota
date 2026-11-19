@@ -6,7 +6,7 @@
 const SB = Deno.env.get("SUPABASE_URL")!;
 const KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const TG = Deno.env.get("TG_TOKEN") ?? "";
-const SITE = Deno.env.get("SITE_URL") ?? "https://wn7ib.github.io/new-rabota/";
+const SITE = Deno.env.get("SITE_URL") ?? "https://new-rabota.ru/";
 
 // ───────── база ─────────
 async function db(method: string, path: string, body?: unknown, prefer?: string): Promise<any> {
