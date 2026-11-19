@@ -49,6 +49,15 @@ button,input{font:inherit;color:inherit}
 .btn.ghost{background:var(--bg2);color:var(--link)}
 .foot{text-align:center;color:var(--hint);font-size:13px;padding:6px 0 20px}
 .foot a{color:var(--link)}
+.fld{margin:10px 0}
+.fld label{display:block;font-size:13px;color:var(--hint);margin-bottom:4px}
+.fld .in{width:100%;display:block}
+textarea.in{min-height:84px;resize:vertical;font:inherit}
+.radio{display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--sep);font-size:15px}
+.radio input{margin-top:3px;accent-color:var(--btn)}
+.err{color:#e5484d;font-size:14px;margin:8px 0}
+.note{color:var(--hint);font-size:13px;margin:6px 0 0}
+.toast{position:fixed;left:12px;right:12px;bottom:18px;z-index:20;background:var(--tx);color:var(--bg);border-radius:12px;padding:11px 14px;text-align:center;font-size:14px}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -66,6 +75,7 @@ button,input{font:inherit;color:inherit}
   <div class="foot">Работодатель? <a href="#" id="addLink">Разместить вакансию</a> · <a href="#" id="siteLink">Сайт</a></div>
 </div>
 <div id="detailView" class="detail" hidden></div>
+<div id="formView" class="detail" hidden></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
@@ -80,6 +90,8 @@ button,input{font:inherit;color:inherit}
   const $=s=>document.getElementById(s);
   const norm=s=>(s||"").toString().toLowerCase().replace(/ё/g,"е").trim();
   const haptic=t=>{try{tg&&tg.HapticFeedback.selectionChanged()}catch(_){}};
+  const buzz=k=>{try{tg&&tg.HapticFeedback.notificationOccurred(k)}catch(_){}};
+  const tgUser=(inTg&&tg.initDataUnsafe&&tg.initDataUnsafe.user)||null;
 
   // ── хранилище: облако Telegram (видно на всех устройствах человека), иначе браузер ──
   const store={
@@ -91,7 +103,7 @@ button,input{font:inherit;color:inherit}
       try{localStorage.setItem("nr-tg-"+k,v)}catch(_){}}
   };
 
-  const S={items:[],q:"",city:"",age:0,remote:false,fav:false,favs:new Set(),ready:false};
+  const S={items:[],q:"",city:"",age:0,remote:false,fav:false,favs:new Set(),ready:false,profile:{},applied:new Set()};
   const AGES=[14,15,16,17,18];
 
   function chips(){
@@ -177,24 +189,103 @@ button,input{font:inherit;color:inherit}
     if(v.description)d.append(el("div","desc",v.description));
     const ct=el("div","box");ct.append(el("b",null,"Как откликнуться"),el("div",null,v.contact||"контакт не указан"));d.append(ct);
     const law=lawBox(v);if(law)d.append(law);
-    const sh=el("div","box");sh.append(el("b",null,"🛡 Осторожно"),el("div",null,"Честный работодатель не просит денег за обучение или форму,, не просит оформить на себя карту или сим-карту и не платит «только наличными курьером». Сомневаешься — пожалуйся на сайте."));d.append(sh);
+    const sh=el("div","box");sh.append(el("b",null,"🛡 Осторожно"),el("div",null,"Честный работодатель не просит денег за обучение или форму, не просит оформить на себя карту или сим-карту и не платит «только наличными курьером». Сомневаешься — нажми «Пожаловаться» внизу."));d.append(sh);
     const fav=S.favs.has(String(v.id));
     const bf=el("button","btn ghost",fav?"★ В избранном":"☆ В избранное");bf.type="button";
     bf.onclick=()=>{const id=String(v.id);S.favs.has(id)?S.favs.delete(id):S.favs.add(id);save();chips();open(v)};
     const bs=el("button","btn ghost","↗ Поделиться с другом");bs.type="button";
     bs.onclick=()=>go("https://t.me/share/url?url="+encodeURIComponent(SITE+"vacancy.html?id="+v.id)+"&text="+encodeURIComponent(v.title||""));
-    const bw=el("button","btn ghost",v.employer_id?"📝 Анкета и подробности на сайте":"Открыть на сайте");bw.type="button";
+    if(v.employer_id){
+      const sent=S.applied.has(String(v.id));
+      const ba=el("button","btn"+(sent?" ghost":""),sent?"✓ Анкета отправлена":"📝 Отправить анкету");ba.type="button";
+      ba.onclick=()=>applyView(v);d.append(ba);
+      if(!sent)d.append(el("div","note","Анкета придёт работодателю в кабинет и в Telegram — он ответит по твоему контакту."));
+    }
+    const bw=el("button","btn ghost","Открыть на сайте");bw.type="button";
     bw.onclick=()=>go(SITE+"vacancy.html?id="+encodeURIComponent(v.id));
-    d.append(bf,bs,bw);
+    const br=el("button","btn ghost","⚠️ Пожаловаться");br.type="button";br.style.color="#e5484d";
+    br.onclick=()=>reportView(v);
+    d.append(bf,bs,bw,br);
     if(!inTg){const br=el("button","btn","✉ Откликнуться");br.type="button";br.onclick=()=>respond(v);d.prepend(br);const bb=el("button","btn ghost","← Назад");bb.type="button";bb.onclick=close;d.prepend(bb)}
     $("listView").hidden=true;d.hidden=false;window.scrollTo(0,0);
+    $("formView").hidden=true;
     if(inTg){tg.BackButton.show();tg.MainButton.setText("✉ Откликнуться");tg.MainButton.show()}
   }
   function close(){
-    cur=null;$("detailView").hidden=true;$("listView").hidden=false;
+    cur=null;mode=null;$("detailView").hidden=true;$("formView").hidden=true;$("listView").hidden=false;
     if(inTg){tg.BackButton.hide();tg.MainButton.hide()}
   }
-  if(inTg){tg.BackButton.onClick(close);tg.MainButton.onClick(()=>{if(cur)respond(cur)})}
+
+  // ── анкета и жалоба прямо в мини-приложении (без перехода на сайт) ──
+  let mode=null,submit=null,busy=false;
+  function toast(t){let e=$("toast");if(!e){e=el("div","toast");e.id="toast";document.body.append(e)}e.textContent=t;e.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>e.hidden=true,3200)}
+  function back(){ if(mode&&cur){const v=cur;mode=null;submit=null;$("formView").hidden=true;open(v)} else close() }
+  function setBusy(b,label){busy=b;if(inTg){try{b?tg.MainButton.showProgress(false):tg.MainButton.hideProgress()}catch(_){}}const s=$("fSend");if(s){s.disabled=b;if(label)s.textContent=label}}
+  function formShell(v,title,hint,sendLabel){
+    const f=$("formView");f.textContent="";
+    if(!inTg){const bb=el("button","btn ghost","← Назад");bb.type="button";bb.onclick=back;f.append(bb)}
+    f.append(el("h2",null,title),el("div","where","«"+(v.title||"")+"»"+(v.company?" · "+v.company:"")));
+    if(hint)f.append(el("div","note",hint));
+    $("detailView").hidden=true;$("listView").hidden=true;f.hidden=false;window.scrollTo(0,0);
+    if(inTg){tg.BackButton.show();tg.MainButton.setText(sendLabel);tg.MainButton.show()}
+    return f;
+  }
+  function field(f,label,node){const d=el("div","fld");d.append(el("label",null,label),node);f.append(d);return node}
+  function input(val,max,ph,mode2){const i=document.createElement("input");i.className="in";i.type="text";i.maxLength=max;i.value=val||"";if(ph)i.placeholder=ph;if(mode2)i.inputMode=mode2;return i}
+  function finish(f,err,send){const e=el("div","err");e.hidden=true;f.append(e);
+    if(!inTg){const b=el("button","btn",send);b.type="button";b.id="fSend";b.onclick=()=>submit&&submit();f.append(b)}
+    return t=>{e.textContent=t;e.hidden=!t;if(t){buzz("error");e.scrollIntoView({block:"nearest"})}}}
+
+  function applyView(v){
+    if(!sb){toast("Мини-приложение не подключено к базе");return}
+    haptic();mode="apply";
+    const p=S.profile||{};
+    const f=formShell(v,"📝 Анкета","Работодатель увидит её в кабинете и получит уведомление в Telegram.","Отправить анкету");
+    const name=field(f,"Имя",input(p.name||(tgUser&&tgUser.first_name)||"",60,"Как к тебе обращаться"));
+    const age=field(f,"Возраст",input(p.age||(S.age&&S.age<18?S.age:""),2,"16","numeric"));
+    const contact=field(f,"Контакт для ответа",input(p.contact||(tgUser&&tgUser.username?"@"+tgUser.username:""),120,"@telegram или телефон"));
+    const msg=document.createElement("textarea");msg.className="in";msg.maxLength=600;msg.placeholder="Пара слов о себе: когда можешь работать, опыт";msg.value=p.about||"";field(f,"О себе",msg);
+    const showErr=finish(f,null,"Отправить анкету");
+    submit=async()=>{
+      if(busy)return;
+      const a=parseInt(age.value,10),nm=name.value.trim(),ct=contact.value.trim();
+      if(nm.length<2||ct.length<3)return showErr("Укажи имя и контакт, чтобы работодатель мог ответить.");
+      if(a&&(a<14||a>99))return showErr("Проверь возраст.");
+      if(a&&a<(+v.age_min||14))return showErr("На эту вакансию берут с "+(+v.age_min||14)+" лет.");
+      showErr("");setBusy(true,"Отправляю…");
+      let error=null;try{({error}=await sb.rpc("apply",{vid:v.id,p_name:nm,p_age:a||null,p_contact:ct,p_message:msg.value.trim()}))}catch(e){error=e}
+      setBusy(false,"Отправить анкету");
+      if(error){const m=String(error.message||"");return showErr(/closed/.test(m)?"Вакансия уже закрыта.":/too many/.test(m)?"Сейчас много анкет — попробуй через 10 минут.":/function|schema/.test(m)?"Анкеты скоро заработают. Пока откликнись по контакту.":"Не получилось отправить. Проверь интернет и попробуй ещё раз.")}
+      S.profile={name:nm,age:a||"",contact:ct,about:msg.value.trim().slice(0,600)};store.set("profile",JSON.stringify(S.profile));
+      S.applied.add(String(v.id));store.set("applied",[...S.applied].slice(-60).join(","));
+      buzz("success");mode=null;submit=null;$("formView").hidden=true;open(v);toast("Анкета отправлена! Работодатель свяжется с тобой.");
+    };
+  }
+
+  const REASONS=["Мошенничество, дропы, «лёгкие деньги»","Просят заплатить за обучение или форму","Не подходит для подростков","Контакты не работают","Другое"];
+  function reportView(v){
+    if(!sb){toast("Мини-приложение не подключено к базе");return}
+    haptic();mode="report";
+    const f=formShell(v,"⚠️ Пожаловаться","Модератор проверит и уберёт вакансию, если что-то не так. Твоё имя не передаётся.","Отправить жалобу");
+    const box=el("div","fld");
+    REASONS.forEach((r,i)=>{const l=el("label","radio");const inp=document.createElement("input");inp.type="radio";inp.name="rr";inp.value=r;if(i===0)inp.checked=true;l.append(inp,el("span",null,r));box.append(l)});
+    f.append(box);
+    const ta=document.createElement("textarea");ta.className="in";ta.maxLength=400;ta.placeholder="Подробности (необязательно)";field(f,"Что случилось",ta);
+    const showErr=finish(f,null,"Отправить жалобу");
+    submit=async()=>{
+      if(busy)return;
+      const r=(f.querySelector("input[name=rr]:checked")||{}).value||"Другое";
+      if(r==="Другое"&&ta.value.trim().length<3)return showErr("Напиши пару слов, что не так.");
+      const reason=(r+(ta.value.trim()?": "+ta.value.trim():"")).slice(0,500);
+      showErr("");setBusy(true,"Отправляю…");
+      let error=null;try{({error}=await sb.from("reports").insert({vacancy_id:v.id,reason}))}catch(e){error=e}
+      setBusy(false,"Отправить жалобу");
+      if(error)return showErr("Не получилось отправить. Попробуй позже.");
+      buzz("success");mode=null;submit=null;$("formView").hidden=true;open(v);toast("Спасибо! Жалоба у модератора.");
+    };
+  }
+
+  if(inTg){tg.BackButton.onClick(back);tg.MainButton.onClick(()=>{if(mode&&submit)submit();else if(cur)respond(cur)})}
 
   let qt;$("q").oninput=e=>{clearTimeout(qt);qt=setTimeout(()=>{S.q=e.target.value;render()},200)};
   $("city").onchange=e=>{S.city=e.target.value.trim();save();render()};
@@ -203,8 +294,10 @@ button,input{font:inherit;color:inherit}
   $("siteLink").onclick=e=>{e.preventDefault();go(SITE)};
 
   async function load(){
-    const [age,city,remote,favs]=await Promise.all(["age","city","remote","favs"].map(k=>store.get(k)));
+    const [age,city,remote,favs,profile,applied]=await Promise.all(["age","city","remote","favs","profile","applied"].map(k=>store.get(k)));
     S.age=+age||0;S.remote=remote==="1";S.favs=new Set((favs||"").split(",").filter(Boolean));
+    try{S.profile=JSON.parse(profile||"{}")||{}}catch(_){S.profile={}}
+    S.applied=new Set((applied||"").split(",").filter(Boolean));
     // город из ссылки бота: t.me/бот?startapp=city_Москва или tg.html?city=…
     const sp=(inTg&&tg.initDataUnsafe&&tg.initDataUnsafe.start_param)||"";
     const urlCity=new URLSearchParams(location.search).get("city")||(sp.startsWith("city_")?decodeURIComponent(sp.slice(5)).replace(/_/g," "):"");
