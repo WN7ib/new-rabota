@@ -250,11 +250,12 @@
     document.body.classList.toggle("noanim",ls.get("nr-anim",true)===false);
     const w=$("#newiWrap");w.classList.remove("ts-s","ts-l");const s=ls.get("nr-size","m");if(s==="s")w.classList.add("ts-s");if(s==="l")w.classList.add("ts-l");
   }
-  function fillProf(){const p=prof();$("#pName").value=p.name||"";$("#pAge").value=p.age||"";$("#pCity").value=p.city||"";
+  function fillProf(){const p=prof();$("#pName").value=p.name||"";$("#pTg").value=p.tg?"@"+p.tg:"";$("#pAge").value=p.age||"";$("#pCity").value=p.city||"";
     $("#sVoice").checked=voiceOn();$("#sRate").value=ls.get("nr-rate",1);$("#sAnim").checked=ls.get("nr-anim",true)!==false;$("#sSize").value=ls.get("nr-size","m");$("#sVoice").disabled=!synth}
   $("#profBtn").onclick=()=>{if($("#viewProf").hidden){fillProf();showView("prof")}else showView("chat")};
   $("#sSave").onclick=()=>{
-    const age=parseInt($("#pAge").value,10),p={name:$("#pName").value.trim().slice(0,30),age:age>=13&&age<=30?age:0,city:$("#pCity").value.trim().slice(0,40)};
+    const tg=$("#pTg").value.trim().replace(/^https?:\/\/t\.me\//,"").replace(/^@/,"");
+    const age=parseInt($("#pAge").value,10),p={tg:/^[A-Za-z0-9_]{4,32}$/.test(tg)?tg:"",name:$("#pName").value.trim().slice(0,30),age:age>=13&&age<=30?age:0,city:$("#pCity").value.trim().slice(0,40)};
     ls.set("nr-profile",Object.assign({},prof(),p));ls.set("nr-voice",$("#sVoice").checked?"on":"off");ls.set("nr-rate",+$("#sRate").value);ls.set("nr-anim",$("#sAnim").checked);ls.set("nr-size",$("#sSize").value);
     paintVoice();applyPrefs();$("#voicePick").hidden=true;
     if(p.age>=14){setAge(p.age>=18?18:p.age>=16?16:14)}
@@ -355,7 +356,9 @@
   }
   async function askServer(q){
     if(!sb||state.settings.chat_on===false){say("Сейчас я отвечаю только на готовые вопросы — кнопки ниже. Свободные вопросы скоро снова включат.");return}
-    const {data,error}=await sb.rpc("chat_ask",{p_session:session,p_q:q});
+    const pr=prof();
+    let {data,error}=await sb.rpc("chat_ask",{p_session:session,p_q:q,p_name:pr.name||null,p_tg:pr.tg||null});
+    if(error&&/function|schema cache|PGRST202/i.test((error.message||"")+(error.code||"")))({data,error}=await sb.rpc("chat_ask",{p_session:session,p_q:q}));   // база ещё без migration-15
     if(error){say(/too many/.test(error.message||"")?"Слишком много вопросов подряд. Подожди минутку.":"Не получилось отправить вопрос. Попробуй ещё раз.");return}
     push({who:"nw",text:"Newi думает…",wait:true,id:data,at:Date.now()});Mascot.set("think");
     poll();

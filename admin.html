@@ -546,15 +546,20 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
   $$("#ctabs .chip").forEach(b=>b.onclick=()=>{ctab=b.dataset.c;$$("#ctabs .chip").forEach(x=>x.setAttribute("aria-pressed",x===b));loadChat()});
   async function loadChat(){
     $("#cstatus").textContent="Загружаю…";
-    let q=sb.from("site_chat").select("id,created_at,q,a,answered_at,session").order("created_at",{ascending:false}).limit(150);
-    if(ctab==="open")q=q.is("a",null);
-    const {data,error}=await q;const list=$("#clist");list.textContent="";
+    const mk=cols=>{let q=sb.from("site_chat").select(cols).order("created_at",{ascending:false}).limit(150);if(ctab==="open")q=q.is("a",null);return q};
+    let {data,error}=await mk("id,created_at,q,a,answered_at,session,who_name,who_tg");
+    if(error&&/who_/.test(error.message||""))({data,error}=await mk("id,created_at,q,a,answered_at,session"));   // база ещё без migration-15
+    const list=$("#clist");list.textContent="";
     if(error){$("#cstatus").textContent="Не загрузилось. Выполнен ли migration-3.sql?";return}
     $("#cstatus").textContent=data.length+" шт.";
     if(!data.length){list.append(el("div","empty",ctab==="open"?"Все вопросы отвечены.":"Вопросов пока нет."));return}
     for(const m of data){
       const c=el("article","card open");
-      const left=el("div");left.style.minWidth="0";left.append(el("h3",null,"❓ "+m.q),el("div","where","посетитель #"+m.session.slice(0,6)));
+      const left=el("div");left.style.minWidth="0";left.append(el("h3",null,"❓ "+m.q));
+      const who=el("div","where");
+      if(m.who_name||m.who_tg){who.append((m.who_name?"👤 "+m.who_name:"👤")+" ");if(m.who_tg){const t=el("a",null,"@"+m.who_tg);t.href="https://t.me/"+m.who_tg;t.target="_blank";t.rel="noopener";who.append(t," ")}who.append("· #"+m.session.slice(0,6))}
+      else who.textContent="посетитель #"+m.session.slice(0,6)+" · не представился";
+      left.append(who);
       c.append(left,el("div","date",new Date(m.created_at).toLocaleString("ru-RU",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})));
       if(m.a)c.append(el("p","desc","💬 "+m.a));
       const a=el("div","row-actions");const inp=document.createElement("input");inp.type="text";inp.placeholder=m.a?"Исправить ответ":"Ответить самому";inp.style.flex="1 1 220px";

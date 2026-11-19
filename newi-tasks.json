@@ -234,6 +234,16 @@
       "args": {
         "addr": "@NEWIrabota"
       }
+    },
+    {
+      "id": "2026-11-19-sql-15",
+      "title": "База: видно, кто спрашивает Newi на сайте (имя и Telegram, если указал сам)",
+      "do": "sql",
+      "args": {
+        "files": [
+          "migration-15-chat-who.sql"
+        ]
+      }
     }
   ]
 }
