@@ -105,6 +105,34 @@
       a.append(el("span",null,g.name+" — "+parts.join(", ")),el("small",null,d<3?"твой город":"≈ "+Math.round(d)+" км"));box.append(a);
     }
   }
+  // города, которых нет в списке C: ищем в OpenStreetMap (Nominatim) — по одному в секунду (правило сервиса),
+  // не больше 20 за заход; найденное и ненайденное помним в браузере на 30 дней, чтобы не спрашивать снова
+  const GEO_KEY="nr_geo1",GEO_TTL=30*864e5;
+  function geoCache(){try{return JSON.parse(localStorage.getItem(GEO_KEY)||"{}")}catch(e){return {}}}
+  function geoSave(c){try{localStorage.setItem(GEO_KEY,JSON.stringify(c))}catch(e){}}
+  async function geocode(){
+    const miss=Object.values(by).filter(g=>!g.c);if(!miss.length)return;
+    const cache=geoCache(),now=Date.now();let changed=false,asked=0;
+    for(const g of miss){
+      const hit=cache[g.key];
+      if(hit&&now-hit.t<GEO_TTL){if(hit.c){g.c=hit.c;changed=true}continue}
+      if(asked>=20)break;
+      if(asked++)await new Promise(r=>setTimeout(r,1100));
+      let c=null;
+      try{
+        const u="https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=ru&accept-language=ru&q="+encodeURIComponent(g.name.replace(/^г\.?\s*/i,""));
+        const r=await fetch(u,{headers:{"Accept":"application/json"}});
+        if(!r.ok)break;   // сервис занят или ограничил — попробуем в следующий раз, ничего не запоминаем
+        const j=await r.json(),p=j&&j[0];
+        if(p&&/^(place|boundary)$/.test(p.class)){const la=+p.lat,lo=+p.lon;if(la>41&&la<82&&(lo>19||lo<-168))c=[+la.toFixed(3),+lo.toFixed(3)]}
+      }catch(e){break}
+      cache[g.key]={c,t:now};geoSave(cache);
+      if(c){g.c=c;changed=true}
+    }
+    if(!changed)return;
+    unknown=Object.values(by).filter(g=>!g.c&&g.vac.length).length;
+    draw();if(!me)fit();else nearList();
+  }
   document.querySelectorAll("#tools [data-show]").forEach(b=>b.onclick=()=>{show=b.dataset.show;document.querySelectorAll("#tools [data-show]").forEach(x=>x.setAttribute("aria-pressed",x===b));draw();fit();if(me)nearList()});
   const nb=document.getElementById("nearBtn");
   function locate(){
@@ -131,6 +159,7 @@
     for(const v of rows){if(!v.city){if(v.remote)remote++;continue}const g=group(v.city);g.vac.push(v);if(!g.c)unknown++}
     for(const e of evs){const g=group(e.city);g.ev.push(e)}
     draw();fit();
+    geocode();
     const ne=evs.length;
     sum.textContent=rows.length||ne?("Сейчас "+rows.length+" "+word(rows.length,"вакансия","вакансии","вакансий")+(remote?" (из них "+remote+" удалённо)":"")+(ne?" и "+ne+" "+word(ne,"смена или мероприятие","смены и мероприятия","смен и мероприятий"):"")+". Синие кружки — вакансии, зелёные — смены и мероприятия. Нажми на кружок, чтобы увидеть, что там есть."):"Пока вакансий нет — загляни позже.";
     const cs=document.getElementById("cities");
