@@ -66,14 +66,19 @@
     const fld=(lab,i,full)=>{const d=el("div","field"+(full?" full":""));d.append(el("label",null,lab),i);f.append(d);return i};
     const mk=(ph,max,type)=>{const i=document.createElement("input");i.type=type||"text";i.maxLength=max;i.placeholder=ph;return i};
     const name=fld("Имя",mk("Как к тебе обращаться",60)),age=fld("Возраст",mk("16",2,"number")),contact=fld("Телеграм или телефон",mk("@username или +7…",120),true);
-    if(from&&location.hash==="#e-"+e.id)f.append(el("p","hint full","Тебя позвал(а) "+from+". Хочешь в одну смену — скажи об этом организаторам, когда они свяжутся."));
+    const pal=fld("С кем идёшь (необязательно)",mk("Имя друга — поставят в одну смену",60),true);
+    if(from&&location.hash==="#e-"+e.id){pal.value=from;f.append(el("p","hint full","Тебя позвал(а) "+from+" — организаторы увидят, что вы вместе, и постараются поставить в одну смену."))}
     f.append(el("p","hint full","Контакт увидят только организаторы, чтобы связаться по мероприятию."));
     const err=el("p","err");err.hidden=true;f.append(err);
     const row=el("div","row");const c=el("button","btn btn-ghost","Отмена");c.type="button";c.onclick=()=>sh.remove();const s=el("button","btn btn-primary","Записаться");s.type="submit";row.append(c,s);f.append(row);
     f.addEventListener("submit",async ev=>{ev.preventDefault();
       if(name.value.trim().length<2||contact.value.trim().length<3){err.textContent="Впиши имя и контакт.";err.hidden=false;return}
       s.disabled=true;const a=parseInt(age.value,10);
-      const {data,error}=await sb.rpc("event_signup",{eid:e.id,p_name:name.value.trim(),p_contact:contact.value.trim(),p_age:a>=10&&a<=99?a:null});s.disabled=false;
+      const args={eid:e.id,p_name:name.value.trim(),p_contact:contact.value.trim(),p_age:a>=10&&a<=99?a:null};const w=pal.value.replace(/[\u0000-\u001f<>]/g,"").trim().slice(0,60);
+      let {data,error}=await sb.rpc("event_signup",w?{...args,p_with:w}:args);
+      // база ещё без шага 16 — записываем без друга, чтобы запись не сорвалась
+      if(error&&w&&/PGRST202|function|не найден|not find/i.test((error.code||"")+" "+error.message))({data,error}=await sb.rpc("event_signup",args));
+      s.disabled=false;
       if(error){err.textContent=/full/.test(error.message)?"Мест больше нет.":/closed/.test(error.message)?"Запись закрыта.":"Не получилось, попробуй ещё раз.";err.hidden=false;return}
       try{localStorage.setItem("nr-name",name.value.trim().split(/\s+/)[0].slice(0,30))}catch(_){}
       if(data===-1){sh.remove();done(e,"Мест нет — ты в резерве","Если кто-то откажется, организаторы свяжутся с тобой. Позови друга — вдвоём в резерве веселее.");return}

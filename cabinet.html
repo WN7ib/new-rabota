@@ -200,6 +200,7 @@
           const res=p.status==="reserve";
           li.append(el("b",null,res?"🕓 резерв · ":"✅ "),document.createTextNode(p.name+(p.age?", "+p.age+" лет":"")+" — "),a);
           // надёжность: сколько смен отработал у всех работодателей и неявки (без чужих личных данных)
+          if(p.with_name)li.append(el("span","st"," 👫 с другом: "+p.with_name));
           if(p.reliable)li.append(el("span","st approved"," ✓ надёжный"));
           if(p.came||p.missed)li.append(el("span","hint"," · смен: "+(p.came||0)+(p.missed?" · неявок: "+p.missed:"")));
           if(past){
