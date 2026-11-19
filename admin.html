@@ -172,6 +172,15 @@ td.n{font-family:var(--f-mono);white-space:nowrap}
 .help{font-size:13px;color:var(--muted);margin:0}
 code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-radius:6px;font-size:13px}
 </style>
+<style>
+.thread .msgs{grid-column:1/-1;display:flex;flex-direction:column;gap:6px;margin-top:6px}
+.thread .msg{max-width:85%;padding:8px 12px;border-radius:14px;white-space:pre-wrap;word-break:break-word;font-size:14.5px;line-height:1.4}
+.thread .msg small{display:block;font-size:11.5px;opacity:.7;margin-top:3px}
+.thread .in{align-self:flex-start;background:var(--chip,#E4EEFB);color:inherit;border-bottom-left-radius:4px}
+.thread .out{align-self:flex-end;background:var(--accent,#2F86F5);color:var(--accent-ink,#fff);border-bottom-right-radius:4px}
+.thread .more{align-self:center;font-size:13px}
+.src-tag{display:inline-block;font-size:12px;padding:1px 8px;border-radius:999px;background:var(--mark,#DCEBFF);color:var(--mark-ink,#1A5FC4);margin-left:6px}
+</style>
 </head>
 <body>
 <div class="wrap adm">
@@ -244,7 +253,7 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
     <!-- ВОПРОСЫ К NEWI -->
     <section id="v-chat" hidden style="flex-direction:column;gap:12px;margin-top:14px">
       <p class="help">Вопросы с сайта в режиме «С Newi». Отвечает Newi с телефона через мессенджер, а если она не знает ответа, вопрос остаётся здесь — можешь ответить сам.</p>
-      <div class="tools"><div class="group" id="ctabs"><button class="chip" type="button" data-c="open" aria-pressed="true">без ответа</button><button class="chip" type="button" data-c="all" aria-pressed="false">все</button></div><span class="status" id="cstatus"></span></div>
+      <div class="tools"><div class="group" id="ctabs"><button class="chip" type="button" data-c="open" aria-pressed="true">без ответа</button><button class="chip" type="button" data-c="all" aria-pressed="false">все</button><button class="chip" type="button" data-c="threads" aria-pressed="false">💬 переписки</button></div><span class="status" id="cstatus"></span></div>
       <div class="list" id="clist"></div>
     </section>
 
@@ -545,6 +554,7 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
   let ctab="open";
   $$("#ctabs .chip").forEach(b=>b.onclick=()=>{ctab=b.dataset.c;$$("#ctabs .chip").forEach(x=>x.setAttribute("aria-pressed",x===b));loadChat()});
   async function loadChat(){
+    if(ctab==="threads")return loadThreads();
     $("#cstatus").textContent="Загружаю…";
     const mk=cols=>{let q=sb.from("site_chat").select(cols).order("created_at",{ascending:false}).limit(150);if(ctab==="open")q=q.is("a",null);return q};
     let {data,error}=await mk("id,created_at,q,a,answered_at,session,who_name,who_tg");
@@ -589,6 +599,54 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
       if(r.status!=="rejected")mk("Отклонить","btn-ghost",()=>set("rejected"));
       mk("Удалить","btn-ghost",async()=>{await sb.from("reviews").delete().eq("id",r.id);toast("Удалён");loadReviews()});
       c.append(a);list.append(c);
+    }
+  }
+
+  // переписки: весь диалог с каждым человеком — с сайта (Newi) и из Telegram-бота
+  const tfmt=d=>new Date(d).toLocaleString("ru-RU",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
+  const BY={newi:"Newi",owner:"ты",faq:"готовый ответ"};
+  async function loadThreads(){
+    $("#cstatus").textContent="Загружаю переписки…";const list=$("#clist");list.textContent="";
+    let site=await sb.from("site_chat").select("id,created_at,q,a,answered_at,session,who_name,who_tg").order("created_at",{ascending:false}).limit(600);
+    if(site.error&&/who_/.test(site.error.message||""))site=await sb.from("site_chat").select("id,created_at,q,a,answered_at,session").order("created_at",{ascending:false}).limit(600);
+    const bot=await sb.from("bot_questions").select("id,created_at,chat_id,name,username,q,a,answered_at,answered_by").order("created_at",{ascending:false}).limit(600);
+    const th=new Map();
+    const add=(key,src,who,tg,row)=>{let t=th.get(key);if(!t){t={key,src,who:"",tg:"",rows:[],last:0,open:0};th.set(key,t)}
+      if(who&&!t.who)t.who=who;if(tg&&!t.tg)t.tg=tg;t.rows.push(row);t.last=Math.max(t.last,new Date(row.created_at).getTime(),row.answered_at?new Date(row.answered_at).getTime():0);if(!row.a)t.open++};
+    (site.data||[]).forEach(r=>add("s:"+r.session,"сайт",r.who_name,r.who_tg,r));
+    (bot.data||[]).forEach(r=>add("b:"+r.chat_id,"Telegram",r.name,r.username,r));
+    const all=[...th.values()].sort((a,b)=>b.last-a.last);
+    $("#cstatus").textContent=all.length?all.length+" собесед."+(site.error?" · сайт не загрузился":"")+(bot.error?" · бот не загрузился":""):"";
+    if(!all.length){list.append(el("div","empty","Переписок пока нет."));return}
+    for(const t of all){
+      t.rows.sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
+      const c=el("article","card open thread");const left=el("div");left.style.minWidth="0";
+      const h=el("h3",null,"👤 "+(t.who||(t.src==="сайт"?"посетитель #"+t.key.slice(2,8):"без имени")));
+      if(t.tg){h.append(" ");const a=el("a",null,"@"+t.tg);a.href="https://t.me/"+t.tg;a.target="_blank";a.rel="noopener";h.append(a)}
+      h.append(el("span","src-tag",t.src));left.append(h,el("div","where",t.rows.length+" сообщ."+(t.open?" · без ответа: "+t.open:"")));
+      c.append(left,el("div","date",tfmt(t.last)));
+      const box=el("div","msgs");const LIM=8;let showAll=false;
+      const draw=()=>{box.textContent="";const rows=showAll?t.rows:t.rows.slice(-LIM);
+        if(!showAll&&t.rows.length>LIM){const m=el("button","link more","Показать всю переписку ("+t.rows.length+")");m.type="button";m.onclick=()=>{showAll=true;draw()};box.append(m)}
+        for(const r of rows){
+          const i=el("div","msg in",r.q);i.append(el("small",null,tfmt(r.created_at)));box.append(i);
+          if(r.a){const o=el("div","msg out",r.a);o.append(el("small",null,(t.src==="сайт"?(r.answered_by?BY[r.answered_by]||r.answered_by:"ответ"):(BY[r.answered_by]||"ответ"))+(r.answered_at?" · "+tfmt(r.answered_at):"")));box.append(o)}
+        }};
+      draw();c.append(box);
+      // ответить: на сайте — в последний вопрос без ответа; в Telegram — через бота (ответь реплаем) или в личку
+      const act=el("div","row-actions");
+      const pend=[...t.rows].reverse().find(r=>!r.a);
+      if(t.src==="сайт"&&pend){
+        const inp=document.createElement("input");inp.type="text";inp.placeholder="Ответить на «"+pend.q.slice(0,40)+"»";inp.style.flex="1 1 220px";
+        const b=el("button","btn btn-sm btn-primary","Отправить");b.type="button";
+        b.onclick=async()=>{const v=inp.value.trim();if(!v)return;const {error}=await sb.from("site_chat").update({a:v,answered_at:new Date().toISOString()}).eq("id",pend.id);toast(error?"Не сохранилось":"Ответ отправлен — посетитель увидит его на сайте");loadThreads();countBadges()};
+        act.append(inp,b);
+      } else if(t.src==="Telegram"){
+        if(t.tg){const a=el("a","btn btn-sm btn-ghost","Написать @"+t.tg+" в Telegram");a.href="https://t.me/"+t.tg;a.target="_blank";a.rel="noopener";act.append(a)}
+        if(pend)act.append(el("span","date","Чтобы ответ ушёл от бота — ответь реплаем на его сообщение с этим вопросом в Telegram."));
+      }
+      if(act.childNodes.length)c.append(act);
+      list.append(c);
     }
   }
 
