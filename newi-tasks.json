@@ -294,6 +294,16 @@
           "migration-20-adults.sql"
         ]
       }
+    },
+    {
+      "id": "2026-11-20-sql-21",
+      "title": "База: взрослый сотрудник на выход — 1 500 ₽ (смена 18+)",
+      "do": "sql",
+      "args": {
+        "files": [
+          "migration-21-adult-price.sql"
+        ]
+      }
     }
   ]
 }

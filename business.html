@@ -75,6 +75,7 @@
   <h2 id="offer">Смена под ключ</h2>
   <div class="offer">
     <div class="price"><span data-price="shift">1 000</span> ₽ <small>за выход одного человека · оплата после подтверждения кандидата</small></div>
+    <p class="hint" style="margin:0">Взрослый сотрудник (18+): <b><span data-price="shift_adult">1 500</span> ₽</b> за выход.</p>
     <ol class="steps">
       <li>Оставляете заявку: даты, дни недели, время и ставку работнику</li>
       <li>Мы подбираем человека и подтверждаем выход через Telegram-бота</li>
@@ -149,7 +150,7 @@
     <details><summary>Как платить комиссию?</summary><p id="payInfo">Переводом по СБП после подтверждения кандидата. Пришлём реквизиты в Telegram или по телефону и чек самозанятого.</p></details>
     <details><summary>Если нужен человек каждый день?</summary><p>Выберите «Неделя», «Месяц» или «Свой срок» и отметьте дни недели. Каждый выход — отдельные <span data-price="shift">1 000</span> ₽ за человека, оплачиваются по мере подтверждения.</p></details>
     <details><summary>А если человек не пришёл?</summary><p>Напишите нам — найдём замену бесплатно. Платить второй раз за этот выход не нужно.</p></details>
-    <details><summary>А если нужен взрослый сотрудник?</summary><p>Подберём и взрослого. Разовые и сменные выходы 18+ — в заявке выберите «Полная смена 8–12 ч (18+)», цена та же: <span data-price="shift">1 000</span> ₽ за выход после подтверждения кандидата. Постоянного сотрудника разместите как вакансию с галочкой «Для взрослых» — она появится на сайте и в канале; на подбор под ключ напишите нам, условия обсудим. Платите только вы, с соискателя мы денег не берём.</p></details>
+    <details><summary>А если нужен взрослый сотрудник?</summary><p>Подберём и взрослого. Разовые и сменные выходы 18+ — в заявке выберите «Полная смена 8–12 ч (18+)», <span data-price="shift_adult">1 500</span> ₽ за выход после подтверждения кандидата (для молодёжи 14–25 — <span data-price="shift">1 000</span> ₽). Постоянного сотрудника разместите как вакансию с галочкой «Для взрослых» — она появится на сайте и в канале; на подбор под ключ напишите нам, условия обсудим. Платите только вы, с соискателя мы денег не берём.</p></details>
     <details><summary>Можно ли брать подростков?</summary><p>Да, с 14 лет на лёгкий труд: не ночью и не в государственные праздники. В день — до 4 ч (14 лет), 5 ч (15 лет), 7 ч (16–17 лет); в учебный год у школьников вдвое меньше. Суббота и воскресенье могут быть рабочими днями по графику, если у подростка два других выходных. Для 14–15 лет нужно согласие родителя — у нас есть <a href="consent.html">готовый бланк</a>.</p></details>
     <details><summary>Нужен человек на 8 часов, а подросткам столько нельзя?</summary><p><b>Сплит 4 + 4:</b> смену делим на две половины — утром выходит один школьник, вечером другой, у каждого законная короткая смена. Комиссия одна — <span data-price="shift">1 000</span> ₽ за пару. <b>Полная смена 18+:</b> подберём студента, до 12 ч. <b>Разовая задача:</b> если нужен результат (раздать листовки, сделать дизайн), а не присутствие по графику, — договор ГПХ или самозанятость с оплатой за результат. Если человек работает по вашему графику на точке под контролем, это трудовые отношения и нормы часов действуют.</p></details>
   </div>
@@ -166,7 +167,7 @@
 (function(){
   const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
   const {sb, el, toast} = window.NR;
-  const P={shift:1000,top7:500,urgent:750,verify:1500,business:2000}; let S={};
+  const P={shift:1000,shift_adult:1500,top7:500,urgent:750,verify:1500,business:2000}; let S={};
   const rub=n=>Math.round(n).toLocaleString("ru-RU")+" ₽";
   const ls={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
   NR.settings().then(s=>{S=s||{};Object.assign(P,Object.fromEntries(Object.entries(S.prices||{}).filter(([,v])=>+v>=0)));
@@ -249,7 +250,7 @@
     const age=ageNow();
     $("#s-wknd").hidden=age>=18;
     const ds=dates(),n=ds.length,ppl=type==="split"?2:Math.min(Math.max(+$("#s-people").value||1,1),10),pay=+$("#s-pay").value||0;
-    const fee=type==="split"?P.shift:P.shift*ppl;
+    const unit=type==="adult"?P.shift_adult:P.shift,fee=type==="split"?unit:unit*ppl;
     const box=$("#s-calc");box.textContent="";
     const line=(t,b)=>{const d=el("div");if(b){d.append(el("b",null,t))}else d.textContent=t;box.append(d)};
     const wN=n%10===1&&n%100!==11?"":n%10>=2&&n%10<=4&&(n%100<12||n%100>14)?"а":"ов";
