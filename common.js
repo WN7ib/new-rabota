@@ -70,12 +70,26 @@
       if(name.value.trim().length<2||contact.value.trim().length<3){err.textContent="Укажи имя и контакт.";err.hidden=false;return}
       if(a&&a<(v.age_min||14)){err.textContent="На эту вакансию берут "+ageWord(v.age_min||14)+".";err.hidden=false;return}
       send.disabled=true;
-      const {error}=await sb.rpc("apply",{vid:v.id,p_name:name.value.trim(),p_age:a||null,p_contact:contact.value.trim(),p_message:msg.value.trim()});
+      const args={vid:v.id,p_name:name.value.trim(),p_age:a||null,p_contact:contact.value.trim(),p_message:msg.value.trim()};
+      let {data:vcode,error}=await sb.rpc("apply_v",args);
+      if(error&&/function|schema/.test(error.message||"")){vcode=null;({error}=await sb.rpc("apply",args))}   // база ещё без шага 19
       send.disabled=false;
       if(error){err.textContent=/closed/.test(error.message)?"Вакансия уже закрыта.":/function|schema/.test(error.message)?"Анкеты скоро заработают. Пока откликнись по контакту.":"Не получилось отправить. Попробуй позже.";err.hidden=false;return}
       try{pr.name=name.value.trim();if(a)pr.age=a;pr.contact=contact.value.trim();localStorage.setItem("nr-profile",JSON.stringify(pr))}catch(_){}
       try{const h=JSON.parse(localStorage.getItem("nr-applied")||"[]").filter(x=>x.id!==v.id);h.unshift({id:v.id,t:v.title,c:v.city||(v.remote?"удалённо":""),at:Date.now(),form:1});localStorage.setItem("nr-applied",JSON.stringify(h.slice(0,50)))}catch(_){}
-      close(); toast("Анкета отправлена! Работодатель свяжется с тобой.") });
+      close(); toast("Анкета отправлена! Работодатель свяжется с тобой.");
+      if(vcode)settings().then(s=>videoOffer(s.bot_username,vcode,v.title)) });
+  }
+  /** После анкеты: по желанию кружок-визитка через бота — бот перешлёт его работодателю в Telegram. */
+  function videoOffer(bot,code,title){
+    bot=String(bot||"").replace(/^@/,"").trim(); if(!/^[A-Za-z0-9_]{4,40}$/.test(bot)||!/^[a-f0-9]{8,32}$/.test(String(code)))return;
+    const sh=el("div","sheet"); const f=el("div","form");
+    f.append(el("h2",null,"📹 Добавить кружок-визитку?"),
+      el("p","hint full","Запиши в Telegram кружок до минуты: как зовут, сколько лет, почему хочешь на «"+(title||"эту работу")+"». Бот перешлёт его только работодателю этой вакансии — так тебя запомнят быстрее. Это по желанию."));
+    const row=el("div","row"); const no=el("button","btn btn-ghost","Не надо"); no.type="button";
+    const go=el("a","btn btn-primary","Записать в боте"); go.href="https://t.me/"+bot+"?start=vv_"+code; go.target="_blank"; go.rel="noopener"; go.style.textDecoration="none";
+    row.append(no,go); f.append(row); sh.append(f); document.body.append(sh);
+    const close=()=>sh.remove(); no.onclick=close; go.addEventListener("click",()=>setTimeout(close,300)); sh.addEventListener("click",e=>{if(e.target===sh)close()});
   }
 
   /** Жалоба на вакансию. */

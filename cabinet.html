@@ -166,6 +166,7 @@
       box.append(el("span","st "+a.status,AST[a.status]||a.status),el("h3",null,a.name+(a.age?", "+a.age+" лет":"")),
         el("div","where","на «"+a.vacancy_title+"» · "+new Date(a.created_at).toLocaleString("ru-RU",{day:"numeric",month:"long",hour:"2-digit",minute:"2-digit"})));
       if(a.message)box.append(el("p","msg",a.message));
+      if(a.video_at)box.append(el("p","hint","📹 Кружок-визитка — у тебя в Telegram, в чате с ботом"));
       const acts=el("div","acts");const c=NR.contactLink(a.contact);
       const cl=el(c.href?"a":"button","btn btn-sm btn-primary",c.href?c.label+": "+a.contact:"Скопировать контакт: "+a.contact);
       if(c.href){cl.href=c.href;cl.target="_blank";cl.rel="noopener";cl.style.textDecoration="none"}else{cl.type="button";cl.onclick=()=>NR.copy(a.contact)}

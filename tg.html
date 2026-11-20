@@ -169,6 +169,14 @@ textarea.in{min-height:84px;resize:vertical;font:inherit}
     const l=el("a",null,"Согласие родителей — бланк");l.href="#";l.style.color="var(--link)";l.onclick=e=>{e.preventDefault();go(SITE+"consent.html")};
     b.append(l);return b;
   }
+  /** После анкеты: по желанию кружок-визитка — бот перешлёт его только работодателю этой вакансии. */
+  async function videoOffer(code){
+    if(!/^[a-f0-9]{8,32}$/.test(String(code)))return;
+    let bot="";try{const r=await sb.from("settings").select("data").eq("id",1).maybeSingle();bot=String((r.data&&r.data.data&&r.data.data.bot_username)||"").replace(/^@/,"").trim()}catch(_){}
+    if(!/^[A-Za-z0-9_]{4,40}$/.test(bot))return;
+    const url="https://t.me/"+bot+"?start=vv_"+code, q="📹 Добавить кружок-визитку? Запиши в боте кружок до минуты — он уйдёт только работодателю этой вакансии. Это по желанию.";
+    if(inTg&&tg.showConfirm)tg.showConfirm(q,ok=>{if(ok)go(url)}); else if(confirm(q))go(url);
+  }
   function go(url){
     if(inTg){ if(/^https:\/\/t\.me\//.test(url))tg.openTelegramLink(url); else tg.openLink(url) }
     else window.open(url,"_blank","noopener");
@@ -253,12 +261,14 @@ textarea.in{min-height:84px;resize:vertical;font:inherit}
       if(a&&(a<14||a>99))return showErr("Проверь возраст.");
       if(a&&a<(+v.age_min||14))return showErr("На эту вакансию берут с "+(+v.age_min||14)+" лет.");
       showErr("");setBusy(true,"Отправляю…");
-      let error=null;try{({error}=await sb.rpc("apply",{vid:v.id,p_name:nm,p_age:a||null,p_contact:ct,p_message:msg.value.trim()}))}catch(e){error=e}
+      const args={vid:v.id,p_name:nm,p_age:a||null,p_contact:ct,p_message:msg.value.trim()};
+      let error=null,vcode=null;try{({data:vcode,error}=await sb.rpc("apply_v",args));if(error&&/function|schema/.test(String(error.message||""))){vcode=null;({error}=await sb.rpc("apply",args))}}catch(e){error=e}
       setBusy(false,"Отправить анкету");
       if(error){const m=String(error.message||"");return showErr(/closed/.test(m)?"Вакансия уже закрыта.":/too many/.test(m)?"Сейчас много анкет — попробуй через 10 минут.":/function|schema/.test(m)?"Анкеты скоро заработают. Пока откликнись по контакту.":"Не получилось отправить. Проверь интернет и попробуй ещё раз.")}
       S.profile={name:nm,age:a||"",contact:ct,about:msg.value.trim().slice(0,600)};store.set("profile",JSON.stringify(S.profile));
       S.applied.add(String(v.id));store.set("applied",[...S.applied].slice(-60).join(","));
       buzz("success");mode=null;submit=null;$("formView").hidden=true;open(v);toast("Анкета отправлена! Работодатель свяжется с тобой.");
+      if(vcode)videoOffer(vcode);
     };
   }
 
