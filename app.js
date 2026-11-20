@@ -3,7 +3,7 @@
   const {sb, el, toast, today} = window.NR;
   const list=$("#list"), statusEl=$("#status");
   const PROJ=["Стажировка","Проект","Волонтёрство"];
-  const state={settings:{},items:[],q:"",city:"",remote:false,age:0,type:"",fav:false,weekend:false,split:false,favs:new Set(),open:new Set(),ready:false};
+  const state={settings:{},items:[],q:"",city:"",remote:false,age:0,type:"",fav:false,weekend:false,split:false,adult:false,favs:new Set(),open:new Set(),ready:false};
   const ls={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
   state.favs=new Set(ls.get("nr-favs",[]));
   const saveFavs=()=>ls.set("nr-favs",[...state.favs]);
@@ -24,6 +24,7 @@
       if(state.remote&&!v.remote)return false;
       if(state.weekend&&!v.weekend)return false;
       if(state.split&&!v.split)return false;
+      if(state.adult&&!v.adult)return false;
       if(c&&!v.remote&&!norm(v.city).includes(c))return false;
       if(q){const hay=norm([v.title,v.company,v.description,v.city,v.type].join(" "));if(!q.split(/\s+/).every(w=>hay.includes(w)))return false}
       return true;
@@ -44,6 +45,7 @@
     if(v.remote)tags.append(el("span","t t-remote","удалённо"));
     if(v.weekend)tags.append(el("span","t","в выходные"));
     if(v.split)tags.append(el("span","t","сплит 4 ч"));
+    if(v.adult)tags.append(el("span","t","👔 для взрослых"));
     if(v.expires_at)tags.append(el("span","date t-exp",NR.expiryText(v.expires_at)));
     tags.append(el("span","date",ago(v.created_at)));
     c.append(tags);
@@ -94,7 +96,7 @@
 
   function setAge(a){state.age=a;$$("#ageGroup .chip").forEach(x=>x.setAttribute("aria-pressed",+x.dataset.age===a))}
   function resetFilters(){
-    state.q=state.city="";state.remote=false;state.type="";state.fav=false;state.weekend=state.split=false;setAge(0);
+    state.q=state.city="";state.remote=false;state.type="";state.fav=false;state.weekend=state.split=state.adult=false;setAge(0);
     $$("#typeGroup .chip[data-flag]").forEach(b=>b.setAttribute("aria-pressed","false"));
     $("#q").value="";$("#city").value="";$("#remote").checked=false;
     $$("#typeGroup .chip:not([data-flag])").forEach(b=>b.setAttribute("aria-pressed",b.dataset.type===""&&!b.dataset.fav));
@@ -137,7 +139,7 @@
     if(Date.now()-ls.get("nr-last",0)<60000){err.textContent="Подожди минуту перед следующей вакансией.";err.hidden=false;return}
     const v=id=>$(id).value.trim();
     const exp=new Date(Date.now()+(+$("#f-exp").value)*864e5);
-    const data={title:v("#f-title"),company:v("#f-company")||null,city:v("#f-city")||null,type:$("#f-type").value,age_min:+$("#f-age").value,pay:v("#f-pay")||null,remote:$("#f-remote").checked,weekend:$("#f-weekend").checked,split:$("#f-split").checked,description:v("#f-desc")||null,contact:v("#f-contact"),status:"pending",expires_at:exp.toISOString().slice(0,10)};
+    const data={title:v("#f-title"),company:v("#f-company")||null,city:v("#f-city")||null,type:$("#f-type").value,age_min:$("#f-adult").checked?18:+$("#f-age").value,adult:$("#f-adult").checked,pay:v("#f-pay")||null,remote:$("#f-remote").checked,weekend:$("#f-weekend").checked,split:$("#f-split").checked,description:v("#f-desc")||null,contact:v("#f-contact"),status:"pending",expires_at:exp.toISOString().slice(0,10)};
     const miss=[];if(data.title.length<2)miss.push("должность");if(!data.city&&!data.remote)miss.push("город или «удалённо»");if(data.contact.length<3)miss.push("контакт для отклика");
     if(miss.length){err.textContent="Заполни: "+miss.join(", ")+".";err.hidden=false;return}
     const btn=$("#submitForm");btn.disabled=true;btn.textContent="Отправляю…";
@@ -187,7 +189,9 @@
     const timer=setTimeout(()=>{if(!state.ready)refreshMeta("Не удаётся загрузить вакансии. Проверь интернет.")},10000);
     const base="id,created_at,title,company,city,type,age_min,pay,remote,description,contact";
     const q=cols=>sb.from("vacancies").select(cols).eq("status","approved").or("expires_at.is.null,expires_at.gte."+today()).order("created_at",{ascending:false}).limit(500);
-    let {data,error}=await q(base+",pinned,pinned_until,verified,expires_at,employer_id");
+    let {data,error}=await q(base+",pinned,pinned_until,verified,expires_at,employer_id,weekend,split,adult");
+    if(error)({data,error}=await q(base+",pinned,pinned_until,verified,expires_at,employer_id,weekend,split"));   // база без migration-20
+    if(error)({data,error}=await q(base+",pinned,pinned_until,verified,expires_at,employer_id"));
     if(error)({data,error}=await q(base+",pinned,pinned_until,verified,expires_at"));
     if(error)({data,error}=await q(base+",pinned,verified,expires_at"));
     if(error)({data,error}=await sb.from("vacancies").select(base).eq("status","approved").order("created_at",{ascending:false}).limit(500));

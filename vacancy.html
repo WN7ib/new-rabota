@@ -28,7 +28,8 @@
   function fail(t){ page.textContent=""; const b=el("div","empty"); b.append(el("h3",null,t)); const a=el("a","btn btn-primary","Смотреть все вакансии"); a.href="./"; b.append(a); page.append(b) }
   if(!sb||!/^[0-9a-f-]{36}$/i.test(id)){fail("Вакансия не найдена");return}
   const base="id,created_at,title,company,city,type,age_min,pay,remote,description,contact";
-  let {data,error}=await sb.from("vacancies").select(base+",verified,expires_at,employer_id").eq("id",id).eq("status","approved").maybeSingle();
+  let {data,error}=await sb.from("vacancies").select(base+",verified,expires_at,employer_id,adult").eq("id",id).eq("status","approved").maybeSingle();
+  if(error)({data,error}=await sb.from("vacancies").select(base+",verified,expires_at,employer_id").eq("id",id).eq("status","approved").maybeSingle());   // база без migration-20
   if(error)({data,error}=await sb.from("vacancies").select(base+",verified,expires_at").eq("id",id).eq("status","approved").maybeSingle());
   if(error)({data,error}=await sb.from("vacancies").select(base).eq("id",id).eq("status","approved").maybeSingle());
   if(!data){fail("Вакансия снята с публикации или не найдена");return}
@@ -43,13 +44,14 @@
   if(v.verified)tags.append(el("span","t t-ok","✓ работодатель проверен"));
   tags.append(el("span","t t-age","с "+v.age_min+" лет"),el("span","t",v.type||"Подработка"));
   if(v.remote)tags.append(el("span","t t-remote","удалённо"));
+  if(v.adult)tags.append(el("span","t","👔 для взрослых"));
   box.append(tags,el("h1",null,v.title));
   if(v.company)box.append(el("div","where",v.company));
   const kv=el("dl","kv");
   const row=(k,val)=>{if(!val)return;kv.append(el("dt",null,k),el("dd",null,val))};
   row("Оплата",v.pay||"по договорённости");
   row("Где",[v.city,v.remote?"можно удалённо":null].filter(Boolean).join(", "));
-  row("Возраст","с "+v.age_min+" лет");
+  row("Возраст",v.adult?"для взрослых, с 18 лет":"с "+v.age_min+" лет");
   row("Актуально",expired?"срок истёк":v.expires_at?NR.expiryText(v.expires_at):null);
   row("Опубликовано",new Date(v.created_at).toLocaleDateString("ru-RU",{day:"numeric",month:"long",year:"numeric"}));
   box.append(kv);

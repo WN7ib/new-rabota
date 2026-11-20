@@ -284,6 +284,16 @@
           "migration-19-video-card.sql"
         ]
       }
+    },
+    {
+      "id": "2026-11-20-sql-20",
+      "title": "База: вакансии для взрослых (отметка «для взрослых» и фильтр)",
+      "do": "sql",
+      "args": {
+        "files": [
+          "migration-20-adults.sql"
+        ]
+      }
     }
   ]
 }
