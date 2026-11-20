@@ -38,6 +38,10 @@
   let items=[],counts={},kind="",settings={};
   // «Пойти с другом»: ?from=Имя#e-<id> — друг открыл приглашение
   const qs=new URLSearchParams(location.search);const from=(qs.get("from")||"").replace(/[\u0000-\u001f<>]/g,"").trim().slice(0,30);
+  // шаг 18: ?c=КОД — друг держит для тебя место (до 24 ч)
+  const code=(qs.get("c")||"").replace(/[^0-9A-Za-z]/g,"").slice(0,12).toUpperCase();let hold=null;
+  const hm=d=>new Date(d).toLocaleString("ru-RU",{day:"numeric",month:"long",hour:"2-digit",minute:"2-digit"});
+  const myEv=()=>{try{return JSON.parse(localStorage.getItem("nr-events")||"[]")}catch(_){return []}};
   const mine=()=>{try{return new Set(JSON.parse(localStorage.getItem("nr-events")||"[]").map(x=>x.id))}catch(_){return new Set()}};
   const myName=()=>{try{return localStorage.getItem("nr-name")||""}catch(_){return ""}};
   const fmt=d=>new Date(d).toLocaleString("ru-RU",{weekday:"short",day:"numeric",month:"long",hour:"2-digit",minute:"2-digit"});
@@ -47,8 +51,9 @@
     const rows=items.filter(e=>!kind||e.kind===kind);
     if(!rows.length){const e=el("div","empty");e.append(el("h3",null,"Скоро здесь появятся события"),el("p",null,"Следи за новостями в нашем Telegram-боте."));list.append(e);return}
     for(const e of rows){
-      const c=el("article","ev");c.id="e-"+e.id;const n=counts[e.id]||0;const full=e.capacity&&n>=e.capacity;
-      if(from&&location.hash==="#e-"+e.id)c.append(el("p","friend",from+" идёт и зовёт тебя с собой 👫"));
+      const c=el("article","ev");c.id="e-"+e.id;const n=counts[e.id]||0;const held=!!(hold&&hold.event_id===e.id&&!mine().has(e.id));const full=e.capacity&&n>=e.capacity&&!held;
+      if(held)c.append(el("p","friend",hold.name+" держит для тебя место до "+hm(hold.hold_until)+" 👫 Запишись — оно твоё."));
+      else if(from&&location.hash==="#e-"+e.id)c.append(el("p","friend",from+" идёт и зовёт тебя с собой 👫"));
       c.append(el("span","when",fmt(e.starts_at)),el("h3",null,e.title));
       c.append(el("div","meta",[e.kind,e.city,e.place].filter(Boolean).join(" · ")));
       if(e.description)c.append(el("p",null,e.description));
@@ -71,7 +76,14 @@
     const mk=(ph,max,type)=>{const i=document.createElement("input");i.type=type||"text";i.maxLength=max;i.placeholder=ph;return i};
     const name=fld("Имя",mk("Как к тебе обращаться",60)),age=fld("Возраст",mk("16",2,"number")),contact=fld("Телеграм или телефон",mk("@username или +7…",120),true);
     const pal=fld("С кем идёшь (необязательно)",mk("Имя друга — поставят в одну смену",60),true);
-    if(from&&location.hash==="#e-"+e.id){pal.value=from;f.append(el("p","hint full","Тебя позвал(а) "+from+" — организаторы увидят, что вы вместе, и постараются поставить в одну смену."))}
+    const held=!!(hold&&hold.event_id===e.id);
+    if(held){pal.value=hold.name;f.append(el("p","hint full",hold.name+" держит для тебя место — запишись, и вы будете вместе."))}
+    else if(from&&location.hash==="#e-"+e.id){pal.value=from;f.append(el("p","hint full","Тебя позвал(а) "+from+" — организаторы увидят, что вы вместе, и постараются поставить в одну смену."))}
+    // держать второе место для друга: только если свободно ≥2 и до начала больше 3,5 ч
+    let hk=null;const n0=counts[e.id]||0;
+    if(!held&&e.capacity&&e.capacity-n0>=2&&new Date(e.starts_at)-Date.now()>3.5*3600e3){
+      const d=el("label","check full");d.style.whiteSpace="normal";d.style.alignItems="flex-start";hk=document.createElement("input");hk.type="checkbox";
+      d.append(hk,document.createTextNode(" Держать место для друга (до 24 ч) — пришлю ссылку, по ней он займёт его"));f.append(d)}
     f.append(el("p","hint full","Контакт увидят только организаторы, чтобы связаться по мероприятию."));
     const err=el("p","err");err.hidden=true;f.append(err);
     const row=el("div","row");const c=el("button","btn btn-ghost","Отмена");c.type="button";c.onclick=()=>sh.remove();const s=el("button","btn btn-primary","Записаться");s.type="submit";row.append(c,s);f.append(row);
@@ -79,26 +91,38 @@
       if(name.value.trim().length<2||contact.value.trim().length<3){err.textContent="Впиши имя и контакт.";err.hidden=false;return}
       s.disabled=true;const a=parseInt(age.value,10);
       const args={eid:e.id,p_name:name.value.trim(),p_contact:contact.value.trim(),p_age:a>=10&&a<=99?a:null};const w=pal.value.replace(/[\u0000-\u001f<>]/g,"").trim().slice(0,60);
-      let {data,error}=await sb.rpc("event_signup",w?{...args,p_with:w}:args);
-      // база ещё без шага 16 — записываем без друга, чтобы запись не сорвалась
-      if(error&&w&&/PGRST202|function|не найден|not find/i.test((error.code||"")+" "+error.message))({data,error}=await sb.rpc("event_signup",args));
+      const noFn=er=>er&&/PGRST202|function|не найден|not find/i.test((er.code||"")+" "+er.message);
+      // шаг 18: запись с бронью места для друга / по коду друга
+      let pr=await sb.rpc("event_signup_pair",{...args,p_with:w||null,p_hold:!!(hk&&hk.checked),p_code:held?code:null});
+      let data,error=pr.error,got=null;
+      if(!error&&pr.data){got=pr.data;data=got.reserve?-1:got.n}
+      else if(noFn(error)){
+        ({data,error}=await sb.rpc("event_signup",w?{...args,p_with:w}:args));
+        // база ещё без шага 16 — записываем без друга, чтобы запись не сорвалась
+        if(noFn(error)&&w)({data,error}=await sb.rpc("event_signup",args));
+      }
       s.disabled=false;
       if(error){err.textContent=/full/.test(error.message)?"Мест больше нет.":/closed/.test(error.message)?"Запись закрыта.":"Не получилось, попробуй ещё раз.";err.hidden=false;return}
       try{localStorage.setItem("nr-name",name.value.trim().split(/\s+/)[0].slice(0,30))}catch(_){}
       if(data===-1){sh.remove();done(e,"Мест нет — ты в резерве","Если кто-то откажется, организаторы свяжутся с тобой. Позови друга — вдвоём в резерве веселее.");return}
       counts[e.id]=data;sh.remove();
-      try{const m=JSON.parse(localStorage.getItem("nr-events")||"[]").filter(x=>x.id!==e.id);m.unshift({id:e.id,t:e.title,at:e.starts_at,p:e.place||""});localStorage.setItem("nr-events",JSON.stringify(m.slice(0,30)))}catch(_){}
-      render();done(e,"Ты записан(а)!","Организаторы свяжутся с тобой. Вдвоём веселее — позови друга."); });
+      try{const m=JSON.parse(localStorage.getItem("nr-events")||"[]").filter(x=>x.id!==e.id);m.unshift({id:e.id,t:e.title,at:e.starts_at,p:e.place||"",...(got&&got.code?{c:got.code,u:got.until}:{})});localStorage.setItem("nr-events",JSON.stringify(m.slice(0,30)))}catch(_){}
+      if(held)hold=null;
+      render();
+      if(got&&got.friend)done(e,"Ты записан(а)!","Ты занял(а) место, которое держал(а) "+got.friend+". Организаторы увидят, что вы вместе.",true);
+      else if(got&&got.code)done(e,"Ты записан(а)! Место для друга держим","Второе место держим до "+hm(got.until)+". Отправь другу ссылку — по ней он займёт его. Не успеет — место освободится само.");
+      else done(e,"Ты записан(а)!","Организаторы свяжутся с тобой. Вдвоём веселее — позови друга."); });
     sh.append(f);document.body.append(sh);sh.addEventListener("click",x=>{if(x.target===sh)sh.remove()});name.focus();
   }
   // После записи: «Позвать друга» / «Готово»
-  function done(e,title,text){
+  function done(e,title,text,noInvite){
     const sh=el("div","sheet"),f=el("div","form");f.append(el("h2",null,title),el("p","hint full",text));
     const row=el("div","row");const ok=el("button","btn btn-ghost","Готово");ok.type="button";ok.onclick=()=>sh.remove();
-    const fr=el("button","btn btn-primary","👫 Позвать друга");fr.type="button";fr.onclick=()=>{sh.remove();invite(e)};row.append(ok,fr);f.append(row);
+    const fr=el("button","btn btn-primary","👫 Позвать друга");fr.type="button";fr.onclick=()=>{sh.remove();invite(e)};row.append(ok);if(!noInvite)row.append(fr);f.append(row);
     sh.append(f);document.body.append(sh);sh.addEventListener("click",x=>{if(x.target===sh)sh.remove()});fr.focus();
   }
-  function inviteUrl(e){const n=myName();return location.origin+location.pathname+(n?"?from="+encodeURIComponent(n):"")+"#e-"+e.id}
+  function inviteUrl(e){const n=myName();const m=myEv().find(x=>x.id===e.id);const c=m&&m.c&&new Date(m.u)>Date.now()?m.c:"";
+    const q=[n?"from="+encodeURIComponent(n):"",c?"c="+c:""].filter(Boolean).join("&");return location.origin+location.pathname+(q?"?"+q:"")+"#e-"+e.id}
   async function invite(e){
     const url=inviteUrl(e),text="Пойдём вместе: «"+e.title+"», "+fmt(e.starts_at)+(e.place?", "+e.place:"")+". Записаться:";
     if(navigator.share){try{await navigator.share({title:e.title,text,url});return}catch(x){if(x&&x.name==="AbortError")return}}
@@ -116,6 +140,7 @@
     const {data:all,error}=await sb.from("events").select("*").gte("starts_at",new Date().toISOString()).order("starts_at").limit(150);const data=(all||[]).filter(x=>x.listed!==false);
     items=error?[]:data||[];
     const r=await sb.rpc("event_counts");(r.data||[]).forEach(x=>counts[x.event_id]=x.n);
+    if(code){try{const h=await sb.rpc("event_friend_hold",{p_code:code});hold=(h.data||[])[0]||null}catch(_){}}
     render();
     // переход с карты: events.html#e-<id> — показать и подсветить событие
     const h=decodeURIComponent(location.hash.slice(1));const t=h&&document.getElementById(h);

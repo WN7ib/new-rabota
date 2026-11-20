@@ -202,6 +202,10 @@
           li.append(el("b",null,res?"🕓 резерв · ":"✅ "),document.createTextNode(p.name+(p.age?", "+p.age+" лет":"")+" — "),a);
           // надёжность: сколько смен отработал у всех работодателей и неявки (без чужих личных данных)
           if(p.with_name)li.append(el("span","st"," 👫 с другом: "+p.with_name));
+          // шаг 18: человек держит второе место для друга (до 24 ч) — друг займёт его по ссылке
+          if(p.friend_hold_until&&!past){li.append(el("span","st"," 🔒 держит место для друга до "+new Date(p.friend_hold_until).toLocaleString("ru-RU",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})));
+            const dh=el("button","btn btn-ghost btn-sm","снять бронь");dh.type="button";dh.style.marginLeft="6px";
+            dh.onclick=async()=>{const {error}=await sb.rpc("emp_drop_hold",{t:T,sid:p.id});if(error){toast("Не получилось");return}toast("Место освобождено");render()};li.append(dh)}
           if(p.reliable)li.append(el("span","st approved"," ✓ надёжный"));
           if(p.came||p.missed)li.append(el("span","hint"," · смен: "+(p.came||0)+(p.missed?" · неявок: "+p.missed:"")));
           if(past){
@@ -215,7 +219,7 @@
           const rm=el("button","btn btn-ghost btn-sm","убрать");rm.type="button";rm.style.marginLeft="6px";rm.onclick=async()=>{await sb.rpc("emp_signup_remove",{t:T,sid:p.id});li.remove()};li.append(sw,rm)}
           list.append(li)}
         if(past)list.append(el("li","hint","Отметь, кто пришёл: три смены подряд без неявок — значок «✓ надёжный», такие люди первыми получают место из резерва. Неявка не бан — просто ниже в очереди."));
-        else list.append(el("li","hint","Мест нет — новые попадают в резерв. Если основной отменит запись, бот сам предложит место первому из резерва (надёжным — первыми)."))});
+        else list.append(el("li","hint","Мест нет — новые попадают в резерв. Если основной отменит запись, бот сам предложит место первому из резерва (надёжным — первыми). 🔒 — место держат для друга до 24 ч (не позже чем за 3 ч до начала), потом оно освобождается само."))});
       if(!past)btn("Изменить","btn-ghost",()=>shiftForm(e));
       box.append(acts,list);cab.append(box);
     }
