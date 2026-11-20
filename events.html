@@ -31,6 +31,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
 <script src="common.js"></script>
+<script src="geo.js"></script>
 <script>
 (function(){
   const {sb,el,toast}=NR; const list=document.getElementById("list");
@@ -56,6 +57,9 @@
       const b=el("button","btn btn-primary btn-sm",full?"Мест нет":"Записаться");b.type="button";b.disabled=!!full;b.onclick=()=>signup(e);a.append(b);
       const bl=NR.botLink(settings.bot_username);if(bl&&!full){const t=el("a","btn btn-ghost btn-sm","Через Telegram");t.href="https://t.me/"+String(settings.bot_username).replace(/^@/,"")+"?start=ev_"+e.id;t.target="_blank";t.rel="noopener";t.style.textDecoration="none";a.append(t)}
       if(mine().has(e.id)){const fr=el("button","btn btn-ghost btn-sm","👫 Позвать друга");fr.type="button";fr.onclick=()=>invite(e);a.append(fr)}
+      // точный адрес (шаг 17): точка на нашей карте и маршрут в Яндекс Картах (общественный транспорт)
+      if(e.lat!=null&&e.lng!=null){const m=el("a","btn btn-ghost btn-sm","📍 На карте");m.href="map.html?e="+e.id;m.style.textDecoration="none";a.append(m);
+        if(window.NRGeo){const r=el("a","btn btn-ghost btn-sm","Как добраться ↗");r.href=NRGeo.route(e.lat,e.lng);r.target="_blank";r.rel="noopener";r.style.textDecoration="none";a.append(r)}}
       if(e.link){const l=el("a","btn btn-ghost btn-sm","Подробнее ↗");l.href=e.link;l.target="_blank";l.rel="noopener";l.style.textDecoration="none";a.append(l)}
       c.append(a);list.append(c);
     }

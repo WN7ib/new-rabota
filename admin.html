@@ -350,6 +350,7 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
 <div class="toast" id="toast" hidden></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
+<script src="geo.js"></script>
 <script>
 (function(){
   const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
@@ -729,7 +730,8 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
       const t=(o.time_from&&o.time_to?o.time_from+"–"+o.time_to:o.shift_hours?o.shift_hours+" ч":"");
       const desc=[o.task,t?"Время: "+t:"",o.worker_pay?"Оплата: "+rub(o.worker_pay)+" за смену, на руки после смены":"",o.age_min?"Возраст: с "+o.age_min+" лет":"",o.with_friend?"Можно вдвоём с другом 👫":"",o.is_urgent?"Срочно 🔥":"","Запись через бота New.работа — мы подтвердим выход."].filter(Boolean).join("\n");
       const row={title:((o.shift_type==="adult"?"18+ · ":"")+(o.shift_type==="task"?"Задача: ":"Смена: ")+(o.task||o.company||"подработка")).slice(0,120),starts_at:o.shift_at,place:(o.address||"").slice(0,160)||null,city:(o.city||"").slice(0,40)||null,kind:"Смена",description:desc.slice(0,2000),capacity:o.people*(o.with_friend?2:1),published:true};
-      const {data,error}=await sb.from("events").insert(row).select("id").single();
+      if(row.place){const geo=await (window.NRGeo&&NRGeo.addr(row.city,row.place));if(geo){row.lat=geo.lat;row.lng=geo.lng}}
+      const {data,error}=await evSave(row,null);
       if(error){toast("Не получилось: "+error.message);return}
       upd({admin_note:((o.admin_note?o.admin_note+"\n":"")+"Опубликовано: events.html#e-"+data.id).slice(0,600)},"Опубликовано в «Мероприятиях»")});
     mk("Заметка","btn-ghost",()=>{const t=prompt("Заметка для себя",o.admin_note||"");if(t!==null)upd({admin_note:t.trim().slice(0,600)||null})});
@@ -746,10 +748,22 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
     e.preventDefault();
     const row={title:$("#ev-title").value.trim(),starts_at:new Date($("#ev-at").value).toISOString(),kind:$("#ev-kind").value,city:$("#ev-city").value.trim()||null,place:$("#ev-place").value.trim()||null,
       capacity:parseInt($("#ev-cap").value,10)||null,link:$("#ev-link").value.trim()||null,description:$("#ev-desc").value.trim()||null,published:$("#ev-pub").checked};
-    const {error}=evEdit?await sb.from("events").update(row).eq("id",evEdit):await sb.from("events").insert(row);
+    // точка на карте: адрес новый/поменялся (или точки ещё нет) — ищем; не нашёлся при смене адреса — стираем старую
+    const was=evEdit&&evRows[evEdit],moved=!was||(was.place||null)!==row.place||(was.city||null)!==row.city;
+    let geo=null;if(row.place&&(moved||was.lat==null))geo=await (window.NRGeo&&NRGeo.addr(row.city,row.place));
+    if(geo){row.lat=geo.lat;row.lng=geo.lng}else if(moved&&was){row.lat=null;row.lng=null}
+    const {error}=await evSave(row,evEdit);
     if(error){toast("Не сохранилось. Выполнен ли migration-5.sql?");return}
-    toast(evEdit?"Сохранено":"Мероприятие добавлено");evClear();loadEvents();
+    toast((evEdit?"Сохранено":"Мероприятие добавлено")+(row.place?(geo?" · 📍 адрес найден на карте":moved?" · адрес на карте не нашёлся (будет по городу)":""):""));evClear();loadEvents();
   });
+  // сохранить мероприятие; база ещё без шага 17 (нет lat/lng) — сохраняем без точки
+  let evRows={};
+  async function evSave(row,id){
+    const go=r=>id?sb.from("events").update(r).eq("id",id).select("id").single():sb.from("events").insert(r).select("id").single();
+    let res=await go(row);
+    if(res.error&&"lat" in row&&/lat|lng|column/i.test(res.error.message||"")){const r={...row};delete r.lat;delete r.lng;res=await go(r)}
+    return res;
+  }
   async function loadEvents(){
     $("#evstatus").textContent="Загружаю…";
     const {data,error}=await sb.from("events").select("*, event_signups(name,contact,age,created_at,chat_id)").order("starts_at",{ascending:false}).limit(100);
@@ -758,10 +772,11 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
     $("#evstatus").textContent=data.length?data.length+" мероприятий":"";
     if(!data.length){list.append(el("div","empty","Мероприятий пока нет. Добавь первое — оно появится на странице «Мероприятия»."));return}
     const bot=(st.settings.bot_username||"").replace(/^@/,"");
-    for(const ev of data){
+    evRows={};
+    for(const ev of data){evRows[ev.id]=ev;
       const past=new Date(ev.starts_at)<new Date();const s=ev.event_signups||[];
       const c=el("article","card open");const left=el("div");left.style.minWidth="0";
-      left.append(el("h3",null,(past?"✓ ":"")+ev.title+(ev.published?"":" (скрыто)")),el("div","where",[ev.kind,new Date(ev.starts_at).toLocaleString("ru-RU",{day:"numeric",month:"long",hour:"2-digit",minute:"2-digit"}),ev.city,ev.place].filter(Boolean).join(" · ")));
+      left.append(el("h3",null,(past?"✓ ":"")+ev.title+(ev.published?"":" (скрыто)")),el("div","where",[ev.kind,new Date(ev.starts_at).toLocaleString("ru-RU",{day:"numeric",month:"long",hour:"2-digit",minute:"2-digit"}),ev.city,ev.place,ev.place?(ev.lat!=null?"📍 на карте":"📍 точки нет"):""].filter(Boolean).join(" · ")));
       c.append(left,el("div","date","записано: "+s.length+(ev.capacity?" / "+ev.capacity:"")));
       if(s.length)c.append(el("p","desc",s.map((x,i)=>(i+1)+". "+x.name+(x.age?", "+x.age:"")+" — "+x.contact).join("\n")));
       const a=el("div","row-actions");const mk=(t,cls,fn)=>{const b=el("button","btn btn-sm "+cls,t);b.type="button";b.onclick=fn;a.append(b)};

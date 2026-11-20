@@ -19,6 +19,7 @@
 .leaflet-popup-content a.mini{margin-top:6px}
 .cities,.tools{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
 .pin.ev{background:var(--good);color:#fff}
+.pin.dot{width:18px;height:18px;border-width:3px}
 .me{width:18px;height:18px;border-radius:50%;background:var(--danger);border:3px solid #fff;box-shadow:0 0 0 2px var(--danger)}
 .near{margin-top:14px;display:grid;gap:8px}
 .near a{display:flex;justify-content:space-between;gap:12px;padding:10px 14px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);color:var(--ink);text-decoration:none}
@@ -45,6 +46,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
 <script src="common.js"></script>
+<script src="geo.js"></script>
 <script>
 (function(){
   const {sb,el}=NR;
@@ -62,6 +64,7 @@
   const km=(a,b)=>{const r=Math.PI/180,d1=(b[0]-a[0])*r,d2=(b[1]-a[1])*r,x=Math.sin(d1/2)**2+Math.cos(a[0]*r)*Math.cos(b[0]*r)*Math.sin(d2/2)**2;return 6371*2*Math.asin(Math.sqrt(x))};
   const fmt=d=>new Date(d).toLocaleString("ru-RU",{day:"numeric",month:"long",hour:"2-digit",minute:"2-digit"});
   const by={};let remote=0,unknown=0,show="all",me=null;
+  const exact=[],marks={};   // смены с точным адресом (шаг 17): своя точка вместо кружка города
   const group=c=>{const k=norm(c);return by[k]=by[k]||{key:k,name:c,vac:[],ev:[],c:coord(k)}};
   const layerV=hasMap?L.layerGroup().addTo(map):null,layerE=hasMap?L.layerGroup().addTo(map):null;
   function box(g,what){
@@ -86,11 +89,21 @@
     layerV.clearLayers();layerE.clearLayers();
     for(const g of Object.values(by)){if(!g.c)continue;
       if(show!=="ev"&&g.vac.length)pin(g,"vac").addTo(layerV);
-      if(show!=="vac"&&g.ev.length)pin(g,"ev").addTo(layerE)}
+      const n=g.ev.filter(e=>e.lat==null).length;   // в кружке города — только смены без точного адреса
+      if(show!=="vac"&&n)pin({...g,ev:g.ev.filter(e=>e.lat==null)},"ev").addTo(layerE)}
+    if(show!=="vac")for(const e of exact)(marks[e.id]=dot(e)).addTo(layerE);
+  }
+  function dot(e){
+    const d=document.createElement("div"),a=el("a","mini");a.href="events.html#e-"+e.id;
+    a.append(el("b",null,e.title),el("span",null,[e.kind,fmt(e.starts_at)].filter(Boolean).join(" · ")));d.append(a);
+    if(e.place)d.append(el("span",null,"📍 "+e.place));
+    if(window.NRGeo){const r=el("a",null,"Как добраться ↗");r.href=NRGeo.route(e.lat,e.lng);r.target="_blank";r.rel="noopener";d.append(document.createElement("br"),r)}
+    return L.marker([e.lat,e.lng],{icon:L.divIcon({className:"",html:'<div class="pin ev dot"></div>',iconSize:[18,18]}),title:e.title}).bindPopup(d);
   }
   function fit(){
     if(!hasMap)return;
     const pts=Object.values(by).filter(g=>g.c&&(show!=="ev"&&g.vac.length||show!=="vac"&&g.ev.length)).map(g=>g.c);
+    if(show!=="vac")exact.forEach(e=>pts.push([e.lat,e.lng]));
     if(me){const near=pts.slice().sort((a,b)=>km(me,a)-km(me,b)).slice(0,3);map.fitBounds([me,...near],{padding:[40,40],maxZoom:10});return}
     if(pts.length>1)map.fitBounds(pts,{padding:[40,40],maxZoom:8});else if(pts.length===1)map.setView(pts[0],9);
   }
@@ -154,10 +167,12 @@
     if(error)({data}=await sb.from("vacancies").select("id,title,city,remote,pay,age_min").eq("status","approved").limit(1000));
     const rows=(data||[]).filter(v=>!v.expires_at||v.expires_at>=today);
     // смены и мероприятия: только опубликованные в общем списке и ещё не прошедшие (как на странице events.html)
-    const er=await sb.from("events").select("id,title,starts_at,place,city,kind,listed").gte("starts_at",new Date().toISOString()).order("starts_at").limit(300);
-    const evs=(er.data||[]).filter(e=>e.listed!==false&&e.city);
+    const evQ=cols=>sb.from("events").select(cols).gte("starts_at",new Date().toISOString()).order("starts_at").limit(300);
+    let er=await evQ("id,title,starts_at,place,city,kind,listed,lat,lng");
+    if(er.error)er=await evQ("id,title,starts_at,place,city,kind,listed");   // база ещё без шага 17 — без точек
+    const evs=(er.data||[]).filter(e=>e.listed!==false&&(e.city||e.lat!=null));
     for(const v of rows){if(!v.city){if(v.remote)remote++;continue}const g=group(v.city);g.vac.push(v);if(!g.c)unknown++}
-    for(const e of evs){const g=group(e.city);g.ev.push(e)}
+    for(const e of evs){if(e.lat!=null&&e.lng!=null){exact.push(e);if(!e.city)continue}const g=group(e.city);g.ev.push(e)}
     draw();fit();
     geocode();
     const ne=evs.length;
@@ -166,6 +181,9 @@
     Object.values(by).sort((a,b)=>(b.vac.length+b.ev.length)-(a.vac.length+a.ev.length)).forEach(g=>{const a=el("a","chip",g.name+" · "+[g.vac.length?g.vac.length+"":"",g.ev.length?"🟢 "+g.ev.length:""].filter(Boolean).join(" + "));a.href=g.vac.length?"./?city="+encodeURIComponent(g.name):"events.html";a.style.textDecoration="none";cs.append(a)});
     if(remote){const a=el("a","chip","Удалённо · "+remote);a.href="./?remote=1";a.style.textDecoration="none";cs.append(a)}
     if(/[?&]near=1/.test(location.search))locate();
+    // map.html?e=<id> — открыть точку конкретной смены (ссылка «на карте» со страницы событий)
+    const want=(location.search.match(/[?&]e=([0-9a-f-]{36})/)||[])[1];
+    if(want&&hasMap&&marks[want]){map.setView(marks[want].getLatLng(),16);marks[want].openPopup()}
   })();
 })();
 </script>

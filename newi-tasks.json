@@ -254,6 +254,16 @@
           "migration-16-with-friend.sql"
         ]
       }
+    },
+    {
+      "id": "2026-11-20-sql-17",
+      "title": "База: точка смены на карте до адреса (координаты lat/lng у мероприятий)",
+      "do": "sql",
+      "args": {
+        "files": [
+          "migration-17-geo.sql"
+        ]
+      }
     }
   ]
 }

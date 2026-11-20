@@ -52,6 +52,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
 <script src="common.js"></script>
+<script src="geo.js"></script>
 <script>
 (function(){
   const {sb,el,toast}=NR; const cab=document.getElementById("cab");
@@ -236,9 +237,13 @@
       if(title.value.trim().length<2||!at.value){err.textContent="Укажи название и время начала.";err.hidden=false;return}
       const when2=new Date(at.value);if(when2<new Date()){err.textContent="Время уже прошло.";err.hidden=false;return}
       s2.disabled=true;
-      const {error}=await sb.rpc("emp_event_save",{t:T,eid:e?e.id:null,p:{title:title.value.trim(),starts_at:when2.toISOString(),place:place.value.trim(),city:city.value.trim(),description:desc.value.trim(),capacity:parseInt(cap.value,10)||""}});
+      const pv={title:title.value.trim(),starts_at:when2.toISOString(),place:place.value.trim(),city:city.value.trim(),description:desc.value.trim(),capacity:parseInt(cap.value,10)||""};
+      // точка на карте: ищем адрес, только если он новый или поменялся (иначе база оставит прежнюю точку)
+      let geo=null;const moved=!e||(e.place||"")!==pv.place||(e.city||"")!==pv.city;
+      if(moved&&pv.place){s2.textContent="Ищу адрес на карте…";geo=await (window.NRGeo&&NRGeo.addr(pv.city,pv.place));s2.textContent="Сохранить";if(geo){pv.lat=geo.lat;pv.lng=geo.lng}}
+      const {error}=await sb.rpc("emp_event_save",{t:T,eid:e?e.id:null,p:pv});
       s2.disabled=false;if(error){err.textContent=/too many/.test(error.message)?"Слишком много смен за день.":"Не сохранилось, попробуй ещё раз.";err.hidden=false;return}
-      sh.remove();toast(e?"Сохранено":"Смена создана — скопируй ссылку для записи");render()});
+      sh.remove();toast((e?"Сохранено":"Смена создана — скопируй ссылку для записи")+(moved&&pv.place?(geo?". 📍 Адрес найден на карте":". Адрес на карте не нашёлся — люди увидят город и адрес текстом"):""));render()});
     sh.append(f);document.body.append(sh);sh.addEventListener("click",x=>{if(x.target===sh)sh.remove()});
   }
 
