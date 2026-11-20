@@ -172,7 +172,7 @@ textarea.in{min-height:84px;resize:vertical;font:inherit}
   /** После анкеты: по желанию кружок-визитка — бот перешлёт его только работодателю этой вакансии. */
   async function videoOffer(code){
     if(!/^[a-f0-9]{8,32}$/.test(String(code)))return;
-    let bot="";try{const r=await sb.from("settings").select("data").eq("id",1).maybeSingle();bot=String((r.data&&r.data.data&&r.data.data.bot_username)||"").replace(/^@/,"").trim()}catch(_){}
+    let bot="";try{const r=await sb.from("settings").select("data").eq("id",1).maybeSingle();const d=(r.data&&r.data.data)||{};if(!d.video_card)return;bot=String(d.bot_username||"").replace(/^@/,"").trim()}catch(_){}
     if(!/^[A-Za-z0-9_]{4,40}$/.test(bot))return;
     const url="https://t.me/"+bot+"?start=vv_"+code, q="📹 Добавить кружок-визитку? Запиши в боте кружок до минуты — он уйдёт только работодателю этой вакансии. Это по желанию.";
     if(inTg&&tg.showConfirm)tg.showConfirm(q,ok=>{if(ok)go(url)}); else if(confirm(q))go(url);
