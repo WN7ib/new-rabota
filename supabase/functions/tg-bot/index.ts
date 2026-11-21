@@ -43,6 +43,14 @@ const MENU = { resize_keyboard: true, keyboard: [
   [{ text: "⚖️ Права 14–17" }, { text: "🛡 Как не попасть на обман" }],
   [{ text: "✉️ Написать команде" }],
 ] };
+// Mini App New.работа (сайт tg.html): кнопка «Вакансии» слева от поля ввода у всех + /app
+const APP = SITE + "tg.html";
+const appButton = (city = "") => ({ inline_keyboard: [[{ text: "📱 Открыть вакансии", web_app: { url: APP + (city ? "?city=" + encodeURIComponent(city) : "") } }]] });
+async function menuApp() {
+  if ((await cfg("menu_app")) === APP) return;
+  const r = await tg("setChatMenuButton", { menu_button: { type: "web_app", text: "Вакансии", web_app: { url: APP } } });
+  if (r?.ok) await setCfg("menu_app", APP);
+}
 async function send(chat: number | string, text: string, markup?: unknown): Promise<number> {
   const r = await tg("sendMessage", { chat_id: chat, text: text.slice(0, 4000), disable_web_page_preview: true, ...(markup ? { reply_markup: markup } : {}) });
   return r?.result?.message_id ?? 0;
@@ -148,6 +156,131 @@ async function ticket(chat: number, from: any, q: string, why: string) {
   if (own && id) await send(own, `❓ #q${id} · ${from.first_name ?? ""}${from.username ? " (@" + from.username + ")" : ""} ${why}:\n«${q.slice(0, 800)}»\n\nОтветь реплаем на это сообщение — перешлю. Если телефон с Неви в сети, она может ответить раньше.`);
 }
 
+// ───────── запись на смену по ссылке t.me/бот?start=ev_<id>[_f<chat друга>] ─────────
+// Запись идёт через RPC event_signup — та же логика мест, что на сайте (резерв, места, которые держат для друга).
+async function rpc(fn: string, args: Record<string, unknown>): Promise<{ ok: boolean; val: any; err: string }> {
+  const r = await fetch(`${SB}/rest/v1/rpc/${fn}`, { method: "POST", headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, "Content-Type": "application/json" }, body: JSON.stringify(args) });
+  const t = await r.text(); let val: any = null; try { val = t ? JSON.parse(t) : null; } catch { val = t; }
+  if (!r.ok) console.error("rpc", fn, r.status, t.slice(0, 300));
+  return { ok: r.ok, val, err: r.ok ? "" : String(val?.message ?? t).slice(0, 200) };
+}
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const evWhen = (e: any) => new Date(e.starts_at).toLocaleString("ru-RU", { timeZone: "Europe/Saratov", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+async function evGet(id: string): Promise<any> { return UUID.test(id) ? (await db("GET", `events?select=*&id=eq.${id}&published=eq.true`))?.[0] ?? null : null; }
+async function botName(): Promise<string> {
+  let n = await cfg("bot_username");
+  if (!n) { n = (await tg("getMe", {}))?.result?.username ?? ""; if (n) await setCfg("bot_username", n); }
+  return n;
+}
+async function friendBtn(chat: number, e: any): Promise<any[]> {
+  const bot = await botName(); const param = `ev_${e.id}_f${chat}`;
+  if (!bot || param.length > 64) return [];
+  const link = `https://t.me/${bot}?start=${param}`;
+  return [[{ text: "👫 Позвать друга", url: `https://t.me/share/url?url=${enc(link)}&text=${enc(`Пойдём вместе на «${String(e.title).slice(0, 60)}»? Запись в один клик 👇`)}` }]];
+}
+async function tellOrganizer(e: any, text: string) {
+  const own = await ownerId();
+  const ec = e?.employer_id ? Number((await db("GET", `employers?select=tg_chat&id=eq.${enc(e.employer_id)}`))?.[0]?.tg_chat ?? 0) : 0;
+  if (ec) await send(ec, text);
+  if (own && ec !== own) await send(own, text);
+}
+async function taken(e: any): Promise<number> {
+  const r = await rpc("event_taken", { eid: e.id });
+  if (r.ok && typeof r.val === "number") return r.val;
+  return ((await db("GET", `event_signups?select=id&event_id=eq.${e.id}&status=eq.main`)) ?? []).length;   // база без шага 18
+}
+
+async function eventJoin(chat: number, from: any, arg: string) {
+  const [id, inv] = arg.split("_f");
+  const e = await evGet(id);
+  if (!e || new Date(e.starts_at).getTime() < Date.now()) { await send(chat, "Эта запись уже закрыта.", MENU); return; }
+  const name = String(from.first_name ?? "Участник").slice(0, 60).padEnd(2, ".");
+  const who = name + (from.username ? " @" + from.username : "");
+  const contact = from.username ? "@" + from.username : "tg:" + chat;
+  const mine = (await db("GET", `event_signups?select=id,status&event_id=eq.${e.id}&chat_id=eq.${chat}`))?.[0];
+  if (mine) { await send(chat, mine.status === "reserve" ? `Ты уже в резерве на «${e.title}». Освободится место — сразу напишу.` : `Ты уже записан(а) на «${e.title}», ${evWhen(e)} ✅`, MENU); return; }
+  // «пойти с другом»: ссылка работает, только если пригласивший сам записан на это событие (без спама чужим)
+  const invId = Number(inv) || 0;
+  const fr = invId && invId !== chat ? (await db("GET", `event_signups?select=name&event_id=eq.${e.id}&chat_id=eq.${invId}`))?.[0] : null;
+  const friend = fr ? invId : 0; const friendName = fr ? String(fr.name || "друг") : "";
+  let r = await rpc("event_signup", { eid: e.id, p_name: name, p_contact: contact, p_age: null, p_with: friendName || null });
+  if (!r.ok && /function|p_with/i.test(r.err)) r = await rpc("event_signup", { eid: e.id, p_name: name, p_contact: contact, p_age: null });   // база без шага 16
+  if (!r.ok) {
+    await send(chat, /full/.test(r.err) ? `На «${e.title}» мест больше нет 😔` : /closed/.test(r.err) ? "Эта запись уже закрыта." : `Не получилось записать, попробуй на сайте: ${SITE}events.html#e-${e.id}`, MENU);
+    return;
+  }
+  await db("PATCH", `event_signups?event_id=eq.${e.id}&contact=eq.${enc(contact)}&chat_id=is.null`, { chat_id: chat }, "return=minimal");
+  if (r.val === -1) {
+    const res: any[] = (await db("GET", `event_signups?select=chat_id&event_id=eq.${e.id}&status=eq.reserve&order=created_at.asc`)) ?? [];
+    const pos = res.findIndex((x) => Number(x.chat_id) === chat) + 1; const n = pos > 0 ? ` (№${pos})` : "";
+    await send(chat, `Мест на «${e.title}» (${evWhen(e)}) пока нет — ты в резерве${n}.\nЕсли кто-то отменит — сразу напишу, место будет твоё 🙌`, MENU);
+    if (friend) await send(friend, `👫 ${name} перешёл(ла) по твоей ссылке на «${e.title}», но мест уже нет — он(а) в резерве${n}.`);
+    await tellOrganizer(e, `🕓 В резерв на «${e.title}»: ${who}. Сделать основным — в кабинете: ${SITE}cabinet.html`);
+    return;
+  }
+  await send(chat, `✅ Записала тебя: «${e.title}»${friend ? ` — вместе с ${friendName} 👫` : ""}\n🗓 ${evWhen(e)}${e.place ? "\n📍 " + e.place : ""}\nЗа день напомню. Если планы поменяются — нажми «Отменить запись», я предупрежу организатора.`,
+    { inline_keyboard: [[{ text: "❌ Отменить запись", callback_data: `evx:${e.id}` }], ...(await friendBtn(chat, e))] });
+  if (friend) await send(friend, `👫 ${name} записался(ась) по твоей ссылке на «${e.title}» (${evWhen(e)}). Идёте вместе!`);
+  await tellOrganizer(e, `🙋 Запись на «${e.title}» (${evWhen(e)}): ${who}${friend ? ` — вместе с другом (${friendName}), ставьте в одну смену` : ""}`);
+}
+
+// освободилось место → предлагаю первому из резерва (кому ещё не предлагали); «Не могу» → следующему
+async function offerReserve(e: any) {
+  if (!e?.capacity || (await taken(e)) >= e.capacity) return;
+  const r = (await db("GET", `event_signups?select=id,chat_id&event_id=eq.${e.id}&status=eq.reserve&chat_id=not.is.null&offered_at=is.null&order=created_at.asc&limit=1`))?.[0];
+  if (!r) return;
+  await db("PATCH", `event_signups?id=eq.${r.id}`, { offered_at: new Date().toISOString() }, "return=minimal");
+  await send(r.chat_id, `🎉 Освободилось место на «${e.title}», ${evWhen(e)}${e.place ? ", " + e.place : ""}. Берёшь? Кто первый нажмёт — того и место.`,
+    { inline_keyboard: [[{ text: "✅ Беру", callback_data: `evt:${e.id}` }, { text: "Не могу", callback_data: `evz:${e.id}` }]] });
+}
+
+async function eventBtn(cbq: any, data: string) {
+  const msg = cbq.message; const chat = Number(msg?.chat?.id ?? 0);
+  if (!msg || msg.chat?.type !== "private" || cbq.from?.id !== chat) { await tg("answerCallbackQuery", { callback_query_id: cbq.id }); return; }
+  const [act, id] = data.split(":");
+  const say = (t: string) => tg("answerCallbackQuery", { callback_query_id: cbq.id, text: t });
+  const edit = (t: string) => tg("editMessageText", { chat_id: chat, message_id: msg.message_id, text: t });
+  if (act === "evx") {   // сначала спрашиваю, чтобы не отменить случайно
+    await say("");
+    await tg("editMessageReplyMarkup", { chat_id: chat, message_id: msg.message_id, reply_markup: { inline_keyboard: [[{ text: "Да, отменить", callback_data: `evy:${id}` }, { text: "Нет, иду ✅", callback_data: `evn:${id}` }]] } });
+    return;
+  }
+  if (act === "evn") { await say("Отлично, ждём!"); await tg("editMessageReplyMarkup", { chat_id: chat, message_id: msg.message_id, reply_markup: { inline_keyboard: [[{ text: "❌ Отменить запись", callback_data: `evx:${id}` }]] } }); return; }
+  if (!UUID.test(id)) { await say(""); return; }
+  const e = (await db("GET", `events?select=*&id=eq.${id}`))?.[0];
+  const title = e?.title ?? "мероприятие";
+  const row = (await db("GET", `event_signups?select=id,status,name&event_id=eq.${id}&chat_id=eq.${chat}`))?.[0];
+  const who = String(cbq.from.first_name ?? row?.name ?? "Участник") + (cbq.from.username ? " @" + cbq.from.username : "");
+  if (act === "evy") {
+    await say("");
+    if (!row) { await edit(`${msg.text}\n\nЗаписи уже нет.`); return; }
+    await db("DELETE", `event_signups?id=eq.${row.id}`, undefined, "return=minimal");
+    await edit(`${String(msg.text).split("\nЗа день напомню")[0]}\n\n❌ Запись отменена`);
+    await send(chat, `❌ Запись на «${title}» отменена. Организатора предупредила. Спасибо, что сказал(а) заранее 🙏`, MENU);
+    await tellOrganizer(e, `❌ Отмена записи на «${title}»${e ? " (" + evWhen(e) + ")" : ""}: ${who}`);
+    if (row.status === "main" && e && new Date(e.starts_at).getTime() > Date.now()) await offerReserve(e);
+    return;
+  }
+  if (!e || new Date(e.starts_at).getTime() < Date.now()) { await say("Уже не актуально"); await edit(`${msg.text}\n\nЗапись уже закрыта.`); return; }
+  if (act === "evz") {
+    await say("Хорошо, предложу другому");
+    await edit(`${msg.text}\n\nОк, предложила место следующему. Ты остаёшься в резерве.`);
+    await offerReserve(e); return;
+  }
+  if (act === "evt") {
+    if (!row) { await say(""); await edit(`${msg.text}\n\nТвоей записи в резерве уже нет.`); return; }
+    if (row.status === "main") { await say("Место уже твоё ✅"); return; }
+    if ((await taken(e)) >= (e.capacity ?? 1e9)) { await say("Не успел(а) 😔"); await edit(`${msg.text}\n\nМесто уже заняли — ты остаёшься в резерве. Освободится ещё — напишу.`); return; }
+    await db("PATCH", `event_signups?id=eq.${row.id}`, { status: "main" }, "return=minimal");
+    await say("Место твоё ✅");
+    await edit(`✅ Место твоё: «${title}», ${evWhen(e)}${e.place ? "\n📍 " + e.place : ""}\nЗа день напомню.`);
+    await tg("editMessageReplyMarkup", { chat_id: chat, message_id: msg.message_id, reply_markup: { inline_keyboard: [[{ text: "❌ Отменить запись", callback_data: `evx:${id}` }]] } });
+    await tellOrganizer(e, `🔁 Замена на «${title}» (${evWhen(e)}): место занял(а) ${who} из резерва.`);
+    return;
+  }
+  await say("");
+}
+
 // ───────── публикация: канал + подписчики города ─────────
 async function seen(key: string): Promise<boolean> { return !!(await db("GET", `bot_seen?select=key&key=eq.${enc(key)}`))?.[0]; }
 async function markSeen(key: string) { await db("POST", "bot_seen", { key }, "resolution=ignore-duplicates,return=minimal"); }
@@ -182,6 +315,7 @@ async function tick() {
     await setCfg("tick_init", new Date().toISOString());
     return "init";
   }
+  await menuApp();
   const since = new Date(Date.now() - 4 * 86400_000).toISOString();
   const appr: any[] = (await db("GET", `vacancies?select=*&status=eq.approved&created_at=gte.${enc(since)}&order=created_at.asc&limit=30`)) ?? [];
   let posted = 0;
@@ -222,7 +356,7 @@ async function tick() {
   for (const e of evs) {
     if (await seen("evr:" + e.id)) continue;
     await markSeen("evr:" + e.id);
-    const ss: any[] = (await db("GET", `event_signups?select=chat_id&event_id=eq.${e.id}&chat_id=not.is.null`)) ?? [];
+    const ss: any[] = (await db("GET", `event_signups?select=chat_id&event_id=eq.${e.id}&chat_id=not.is.null&status=eq.main`)) ?? [];
     const when = new Date(e.starts_at).toLocaleString("ru-RU", { timeZone: "Europe/Saratov", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
     for (const s of ss) await send(s.chat_id, `⏰ Напоминаю: завтра «${e.title}», ${when}${e.place ? ", " + e.place : ""}. Ждём!`);
   }
@@ -230,6 +364,8 @@ async function tick() {
 }
 
 async function moderate(cbq: any) {
+  const data = String(cbq.data ?? "");
+  if (/^ev[xyntz]:/.test(data)) { await eventBtn(cbq, data); return; }
   await tg("answerCallbackQuery", { callback_query_id: cbq.id });
   const own = await ownerId();
   if (!own || cbq.from?.id !== own) return;
@@ -341,23 +477,10 @@ async function onMessage(m: any) {
       await send(chat, ok ? "✅ Вход в кабинет работодателя подтверждён. Вернись на сайт — всё уже открыто.\nСюда буду присылать новые анкеты и отмены записей на твои смены." : "Ссылка входа устарела. Нажми «Войти через Telegram» на сайте ещё раз.", MENU);
       return;
     }
-    if (arg.startsWith("ev_")) {
-      const eid = arg.slice(3);
-      const e = (await db("GET", `events?select=*&id=eq.${enc(eid)}&published=eq.true`))?.[0];
-      if (!e || new Date(e.starts_at).getTime() < Date.now()) { await send(chat, "Эта запись уже закрыта.", MENU); return; }
-      const has = (await db("GET", `event_signups?select=id&event_id=eq.${e.id}&chat_id=eq.${chat}`))?.[0];
-      if (!has) {
-        const cnt = ((await db("GET", `event_signups?select=id&event_id=eq.${e.id}`)) ?? []).length;
-        if (e.capacity && cnt >= e.capacity) { await send(chat, `На «${e.title}» мест больше нет 😔`, MENU); return; }
-        await db("POST", "event_signups", { event_id: e.id, name: (from.first_name ?? "Участник").slice(0, 60).padEnd(2, "."), contact: from.username ? "@" + from.username : "tg:" + chat, chat_id: chat }, "return=minimal");
-      }
-      const when = new Date(e.starts_at).toLocaleString("ru-RU", { timeZone: "Europe/Saratov", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
-      await send(chat, `✅ Записала тебя: «${e.title}»\n🗓 ${when}${e.place ? "\n📍 " + e.place : ""}\nЗа день напомню.`, MENU);
-      const own2 = await ownerId(); if (own2 && !has) await send(own2, `🙋 Запись на «${e.title}»: ${from.first_name ?? ""}${from.username ? " @" + from.username : ""}`);
-      return;
-    }
+    if (arg.startsWith("ev_")) { await eventJoin(chat, from, arg.slice(3)); return; }
     await send(chat, `Привет, ${from.first_name ?? "друг"}! Я Неви, помощница New.работа 🤖\nПомогу найти работу или подработку с 14 лет, разместить вакансию и разобраться с правами.\nВыбери кнопку внизу или просто задай вопрос.\n🌐 Сайт: ${SITE}`, MENU); return;
   }
+  if (text === "/app" || text.startsWith("/app@")) { await send(chat, "Все вакансии с фильтрами по городу и возрасту — прямо в Telegram 👇", appButton(u.city && u.city !== "удалённо" ? u.city : "")); return; }
   if (text.startsWith("/privacy")) { await send(chat, PRIVACY_LONG, MENU); return; }
   if (text.startsWith("/forget")) {
     await db("DELETE", `bot_questions?chat_id=eq.${chat}`, undefined, "return=minimal");
@@ -369,7 +492,7 @@ async function onMessage(m: any) {
     await send(chat, "Хочешь, чтобы работодатель или команда могли связаться с тобой напрямую? Напиши телефон или почту — по желанию. Данные видит только команда New.работа, удалить можно командой /forget. Если тебе меньше 18, лучше оставь контакт родителей или предупреди их.\nЕсли не хочешь, напиши «нет».", MENU); return;
   }
   if (text === "/stop") { await setUser(chat, { city: null }); await send(chat, "Отписала от новых вакансий. Подписаться снова — «🔎 Найти работу».", MENU); return; }
-  if (text.startsWith("/help")) { await send(chat, "Что я умею:\n🔎 найти вакансии по городу\n📢 принять вакансию на проверку\n⚖️ рассказать про права подростков\n🛡 предупредить о мошенниках\n✉️ передать вопрос команде\nА ещё можно просто спросить меня словами.", MENU); return; }
+  if (text.startsWith("/help")) { await send(chat, "Что я умею:\n🔎 найти вакансии по городу\n📢 принять вакансию на проверку\n⚖️ рассказать про права подростков\n📱 /app — все вакансии прямо в Telegram\n🛡 предупредить о мошенниках\n✉️ передать вопрос команде\nА ещё можно просто спросить меня словами.", MENU); return; }
   if (text.startsWith("🔎") || text.startsWith("/find") || text.startsWith("/jobs")) { await setUser(chat, { step: "city" }); await send(chat, "В каком городе ищешь? Или напиши «удалённо»."); return; }
   if (text.startsWith("📢") || text.startsWith("/add_job") || text.startsWith("/vacancy")) { await setUser(chat, { step: "v_title", draft: {} }); await send(chat, "Разместим вакансию. Отвечай по шагам, «отмена» — выйти.\n1/6. Какая должность? (например: «Бариста на выходные»)"); return; }
   if (text.startsWith("⚖️")) { await send(chat, RIGHTS, MENU); return; }
