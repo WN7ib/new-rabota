@@ -5,6 +5,8 @@ const EID = "11111111-2222-3333-4444-555555555555";
 T.events.push({ id: EID, title: "Раздача листовок", starts_at: new Date(Date.now() + 3 * 86400e3).toISOString(), place: "Саратов", capacity: 2, published: true, employer_id: "emp1" });
 T.bot_config.push({ key: "owner_id", value: "900" });
 function match(row, k, v) {
+  if (k === "or") return v.slice(1, -1).split(",").some((c) => { const [kk, ...rest] = c.split("."); return match(row, kk, rest.join(".")); });
+  if (v.startsWith("ilike.")) { const re = new RegExp("^" + decodeURIComponent(v.slice(6)).split("*").map((x) => x.replace(/[.?+^$()[\]{}|\\]/g, "\\$&")).join(".*") + "$", "i"); return row[k] != null && re.test(String(row[k])); }
   if (v === "is.null") return row[k] == null;
   if (v === "not.is.null") return row[k] != null;
   if (v.startsWith("eq.")) return String(row[k]) === decodeURIComponent(v.slice(3));
@@ -132,4 +134,37 @@ T.event_signups.push({ id: "r2", event_id: E3, name: "Ян", contact: "@yan", st
 T.event_signups.push({ id: "r3", event_id: E3, name: "Ия", contact: "@iya", status: "reserve", chat_id: 303, created_at: ++seq, offered_at: null });
 await cb(301, "evy:" + E3); assert.match(last(302).text, /Освободилось место/); assert.ok(!to(303).length, "второму пока не предлагаю");
 await cb(302, "evz:" + E3); assert.match(last(303).text, /Освободилось место/);
+// ───── «🎯 Подбор под меня» и подборка недели ─────
+T.vacancies.push(
+  { id: "v1", title: "Бариста", city: "Саратов", age_min: 16, remote: false, status: "approved", description: "кофейня", created_at: new Date().toISOString(), contact: "@cafe" },
+  { id: "v2", title: "Курьер", city: "Саратов", age_min: 18, remote: false, status: "approved", description: "доставка", created_at: new Date().toISOString(), contact: "@c" },
+  { id: "v3", title: "Промоутер", city: "Москва", age_min: 14, remote: false, status: "approved", description: "листовки", created_at: new Date().toISOString(), contact: "@p" },
+  { id: "v4", title: "Официант", city: "Саратов", age_min: 14, adult: true, remote: false, status: "approved", description: "кафе", created_at: new Date().toISOString(), contact: "@o" });
+await msg(401, "Лиза", "🎯 Подбор под меня"); assert.match(last(401).text, /1\/3/);
+await msg(401, "Лиза", "Саратов"); assert.match(last(401).text, /2\/3. Сколько тебе лет/); assert.equal(T.bot_users.find((x) => x.chat_id === 401).step, "p_age");
+await msg(401, "Лиза", "16"); assert.equal(T.bot_users.find((x) => x.chat_id === 401).age, 16);
+assert.ok(to(401).some((t) => /согласие родителя/.test(t))); let pk = last(401).reply_markup.inline_keyboard;
+assert.equal(pk[0][0].callback_data, "pi:food"); assert.equal(pk.at(-1)[0].callback_data, "pi:done");
+await cb(401, "pi:food"); assert.deepEqual(T.bot_users.find((x) => x.chat_id === 401).ints, ["food"]);
+assert.match(sent.at(-1).reply_markup.inline_keyboard[0][0].text, /^✅ /);
+await cb(401, "pi:courier"); await cb(401, "pi:courier"); assert.deepEqual(T.bot_users.find((x) => x.chat_id === 401).ints, ["food"]);
+const b0 = to(401).length; await cb(401, "pi:done");
+const got = to(401).slice(b0).filter((t) => /^💼/.test(t)); assert.equal(got.length, 1, "только бариста: курьер 18+, Москва и «для взрослых» не подходят"); assert.match(got[0], /Бариста/);
+assert.match(last(401).text, /Раз в неделю пришлю/);
+await cb(402, "pi:food");   // нет профиля — тихо
+await msg(401, "Лиза", "/weekly"); assert.equal(T.bot_users.find((x) => x.chat_id === 401).weekly, false); assert.match(last(401).text, /выключила/);
+await msg(401, "Лиза", "/weekly"); assert.equal(T.bot_users.find((x) => x.chat_id === 401).weekly, true);
+// ответ не про возраст на шаге «возраст» — обычный разговор, шаг сбрасывается
+await msg(403, "Тим", "🎯"); await msg(403, "Тим", "удалённо"); await msg(403, "Тим", "как не попасть на обман?"); assert.equal(T.bot_users.find((x) => x.chat_id === 403).step, null);
+// владелец: /people Саратов 16
+await msg(900, "Никита", "/people Саратов 16"); assert.match(last(900).text, /Лиза.*16 лет/); assert.doesNotMatch(last(900).text, /Тим/);
+// подборка недели — только в воскресенье после 12 по Саратову
+const RealDate = Date; const sunday = new RealDate("2026-11-22T10:00:00Z").getTime();   // 14:00 Саратов
+globalThis.Date = class extends RealDate { constructor(...a) { super(...(a.length ? a : [sunday])); } static now() { return sunday; } };
+T.vacancies.push({ id: "v5", title: "Помощник повара", city: "Саратов", age_min: 16, status: "approved", description: "кухня", created_at: new RealDate(sunday - 86400e3).toISOString(), contact: "@k" });
+const before = to(401).length; await post({ tick: 1 });
+const wk = to(401).slice(before).filter((t) => !/^🆕/.test(t)); assert.match(wk[0], /Подборка недели для тебя — 2 вакансии/); assert.ok(wk.some((t) => /Помощник повара/.test(t)));
+assert.deepEqual([...T.bot_users.find((x) => x.chat_id === 401).wk_ids].sort(), ["v1", "v5"]);
+const wkn = () => to(401).filter((t) => !/^🆕/.test(t)).length; const n2 = wkn(); await post({ tick: 1 }); assert.equal(wkn(), n2, "второй раз за неделю не шлю");
+globalThis.Date = RealDate;
 console.log("OK", sent.length, "вызовов Telegram");

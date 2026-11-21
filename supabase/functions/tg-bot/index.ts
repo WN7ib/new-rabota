@@ -145,7 +145,7 @@ async function vkUpdate(u: any): Promise<Response> {
 const MENU = { resize_keyboard: true, keyboard: [
   [{ text: "🔎 Найти работу" }, { text: "📢 Разместить вакансию" }],
   [{ text: "⚖️ Права 14–17" }, { text: "🛡 Как не попасть на обман" }],
-  [{ text: "✉️ Написать команде" }],
+  [{ text: "🎯 Подбор под меня" }, { text: "✉️ Написать команде" }],
 ] };
 // Mini App New.работа (сайт tg.html): кнопка «Вакансии» слева от поля ввода у всех + /app
 const APP = SITE + "tg.html";
@@ -168,8 +168,8 @@ const DOCS = "Для устройства понадобятся:\n• пасп�
 const HELP = "Если что-то не так:\n• не платят или нарушают права — Государственная инспекция труда, сайт онлайнинспекция.рф;\n• трудно, страшно, давят — детский телефон доверия 8-800-2000-122, бесплатно;\n• втягивают в дропперство или закладки — полиция, 102 или 112, и расскажи взрослым, которым доверяешь.\nПодозрительную вакансию на сайте отправь модератору кнопкой «Пожаловаться».";
 const CONSENT = "Если тебе 14–15 лет, нужно письменное согласие одного из родителей и органа опеки и попечительства (с заявлением в опеку идёт родитель). С 16 лет согласие родителей не нужно. Готовый бланк можно заполнить и распечатать — родитель подпишет: " + SITE + "consent.html";
 const EMP = "Вакансию работодатель добавляет через «📢 Разместить вакансию» — перед публикацией её проверяет модератор. Правила: работа законная и подходит по возрасту (для 14–17 лет — только то, что разрешает Трудовой кодекс); нельзя брать с соискателя деньги за обучение, форму, медкнижку или «бронь»; нельзя предлагать работу с переводом чужих денег, оформлением карт, закладками, алкоголем, табаком и вейпами для несовершеннолетних; указывай реальную оплату, график и рабочий контакт. Вакансия снимается сама, когда истекает выбранный срок. Полные правила: " + SITE + "about.html#rules";
-const PRIVACY_SHORT = "ℹ️ Запоминаю твоё имя (и ник) из Telegram или ВКонтакте, город и подписку на вакансии. Телефон или почту — только если сам оставишь (/contact). Подробнее: /privacy, удалить всё: /forget.";
-const PRIVACY_LONG = "🔒 Что я о тебе храню: имя и ник из Telegram или ВКонтакте, город для подборок вакансий, а контакт (телефон или почта) — только если ты сам его оставил командой /contact. Зачем: присылать вакансии и, если ты хочешь, связать тебя с работодателем. Данные видит только команда New.работа. Отписаться от подборок: /stop. Удалить всё: /forget. Подробнее: " + SITE + "about.html#privacy";
+const PRIVACY_SHORT = "ℹ️ Запоминаю твоё имя (и ник) из Telegram или ВКонтакте, город и подписку на вакансии, а возраст и интересы — если сам укажешь в «🎯 Подбор под меня». Телефон или почту — только если сам оставишь (/contact). Подробнее: /privacy, удалить всё: /forget.";
+const PRIVACY_LONG = "🔒 Что я о тебе храню: имя и ник из Telegram или ВКонтакте, город, возраст и интересы для подборок вакансий (возраст и интересы — только если ты сам их указал), а контакт (телефон или почта) — только если ты сам его оставил командой /contact. Зачем: присылать вакансии и, если ты хочешь, связать тебя с работодателем. Данные видит только команда New.работа. Отписаться от новых вакансий: /stop, от подборки раз в неделю: /weekly. Удалить всё: /forget. Подробнее: " + SITE + "about.html#privacy";
 const ABOUT = "New.работа — бесплатный сайт вакансий для молодёжи от 14 лет: подработка, стажировки, проекты и волонтёрство по всей России и удалённо. Каждую вакансию перед публикацией проверяет модератор. Делает молодёжная команда из Саратова. Ответы Неви — подсказки, а не юридическая консультация.";
 
 // частые вопросы: отвечаю сразу, без нейросети
@@ -250,6 +250,95 @@ async function vacancyStep(chat: number, u: any, text: string, from: any) {
       return;
     }
   }
+}
+
+// ───────── «🎯 Подбор под меня»: возраст + интересы + подборка раз в неделю (как TgBot.kt на телефоне) ─────────
+const CATS: [string, string, RegExp][] = [
+  ["food", "☕ Кафе и еда", /кафе|кофе|барист|официант|повар|кухн|пицц|фастфуд|бургер|шаурм|ресторан|кассир/i],
+  ["promo", "📣 Промо и события", /промо|листов|флаер|аниматор|мероприят|ивент|праздник|фестивал|волонт/i],
+  ["courier", "🚴 Курьер и доставка", /курьер|доставк|развоз/i],
+  ["retail", "🛒 Магазин и склад", /магазин|выкладк|продав|мерчанд|склад|пвз|пункт выдачи|сборщик|комплектов/i],
+  ["online", "💻 Онлайн и digital", /удал|онлайн|smm|дизайн|монтаж|видео|текст|копирайт|модерац|контент|таргет|программ|сайт/i],
+  ["kids", "🏕 Дети и лагеря", /вожат|лагер|детск|ребён|репетит|няня|аниматор/i],
+  ["outdoor", "🌳 На улице и сезонное", /парк|аттракцион|автомой|уборк|озелен|сезон|летн/i],
+];
+const AGE_KB = { resize_keyboard: true, one_time_keyboard: true, keyboard: [[{ text: "14" }, { text: "15" }, { text: "16" }], [{ text: "17" }, { text: "18+" }, { text: "Не скажу" }]] };
+async function askAge(chat: number) {
+  await setUser(chat, { step: "p_age" });
+  await send(chat, "2/3. Сколько тебе лет? Покажу только то, куда тебя реально возьмут.", AGE_KB);
+}
+function intsKb(sel: string[]) {
+  const rows: any[] = []; let row: any[] = [];
+  for (const [k, label] of CATS) { row.push({ text: (sel.includes(k) ? "✅ " : "") + label, callback_data: `pi:${k}` }); if (row.length === 2) { rows.push(row); row = []; } }
+  if (row.length) rows.push(row);
+  rows.push([{ text: "Готово ➡️", callback_data: "pi:done" }]);
+  return { inline_keyboard: rows };
+}
+async function profileStart(chat: number, u: any) {
+  if (!u.city) { await setUser(chat, { step: "city" }); await send(chat, "Подберу работу под тебя за 3 шага 🎯\n1/3. В каком городе ищешь? Или напиши «удалённо»."); return; }
+  await askAge(chat);
+}
+// вакансия подходит? -1 — нет (город/возраст), 0 — не по интересам, ≥1 — да (чем больше совпало интересов, тем выше)
+function score(u: any, v: any): number {
+  const city = String(u.city ?? "").toLowerCase(); const remote = city.startsWith("удал");
+  const okPlace = remote ? !!v.remote : !city || String(v.city ?? "").toLowerCase().startsWith(city.slice(0, 5)) || !!v.remote;
+  if (!okPlace) return -1;
+  const age = Number(u.age) || 99; const need = v.adult ? 18 : Number(v.age_min ?? 16);
+  if (age < 99 && need > age) return -1;
+  const sel: string[] = u.ints ?? []; if (!sel.length) return 1;
+  const t = `${v.title} ${v.description ?? ""}`;
+  const n = CATS.filter(([k, , re]) => sel.includes(k) && re.test(t)).length;
+  return n > 0 ? 1 + n : 0;
+}
+async function approvedPool(days: number): Promise<any[]> {
+  const since = new Date(Date.now() - days * 86400_000).toISOString();
+  return (await db("GET", `vacancies?select=*&status=eq.approved&created_at=gte.${enc(since)}&order=created_at.desc&limit=300`)) ?? [];
+}
+function matches(u: any, pool: any[], max: number, skip: string[] = []): any[] {
+  return pool.filter((v) => !skip.includes(String(v.id))).map((v) => [v, score(u, v)] as [any, number]).filter((x) => x[1] > 0)
+    .sort((a, b) => b[1] - a[1]).slice(0, max).map((x) => x[0]);
+}
+async function onPick(cbq: any, key: string) {
+  const msg = cbq.message; const chat = Number(msg?.chat?.id ?? 0);
+  await tg("answerCallbackQuery", { callback_query_id: cbq.id });
+  if (!msg || msg.chat?.type !== "private" || cbq.from?.id !== chat) return;
+  const u = await user(chat); if (!u) return;
+  const sel: string[] = Array.isArray(u.ints) ? [...u.ints] : [];
+  if (key === "done") {
+    await setUser(chat, { ints: sel });   // пустой список = «любые», но профиль заполнен
+    await tg("editMessageText", { chat_id: chat, message_id: msg.message_id, text: "Интересы: " + (CATS.filter(([k]) => sel.includes(k)).map(([, l]) => l).join(", ") || "любые") });
+    await send(chat, "Готово! Вот что подходит тебе сейчас 👇", MENU);
+    const hit = matches({ ...u, ints: sel }, await approvedPool(30), 6);
+    for (const v of hit) await send(chat, card(v) + `\n🔗 ${SITE}vacancy.html?id=${v.id}`);
+    const weekly = u.weekly !== false;
+    await send(chat, (hit.length ? "" : "Пока подходящих нет. ") + (weekly ? "Раз в неделю пришлю подборку, а новые — сразу 🔔\n" : "Новые пришлю сразу 🔔\n") + "Изменить — «🎯 Подбор под меня»" + (weekly ? ", выключить подборку — /weekly" : ", включить подборку — /weekly"), MENU);
+    return;
+  }
+  if (!CATS.some(([k]) => k === key)) return;
+  const i = sel.indexOf(key); if (i >= 0) sel.splice(i, 1); else sel.push(key);
+  await setUser(chat, { ints: sel });
+  await tg("editMessageReplyMarkup", { chat_id: chat, message_id: msg.message_id, reply_markup: intsKb(sel) });
+}
+// подборка раз в неделю: воскресенье после 12:00 (Саратов, UTC+4), тем, кто прошёл подбор и не выключил; за обход — до 25 человек
+async function weeklyDigest(): Promise<number> {
+  const now = new Date(Date.now() + 4 * 3600_000);
+  if (now.getUTCDay() !== 0 || now.getUTCHours() < 12) return 0;
+  const t6 = new Date(Date.now() - 6 * 86400_000).toISOString();
+  const us: any[] = (await db("GET", `bot_users?select=chat_id,city,age,ints,wk_ids&ints=not.is.null&weekly=eq.true&or=(wk_at.is.null,wk_at.lt.${enc(t6)})&limit=25`)) ?? [];
+  if (!us.length) return 0;
+  const pool = await approvedPool(8); let n = 0;
+  for (const u of us) {
+    await setUser(u.chat_id, { wk_at: new Date().toISOString() });
+    const was: string[] = u.wk_ids ?? [];
+    const hit = matches(u, pool, 5, was); if (!hit.length) continue;
+    const w = hit.length === 1 ? "вакансия" : hit.length < 5 ? "вакансии" : "вакансий";
+    if (!(await send(u.chat_id, `🎯 Подборка недели для тебя — ${hit.length} ${w}:`))) continue;
+    for (const v of hit) await send(u.chat_id, card(v) + `\n🔗 ${SITE}vacancy.html?id=${v.id}`);
+    await send(u.chat_id, "Изменить интересы — «🎯 Подбор под меня», выключить подборку — /weekly", MENU);
+    await setUser(u.chat_id, { wk_ids: [...was, ...hit.map((v) => String(v.id))].slice(-60) });
+    n++;
+  }
+  return n;
 }
 
 async function ticket(chat: number, from: any, q: string, why: string) {
@@ -501,12 +590,14 @@ async function tick() {
     if (r.chat_id) await send(r.chat_id, `Ты не ответил(а) за 30 минут — место на «${e.title}» предложила следующему. Ты остаёшься в резерве.`);
     await offerReserve(e);
   }
-  return `ok posted=${posted}`;
+  const wk = await weeklyDigest();
+  return `ok posted=${posted}${wk ? " weekly=" + wk : ""}`;
 }
 
 async function moderate(cbq: any) {
   const data = String(cbq.data ?? "");
   if (/^ev[xyktzrn]:/.test(data)) { await eventBtn(cbq, data); return; }
+  if (data.startsWith("pi:")) { await onPick(cbq, data.slice(3)); return; }
   await tg("answerCallbackQuery", { callback_query_id: cbq.id });
   const own = await ownerId();
   if (!own || cbq.from?.id !== own) return;
@@ -555,10 +646,11 @@ async function ownerCmd(chat: number, m: any, text: string): Promise<boolean> {
     await send(chat, `Разослала ${n} подписчикам.`); return true;
   }
   if (text === "/people" || text.startsWith("/people ")) {
-    const city = text.slice(7).trim();
-    const f = city ? `&city=ilike.*${enc(city)}*` : "";
-    const rows: any[] = (await db("GET", `bot_users?select=name,username,city,contact,chat_id&order=last_at.desc&limit=40${f}`)) ?? [];
-    await send(chat, rows.length ? `В базе ${rows.length}:\n` + rows.filter((r) => r.chat_id !== chat).map((r) => `• ${r.name || "?"}${r.username ? " @" + r.username : ""}${r.city ? " · " + r.city : ""}${r.contact ? " · ☎ " + r.contact : ""} · id ${r.chat_id}`).join("\n") : "В базе таких нет."); return true;
+    const parts = text.slice(7).trim().split(/\s+/).filter(Boolean);
+    const ageQ = parts.length && /^\d{2}$/.test(parts.at(-1)!) ? Number(parts.pop()) : 0; const city = parts.join(" ");
+    const f = (city ? `&city=ilike.*${enc(city)}*` : "") + (ageQ ? `&age=eq.${ageQ}` : "");
+    const rows: any[] = (await db("GET", `bot_users?select=*&order=last_at.desc&limit=40${f}`)) ?? [];
+    await send(chat, rows.length ? `В базе ${rows.length}:\n` + rows.filter((r) => r.chat_id !== chat).map((r) => `• ${r.name || "?"}${r.username ? " @" + r.username : ""}${r.city ? " · " + r.city : ""}${r.age && r.age < 99 ? " · " + r.age + " лет" : ""}${r.contact ? " · ☎ " + r.contact : ""} · id ${r.chat_id}`).join("\n") : "В базе таких нет."); return true;
   }
   if (text === "/stats") {
     const users = (await db("GET", "bot_users?select=chat_id", undefined, "count=exact"))?.length ?? 0;
@@ -594,8 +686,15 @@ async function onMessage(m: any) {
   else await setUser(chat, { last_at: new Date().toISOString(), name: from.first_name ?? u.name, username: from.username ?? u.username });
   if (own && from.id === own && await ownerCmd(chat, m, text)) return;
 
-  const menuWord = /^(🔎|📢|⚖️|🛡|✉️|\/)/.test(text);
-  if (u.step === "city" && !menuWord) { await setUser(chat, { step: null }); await findJobs(chat, text); return; }
+  const menuWord = /^(🔎|📢|⚖️|🛡|✉️|🎯|\/)/.test(text);
+  if (u.step === "city" && !menuWord) { await setUser(chat, { step: null }); await findJobs(chat, text); if (u.age == null) await askAge(chat); return; }
+  if (u.step === "p_age" && !menuWord && /^\s*(\d{1,2}\+?|не скажу|не хочу|нет)\s*$/i.test(text)) {
+    const a = Number(text.match(/\d+/)?.[0] ?? 0); const age = a ? Math.min(30, Math.max(14, a)) : 99;   // 99 — не сказал, возраст не фильтрую
+    await setUser(chat, { step: null, age });
+    if (age < 18) await send(chat, `📝 Тебе меньше 18: работодатель может попросить согласие родителя (в 14–15 лет оно обязательно). Готовый бланк: ${SITE}consent.html — заполни, распечатай, родитель подпишет.`, MENU);
+    await send(chat, "3/3. Что интересно? Отметь всё, что подходит, и нажми «Готово».", intsKb(Array.isArray(u.ints) ? u.ints : []));
+    return;
+  }
   if (u.step === "contact" && !menuWord) {
     await setUser(chat, { step: null });
     if (/^\s*(нет|не хочу|отмена|стоп)/i.test(text)) { await send(chat, "Хорошо, контакт не сохраняю 👌", MENU); return; }
@@ -639,8 +738,10 @@ async function onMessage(m: any) {
     await setUser(chat, { step: "contact" });
     await send(chat, "Хочешь, чтобы работодатель или команда могли связаться с тобой напрямую? Напиши телефон или почту — по желанию. Данные видит только команда New.работа, удалить можно командой /forget. Если тебе меньше 18, лучше оставь контакт родителей или предупреди их.\nЕсли не хочешь, напиши «нет».", MENU); return;
   }
+  if (text.startsWith("🎯") || text === "/me") { await profileStart(chat, u); return; }
+  if (text === "/weekly") { const on = u.weekly === false; await setUser(chat, { weekly: on }); await send(chat, on ? "Подборка раз в неделю включена 🔔" : "Подборку раз в неделю выключила. Включить — /weekly", MENU); return; }
   if (text === "/stop") { await setUser(chat, { city: null }); await send(chat, "Отписала от новых вакансий. Подписаться снова — «🔎 Найти работу».", MENU); return; }
-  if (text.startsWith("/help")) { await send(chat, "Что я умею:\n🔎 найти вакансии по городу\n📢 принять вакансию на проверку\n⚖️ рассказать про права подростков\n📱 /app — все вакансии прямо в Telegram\n🛡 предупредить о мошенниках\n✉️ передать вопрос команде\nА ещё можно просто спросить меня словами.", MENU); return; }
+  if (text.startsWith("/help")) { await send(chat, "Что я умею:\n🔎 найти вакансии по городу\n🎯 подобрать работу под твой возраст и интересы (/me), подборка раз в неделю (/weekly)\n📢 принять вакансию на проверку\n⚖️ рассказать про права подростков\n📱 /app — все вакансии прямо в Telegram\n🛡 предупредить о мошенниках\n✉️ передать вопрос команде\nА ещё можно просто спросить меня словами.", MENU); return; }
   if (text.startsWith("🔎") || text.startsWith("/find") || text.startsWith("/jobs")) { await setUser(chat, { step: "city" }); await send(chat, "В каком городе ищешь? Или напиши «удалённо»."); return; }
   if (text.startsWith("📢") || text.startsWith("/add_job") || text.startsWith("/vacancy")) { await setUser(chat, { step: "v_title", draft: {} }); await send(chat, "Разместим вакансию. Отвечай по шагам, «отмена» — выйти.\n1/6. Какая должность? (например: «Бариста на выходные»)"); return; }
   if (text.startsWith("⚖️")) { await send(chat, RIGHTS, MENU); return; }
