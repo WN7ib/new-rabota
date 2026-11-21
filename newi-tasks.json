@@ -376,6 +376,18 @@
         ],
         "verify_jwt": false
       }
+    },
+    {
+      "id": "2026-11-21-bot-deploy-6",
+      "title": "Серверный бот: публикацию и проверку вакансий оставить телефону (решение Никиты 21.11), сервер шлёт только подписчикам",
+      "do": "fn_deploy",
+      "args": {
+        "slug": "tg-bot",
+        "files": [
+          "supabase/functions/tg-bot/index.ts"
+        ],
+        "verify_jwt": false
+      }
     }
   ]
 }

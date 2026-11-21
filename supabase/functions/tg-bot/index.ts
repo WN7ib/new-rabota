@@ -748,16 +748,25 @@ async function vkPost(text: string, link: string, img: Uint8Array<ArrayBuffer> |
 // ───────── публикация: канал + подписчики города ─────────
 async function seen(key: string): Promise<boolean> { return !!(await db("GET", `bot_seen?select=key&key=eq.${enc(key)}`))?.[0]; }
 async function markSeen(key: string) { await db("POST", "bot_seen", { key }, "resolution=ignore-duplicates,return=minimal"); }
+// Кто публикует в канал и на стену ВК и присылает вакансии и жалобы на проверку (Никита 21.11: «у телефона оставь публикацию, я буду каждую вакансию проверять»):
+// phone (по умолчанию) — телефон (TgBot.sync: личный бот с кнопками, канал, ВК), сервер шлёт только своим подписчикам; server — всё делает сервер. Переключить: /publish server | phone.
+async function phonePublishes(): Promise<boolean> { return (await cfg("publish")) !== "server"; }
 async function announce(v: any, skipChat?: number): Promise<number> {
   if (await seen("post:" + v.id)) return 0;
   await markSeen("post:" + v.id);
   const link = `${SITE}vacancy.html?id=${v.id}`;
+  if (!(await phonePublishes())) await publishOut(v, link);
+  return await toSubscribers(v, link, skipChat);
+}
+async function publishOut(v: any, link: string) {
   const ch = await cfg("channel");
   const tags = `#вакансия` + (v.city ? " #" + String(v.city).replace(/[^\p{L}\d]/gu, "") : "") + (v.remote ? " #удалённо" : "");
   const img = await vacancyArt(v);
   const kb = { inline_keyboard: [[{ text: "Открыть на сайте", url: link }], [{ text: "⚡ Нужен человек на смену? Смена под ключ", url: `${SITE}business.html#shift` }]] };
   if (ch) { const sent = img ? await tgPhoto(ch, img, card(v) + `\n🔗 ${link}\n\n${tags}`, kb) : 0; if (!sent) await send(ch, card(v) + `\n🔗 ${link}\n\n${tags}`, kb); }
   await vkPost(card(v) + `\n\nОткликнуться: ${link}\n${tags}`, link, img);
+}
+async function toSubscribers(v: any, link: string, skipChat?: number): Promise<number> {
   const c5 = (v.city ?? "").toLowerCase().slice(0, 5);
   // «всем»: по умолчанию новая вакансия уходит ВСЕМ подписчикам бота (у кого выбран город; кто нажал /stop — не получает).
   // Владелец может сузить до «только свой город» командой /all off.
@@ -832,7 +841,7 @@ async function tick() {
   const appr: any[] = (await db("GET", `vacancies?select=*&status=eq.approved&created_at=gte.${enc(since)}&order=created_at.asc&limit=30`)) ?? [];
   let posted = 0;
   for (const v of appr) { if (posted >= 4) break; if (!(await seen("post:" + v.id))) { await announce(v); posted++; } }
-  if (own) {
+  if (own && !(await phonePublishes())) {
     const pend: any[] = (await db("GET", `vacancies?select=*&status=eq.pending&order=created_at.asc&limit=20`)) ?? [];
     for (const v of pend) {
       if (await seen("pend:" + v.id)) continue;
@@ -979,6 +988,14 @@ async function ownerCmd(chat: number, m: any, text: string): Promise<boolean> {
     const t = text.slice(3).trim();
     if (t) { await tg("deleteMessage", { chat_id: chat, message_id: m.message_id }); await setCfg("vk_token", t); vkTok = ""; await setCfg("vk_setup", ""); }
     await send(chat, "ВК: " + (t ? "ключ сохранила, сообщение с ключом удалила. " : "") + await vkSetup(!!t)); return true;
+  }
+  if (text === "/publish" || text.startsWith("/publish ")) {
+    const a = text.slice(8).trim().toLowerCase();
+    if (/^(server|сервер)/.test(a)) await setCfg("publish", "server"); else if (/^(phone|телефон)/.test(a)) await setCfg("publish", "phone");
+    await send(chat, (await phonePublishes())
+      ? "📱 Публикует телефон: вакансии и жалобы на проверку приходят тебе в личный бот Неви, в канал и на стену ВК постит телефон после твоего «✅». Сервер только рассылает одобренное подписчикам бота.\nПереключить на сервер 24/7: /publish server"
+      : "🖥 Публикует сервер 24/7: проверка вакансий и жалоб — здесь, канал и стена ВК — с сервера (картинки рисует Gemini). На телефоне очисти поле «канал» у бота, иначе будут дубли.\nВернуть телефону: /publish phone");
+    return true;
   }
   if (text === "/channel" || text.startsWith("/channel ")) { const c = text.slice(8).trim(); await setCfg("channel", c); await send(chat, c ? `Новые вакансии буду публиковать в ${c} (бот должен быть админом канала).` : "Публикация в канал выключена."); return true; }
   return false;

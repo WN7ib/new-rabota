@@ -3,7 +3,7 @@ const T = { bot_config: [], bot_users: [], events: [], event_signups: [], employ
 const sent = [], vkc = [], gem = []; let seq = 0;
 const EID = "11111111-2222-3333-4444-555555555555";
 T.events.push({ id: EID, title: "Раздача листовок", starts_at: new Date(Date.now() + 3 * 86400e3).toISOString(), place: "Саратов", capacity: 2, published: true, employer_id: "emp1" });
-T.bot_config.push({ key: "owner_id", value: "900" });
+T.bot_config.push({ key: "owner_id", value: "900" }, { key: "publish", value: "server" });   // режим «всё делает сервер»; режим телефона — в конце
 function match(row, k, v) {
   if (k === "or") return v.slice(1, -1).split(",").some((c) => { const [kk, ...rest] = c.split("."); return match(row, kk, rest.join(".")); });
   if (v.startsWith("ilike.")) { const re = new RegExp("^" + decodeURIComponent(v.slice(6)).split("*").map((x) => x.replace(/[.?+^$()[\]{}|\\]/g, "\\$&")).join(".*") + "$", "i"); return row[k] != null && re.test(String(row[k])); }
@@ -279,4 +279,18 @@ assert.ok(T.applications[0].video_at); assert.match(last(901).text, /Перес�
 await msg(901, "Оля", "/start vv_0123456789abcdef"); assert.match(last(901).text, /уже отправлен/);
 T.applications.push({ id: "aaaaaaaa-bbbb-cccc-dddd-000000000009", name: "Ян", age: 18, video_at: null, vacancy_id: VVAC, vcode: "fedcba9876543210" });
 await msg(903, "Ян", "/start vv_fedcba9876543210"); await msg(903, "Ян", "отмена"); assert.match(last(903).text, /без кружка/);
+
+// режим «публикует телефон» (по умолчанию, Никита 21.11): сервер не постит в канал/ВК и не шлёт вакансии и жалобы на проверку, подписчикам — шлёт
+await msg(900, "Никита", "/publish phone"); assert.match(last(900).text, /Публикует телефон/); assert.equal(T.bot_config.find((x) => x.key === "publish").value, "phone");
+T.bot_config = T.bot_config.filter((x) => x.key !== "publish");   // ключа нет — тоже телефон
+const ph0 = sent.length, vk0 = vkc.length, own0 = to(900).length;
+T.bot_users.push({ chat_id: 950, city: "Саратов", step: null });
+T.vacancies.push({ id: "ph1", title: "Курьер", city: "Саратов", age_min: 16, status: "approved", created_at: new Date().toISOString(), contact: "@c" },
+  { id: "ph2", title: "Ждёт проверки", city: "Саратов", age_min: 16, status: "pending", created_at: new Date().toISOString(), contact: "@d" });
+T.reports.push({ id: "rp1", reason: "обман", vacancy_id: "ph1", status: "new" });
+await post({ tick: 1 });
+assert.ok(!sent.slice(ph0).some((x) => x.chat_id === "@NEWIrabota"), "в канал не постит"); assert.ok(!vkc.slice(vk0).some((x) => x.m === "wall.post" || x.m === "stories.save"), "в ВК не постит");
+assert.ok(to(950).some((t) => /Новая вакансия:\n[\s\S]*Курьер/.test(t)), "подписчику — да");
+assert.ok(!to(900).slice(own0).some((t) => /Ждёт проверки|Жалоба/.test(t)), "на проверку — только с телефона");
+await msg(900, "Никита", "/publish server"); assert.match(last(900).text, /Публикует сервер/);
 console.log("OK", sent.length, "вызовов Telegram");
