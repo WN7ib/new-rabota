@@ -364,6 +364,18 @@
         ],
         "verify_jwt": false
       }
+    },
+    {
+      "id": "2026-11-21-bot-deploy-5",
+      "title": "Серверный бот: кружок-визитка к анкете (vv_) — пересылает кружок только работодателю вакансии",
+      "do": "fn_deploy",
+      "args": {
+        "slug": "tg-bot",
+        "files": [
+          "supabase/functions/tg-bot/index.ts"
+        ],
+        "verify_jwt": false
+      }
     }
   ]
 }

@@ -260,4 +260,23 @@ await post({ tick: 1 }); assert.equal(to(801).slice(n801).filter((t) => /раз�
 await cb(801, "sh:no:9901", "⏰ Скоро смена"); assert.equal(T.bot_shifts.find((x) => x.id === 9901).answer, "no");
 assert.match(sent.filter((x) => x.m === "editMessageText").at(-1).text, /Предупреди работодателя/);
 await msg(801, "Даша", "/forget"); assert.equal(T.bot_shifts.filter((x) => x.chat_id === 801).length, 0);
+
+// кружок-визитка (шаг 19): vv_КОД → кружок только работодателю (copyMessage, protect_content), отметка video_at; флаг video_card на сайте
+const VAPP = "aaaaaaaa-bbbb-cccc-dddd-000000000001", VVAC = "aaaaaaaa-bbbb-cccc-dddd-000000000002", EMP2 = "aaaaaaaa-bbbb-cccc-dddd-000000000003";
+T.employers.push({ id: EMP2, tg_chat: 555 }); T.vacancies.push({ id: VVAC, title: "Бариста", employer_id: EMP2 });
+T.applications = [{ id: VAPP, name: "Оля", age: 16, video_at: null, vacancy_id: VVAC, vcode: "0123456789abcdef" }];
+T.settings = [{ id: 1, data: { tagline: "x" } }];
+await post({ tick: 1 }); assert.equal(T.settings[0].data.video_card, true); assert.equal(T.settings[0].data.bot_username, "newrabota_bot"); assert.equal(T.settings[0].data.tagline, "x");
+await msg(901, "Оля", "/start vv_badcode"); assert.match(last(901).text, /устарела/);
+await post({ message: { message_id: 77, chat: { id: 902, type: "private" }, from: { id: 902, first_name: "Чужой" }, video_note: { duration: 20 } } }); assert.match(last(902).text, /после анкеты/);
+await msg(901, "Оля", "/start vv_0123456789ABCDEF"); assert.match(last(901).text, /Кружок-визитка к анкете на «Бариста»[\s\S]*адрес и номер школы/); assert.equal(T.bot_users.find((x) => x.chat_id === 901).step, "vv:" + VAPP);
+await msg(901, "Оля", "привет"); assert.match(last(901).text, /Жду кружок/);
+await post({ message: { message_id: 78, chat: { id: 901, type: "private" }, from: { id: 901, first_name: "Оля" }, video: { duration: 300 } } }); assert.match(last(901).text, /до 2 минут/);
+await post({ message: { message_id: 79, chat: { id: 901, type: "private" }, from: { id: 901, first_name: "Оля" }, video_note: { duration: 30 } } });
+assert.match(last(555).text, /Кружок-визитка от Оля, 16 лет к анкете на «Бариста»/);
+{ const c = sent.filter((x) => x.m === "copyMessage").at(-1); assert.deepEqual([c.chat_id, c.from_chat_id, c.message_id, c.protect_content], [555, 901, 79, true]); }
+assert.ok(T.applications[0].video_at); assert.match(last(901).text, /Переслала кружок/); assert.equal(T.bot_users.find((x) => x.chat_id === 901).step, null);
+await msg(901, "Оля", "/start vv_0123456789abcdef"); assert.match(last(901).text, /уже отправлен/);
+T.applications.push({ id: "aaaaaaaa-bbbb-cccc-dddd-000000000009", name: "Ян", age: 18, video_at: null, vacancy_id: VVAC, vcode: "fedcba9876543210" });
+await msg(903, "Ян", "/start vv_fedcba9876543210"); await msg(903, "Ян", "отмена"); assert.match(last(903).text, /без кружка/);
 console.log("OK", sent.length, "вызовов Telegram");

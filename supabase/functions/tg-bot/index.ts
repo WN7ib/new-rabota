@@ -496,6 +496,65 @@ async function eventBtn(cbq: any, data: string) {
   await say("");
 }
 
+// ───────── кружок-визитка к анкете (шаг 19): t.me/бот?start=vv_КОД → кружок ТОЛЬКО работодателю этой вакансии ─────────
+// Видео у нас не хранится: copyMessage в Telegram (protect_content — работодатель не перешлёт дальше), в базе — только отметка video_at.
+const VV_MAX = 120;
+const VV = {
+  ask: (title: string, minor: boolean) => `📹 Кружок-визитка к анкете на «${title.slice(0, 80)}».\nЗапиши кружок до минуты: как тебя зовут, сколько лет, когда можешь работать и почему хочешь сюда. Я перешлю его ТОЛЬКО работодателю этой вакансии, больше никому.\n${minor ? "Не называй адрес и номер школы — это лишнее.\n" : ""}Передумал(а) — напиши «отмена».`,
+  forEmployer: (name: string, age: number, title: string) => `📹 Кружок-визитка от ${String(name || "кандидата").slice(0, 60)}${age > 0 && age < 99 ? `, ${age} лет` : ""} к анкете на «${title.slice(0, 80)}». Контакт — в анкете в кабинете: ${SITE}cabinet.html`,
+  SENT: "✅ Готово! Переслала кружок работодателю. Он ответит по контакту из анкеты.",
+  ALREADY: "Кружок к этой анкете уже отправлен 👍 Второй не нужен.",
+  NO_EMPLOYER: "Работодатель этой вакансии пока не подключил Telegram, поэтому кружок передать не получится. Анкета у него уже есть 👍",
+  BAD_LINK: "Ссылка для кружка устарела или неверная. Отправь анкету на сайте ещё раз — там будет новая кнопка.",
+  NOT_VIDEO: "Жду кружок (видео до 2 минут). Нажми на значок микрофона, чтобы он стал камерой, и зажми. Или напиши «отмена».",
+  STRAY: "Кружок можно передать работодателю после анкеты: отправь анкету на сайте или в мини-приложении — там будет кнопка «📹 Записать в боте».",
+  FAIL: "Не получилось переслать — попробуй ещё раз через минуту.",
+  VK: "Кружок-визитку можно записать только в Telegram — открой ссылку из анкеты там. Анкета у работодателя уже есть 👍",
+};
+async function vvApp(q: string): Promise<{ app: any; vac: any } | null> {
+  const app = (await db("GET", `applications?select=id,name,age,video_at,vacancy_id&${q}&limit=1`))?.[0];
+  if (!app) return null;
+  const vac = UUID.test(String(app.vacancy_id ?? "")) ? (await db("GET", `vacancies?select=title,employer_id&id=eq.${app.vacancy_id}`))?.[0] ?? {} : {};
+  return { app, vac };
+}
+async function videoStart(chat: number, code0: string) {
+  const code = code0.trim().toLowerCase();
+  if (isVk(chat)) { await send(chat, VV.VK, MENU); return; }
+  const r = /^[a-f0-9]{8,32}$/.test(code) ? await vvApp(`vcode=eq.${code}`) : null;
+  if (!r) { await send(chat, VV.BAD_LINK, MENU); return; }
+  if (r.app.video_at) { await send(chat, VV.ALREADY, MENU); return; }
+  await setUser(chat, { step: "vv:" + r.app.id });
+  await send(chat, VV.ask(String(r.vac.title ?? "вакансию"), r.app.age >= 14 && r.app.age <= 17));
+}
+async function videoIn(chat: number, m: any, step: string | null) {
+  const appId = step?.startsWith("vv:") ? step.slice(3) : "";
+  if (!UUID.test(appId)) { await send(chat, VV.STRAY, MENU); return; }
+  const v = m.video_note ?? m.video; const sec = Number(v?.duration ?? 0);
+  if (!(sec >= 1 && sec <= VV_MAX)) { await send(chat, VV.NOT_VIDEO); return; }
+  const r = await vvApp(`id=eq.${appId}`);
+  if (!r) { await setUser(chat, { step: null }); await send(chat, VV.BAD_LINK, MENU); return; }
+  if (r.app.video_at) { await setUser(chat, { step: null }); await send(chat, VV.ALREADY, MENU); return; }
+  const ec = UUID.test(String(r.vac.employer_id ?? "")) ? Number((await db("GET", `employers?select=tg_chat&id=eq.${r.vac.employer_id}`))?.[0]?.tg_chat ?? 0) : 0;
+  if (!ec) { await setUser(chat, { step: null }); await send(chat, VV.NO_EMPLOYER, MENU); return; }
+  if (!(await send(ec, VV.forEmployer(r.app.name, Number(r.app.age ?? 0), String(r.vac.title ?? ""))))) { await send(chat, VV.FAIL); return; }
+  const cp = await tg("copyMessage", { chat_id: ec, from_chat_id: chat, message_id: m.message_id, protect_content: true });
+  if (!cp?.ok) { await send(chat, VV.FAIL); return; }
+  await db("PATCH", `applications?id=eq.${appId}`, { video_at: new Date().toISOString() }, "return=minimal");
+  await setUser(chat, { step: null });
+  await send(chat, VV.SENT, MENU);
+}
+/** Сайт показывает «📹 Записать в боте» только при settings.video_card и bot_username — включаю, раз бот на сервере это умеет. */
+async function videoFlag() {
+  if ((await cfg("vc_flag")) === "1") return;
+  const cur = (await db("GET", "settings?select=data&id=eq.1"))?.[0];
+  if (!cur) return;
+  const d = { ...(cur.data ?? {}) }; let ch = false;
+  if (d.video_card !== true) { d.video_card = true; ch = true; }
+  if (!String(d.bot_username ?? "").trim()) { const b = await botName(); if (b) { d.bot_username = b; ch = true; } }
+  if (ch) await db("PATCH", "settings?id=eq.1", { data: d }, "return=minimal");
+  await setCfg("vc_flag", "1");
+}
+
 // ───────── «⏰ Мои смены» (как в боте на телефоне): человек пишет смену словами — напоминаю накануне вечером и за 2 часа ─────────
 // Время — саратовское (UTC+4, без перехода на летнее). Таблица bot_shifts (шаг 24), удаляется вместе с человеком (/forget).
 const SAR = 4 * 3600_000;
@@ -767,6 +826,7 @@ async function tick() {
     return "init";
   }
   await menuApp();
+  await videoFlag().catch((e) => console.error(e));
   if (await vkToken()) await vkSetup();
   const since = new Date(Date.now() - 4 * 86400_000).toISOString();
   const appr: any[] = (await db("GET", `vacancies?select=*&status=eq.approved&created_at=gte.${enc(since)}&order=created_at.asc&limit=30`)) ?? [];
@@ -927,6 +987,7 @@ async function ownerCmd(chat: number, m: any, text: string): Promise<boolean> {
 async function onMessage(m: any) {
   if (m.chat?.type !== "private") return;
   const chat: number = m.chat.id; const from = m.from ?? {}; const text: string = (m.text ?? "").trim();
+  if (m.video_note || m.video) { await videoIn(chat, m, (await user(chat))?.step ?? null); return; }
   if (!text) { await send(chat, "Я пока понимаю только текст. Напиши словами 🙂", MENU); return; }
   // кто владелец: первый, кто напишет «/owner <код>» (код — в настройках мессенджера Newi), или задаёт мессенджер
   const own = await ownerId();
@@ -958,6 +1019,11 @@ async function onMessage(m: any) {
     await setUser(chat, { contact: c, contact_at: new Date().toISOString() });
     await send(chat, "Сохранила 👌 Изменить или удалить: /contact, /forget.", MENU); return;
   }
+  if (u.step?.startsWith("vv:") && !menuWord) {
+    if (/^\s*(отмена|стоп|не надо|нет)(?![а-яё])/i.test(text)) { await setUser(chat, { step: null }); await send(chat, "Хорошо, без кружка. Анкета у работодателя уже есть 👍", MENU); }
+    else await send(chat, VV.NOT_VIDEO);
+    return;
+  }
   if (u.step === "shift" && !menuWord) {
     await setUser(chat, { step: null });
     if (/^\s*(отмена|стоп|выход|нет)(?![а-яё])/i.test(text)) await send(chat, "Хорошо.", MENU); else await addShift(chat, text);
@@ -984,6 +1050,7 @@ async function onMessage(m: any) {
       return;
     }
     if (arg.startsWith("ev_")) { await eventJoin(chat, from, arg.slice(3)); return; }
+    if (arg.startsWith("vv_")) { await videoStart(chat, arg.slice(3)); return; }
     await send(chat, `Привет, ${from.first_name ?? "друг"}! Я Неви, помощница New.работа 🤖\nПомогу найти работу или подработку с 14 лет, разместить вакансию и разобраться с правами.\n📍 Сейчас мы в Саратове, удалёнка — для всей России.\nВыбери кнопку внизу или просто задай вопрос.\n🌐 Сайт: ${SITE}`, MENU); return;
   }
   if ((text === "/app" || text.startsWith("/app@")) && isVk(chat)) { await send(chat, "Все вакансии с фильтрами по городу и возрасту: " + SITE, MENU); return; }
