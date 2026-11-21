@@ -214,11 +214,11 @@
     if(o){Mascot.flash("alert",900);Mascot.wake();showView("chat");$("#droneBadge").hidden=true;renderChat();resumeWaiting();if(ls.get("nr-voice","")==="")$("#voicePick").hidden=false;else $("#voicePick").hidden=true}
     else stopSpeak();
   }
-  $("#modeOff").onclick=()=>setMode("off");$("#modeNewi").onclick=()=>setMode("newi",true);
+  $("#modeOff").onclick=()=>setMode("off");$("#modeNewi").onclick=()=>setMode("newi",false);
   $("#drone").onclick=()=>openPanel(!panelOpen);$("#newiClose").onclick=()=>openPanel(false);
   // стартовый выбор режима
   $("#gOff").onclick=()=>{ls.set("nr-chosen",1);$("#gate").hidden=true;setMode("off")};
-  $("#gNewi").onclick=()=>{ls.set("nr-chosen",1);$("#gate").hidden=true;setMode("newi",true)};
+  $("#gNewi").onclick=()=>{ls.set("nr-chosen",1);$("#gate").hidden=true;setMode("newi",false);try{$("#droneBadge").hidden=false}catch(_){}};
 
   // ═════════ озвучка ═════════
   const synth=window.speechSynthesis;
@@ -255,12 +255,12 @@
     const w=$("#newiWrap");w.classList.remove("ts-s","ts-l");const s=ls.get("nr-size","m");if(s==="s")w.classList.add("ts-s");if(s==="l")w.classList.add("ts-l");
   }
   function fillProf(){const p=prof();$("#pName").value=p.name||"";$("#pTg").value=p.tg?"@"+p.tg:"";$("#pAge").value=p.age||"";$("#pCity").value=p.city||"";
-    $("#sVoice").checked=voiceOn();$("#sRate").value=ls.get("nr-rate",1);$("#sAnim").checked=ls.get("nr-anim",true)!==false;$("#sSize").value=ls.get("nr-size","m");$("#sVoice").disabled=!synth}
+    $("#sVoice").checked=voiceOn();$("#sRate").value=ls.get("nr-rate",1);$("#sAnim").checked=ls.get("nr-anim",true)!==false;$("#sSize").value=ls.get("nr-size","m");try{$("#sTheme").value=localStorage.getItem("nr-theme")||""}catch(_){}$("#sVoice").disabled=!synth}
   $("#profBtn").onclick=()=>{if($("#viewProf").hidden){fillProf();showView("prof")}else showView("chat")};
   $("#sSave").onclick=()=>{
     const tg=$("#pTg").value.trim().replace(/^https?:\/\/t\.me\//,"").replace(/^@/,"");
     const age=parseInt($("#pAge").value,10),p={tg:/^[A-Za-z0-9_]{4,32}$/.test(tg)?tg:"",name:$("#pName").value.trim().slice(0,30),age:age>=13&&age<=30?age:0,city:$("#pCity").value.trim().slice(0,40)};
-    ls.set("nr-profile",Object.assign({},prof(),p));ls.set("nr-voice",$("#sVoice").checked?"on":"off");ls.set("nr-rate",+$("#sRate").value);ls.set("nr-anim",$("#sAnim").checked);ls.set("nr-size",$("#sSize").value);
+    ls.set("nr-profile",Object.assign({},prof(),p));ls.set("nr-voice",$("#sVoice").checked?"on":"off");ls.set("nr-rate",+$("#sRate").value);ls.set("nr-anim",$("#sAnim").checked);ls.set("nr-size",$("#sSize").value);try{const th=$("#sTheme").value;if(th){localStorage.setItem("nr-theme",th);document.documentElement.setAttribute("data-theme",th)}else{localStorage.removeItem("nr-theme");document.documentElement.removeAttribute("data-theme")}}catch(_){}
     paintVoice();applyPrefs();$("#voicePick").hidden=true;
     if(p.age>=14){setAge(p.age>=18?18:p.age>=16?16:14)}
     if(p.city&&!/^удал/i.test(p.city)){state.city=p.city;$("#city").value=p.city;ls.set("nr-city",p.city)}

@@ -190,7 +190,7 @@ td.n{font-family:var(--f-mono);white-space:nowrap}
 @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
 .noanim .drone,.noanim .gdrone,.noanim .mascot .m-fire{animation:none}
 @media (prefers-reduced-motion:reduce){.drone,.gdrone,.mascot .m-fire{animation:none}}
-.newi-pop{position:fixed;z-index:70;right:max(10px,env(safe-area-inset-right,0px));bottom:calc(max(10px,env(safe-area-inset-bottom,0px)) + 76px);width:min(320px,calc(100vw - 20px));max-height:min(60vh,440px);display:flex}
+.newi-pop{position:fixed;z-index:70;right:max(10px,env(safe-area-inset-right,0px));bottom:calc(max(10px,env(safe-area-inset-bottom,0px)) + 76px);width:min(300px,calc(100vw - 20px));max-height:min(42vh,320px);display:flex}
 .newi-pop[hidden]{display:none}
 .newi-pop .newi{display:flex;flex-direction:column;width:100%;min-height:0;border-radius:16px}
 .newi-head{padding:8px 10px;gap:8px}
