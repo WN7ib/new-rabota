@@ -1,5 +1,5 @@
 import assert from "node:assert";
-const T = { bot_config: [], bot_users: [], events: [], event_signups: [], employers: [{ id: "emp1", tg_chat: 500 }], bot_questions: [], bot_seen: [] };
+const T = { bot_config: [], bot_users: [], events: [], event_signups: [], employers: [{ id: "emp1", tg_chat: 500 }], bot_questions: [], bot_seen: [], bot_shifts: [] };
 const sent = [], vkc = [], gem = []; let seq = 0;
 const EID = "11111111-2222-3333-4444-555555555555";
 T.events.push({ id: EID, title: "Раздача листовок", starts_at: new Date(Date.now() + 3 * 86400e3).toISOString(), place: "Саратов", capacity: 2, published: true, employer_id: "emp1" });
@@ -236,4 +236,28 @@ assert.match(to(602).at(-1), /не пришёл\(ла\) на «Промо»/); a
 T.event_signups.push({ id: "at4", event_id: E4, chat_id: 601, contact: "@sasha", status: "main", attended: true, att_notified: null, events: { title: "Ещё" } });
 const n601 = to(601).length; await post({ tick: 1 }); assert.equal(to(601).length, n601, "значок — один раз");
 assert.ok(T.event_signups.filter((x) => x.attended != null).every((x) => x.att_notified));
+
+// «⏰ Мои смены» (шаг 24): смена словами → bot_shifts, напоминание за 2 часа и накануне, кнопки, удаление, /forget
+await msg(801, "Даша", "⏰ Мои смены"); assert.match(last(801).text, /Смен пока нет/); assert.equal(T.bot_users.find((x) => x.chat_id === 801).step, "shift");
+await msg(801, "Даша", "абракадабра"); assert.match(last(801).text, /Не поняла дату/); assert.equal(T.bot_users.find((x) => x.chat_id === 801).step, "shift");
+await msg(801, "Даша", "15.12 18:30–22:00 ТЦ Триумф"); assert.match(last(801).text, /Записала: 15 декабря, \S+, 18:30 — ТЦ Триумф\n/);
+await msg(801, "Даша", "смена 3 января в 9 утра промо у ТЦ"); assert.match(last(801).text, /Записала: 3 января, \S+, 09:00 — промо у ТЦ/);
+await msg(801, "Даша", "/shifts"); await msg(801, "Даша", "в субботу с 10 до 18 склад"); assert.match(last(801).text, /Записала: \d+ \S+, суббота, 10:00 — склад/);
+await msg(801, "Даша", "/shifts"); await msg(801, "Даша", "завтра в 7 вечера кафе"); assert.match(last(801).text, /, 19:00 — кафе/);
+await msg(801, "Даша", "/shifts"); await msg(801, "Даша", "21.10.2026 10:00 прошлое"); assert.match(last(801).text, /2027|октября/);
+assert.equal(T.bot_shifts.filter((x) => x.chat_id === 801).length, 5);
+await msg(801, "Даша", "⏰"); { const l = last(801); assert.match(l.text, /Твои смены:\n• /); assert.ok(l.reply_markup.inline_keyboard.every((r) => /^sh:del:\d+$/.test(r[0].callback_data))); }
+await msg(801, "Даша", "отмена"); assert.equal(last(801).text, "Хорошо.");
+const shDel = T.bot_shifts.find((x) => /склад/.test(x.text)).id;
+await cb(802, `sh:del:${shDel}`); assert.ok(T.bot_shifts.some((x) => x.id === shDel), "чужую смену не удалить");
+await cb(801, `sh:del:${shDel}`); assert.ok(!T.bot_shifts.some((x) => x.id === shDel)); assert.match(last(801).text, /Удалила смену/);
+T.bot_shifts.push({ id: 9901, chat_id: 801, at: new Date(Date.now() + 70 * 60_000).toISOString(), text: "раздача", r1: false, r2: false, answer: null },
+  { id: 9902, chat_id: 801, at: new Date(Date.now() - 7 * 3600_000).toISOString(), text: "старая", r1: true, r2: true, answer: null });
+const n801 = to(801).length; await post({ tick: 1 });
+assert.match(to(801).at(-1), /Скоро смена — в \d\d:\d\d \(через 70 мин\): раздача/); assert.equal(last(801).reply_markup.inline_keyboard[0][0].callback_data, "sh:ok:9901");
+assert.ok(!T.bot_shifts.some((x) => x.id === 9902), "старые смены удаляются"); assert.ok(T.bot_shifts.find((x) => x.id === 9901).r2);
+await post({ tick: 1 }); assert.equal(to(801).slice(n801).filter((t) => /раздача/.test(t)).length, 1, "напоминание — один раз");
+await cb(801, "sh:no:9901", "⏰ Скоро смена"); assert.equal(T.bot_shifts.find((x) => x.id === 9901).answer, "no");
+assert.match(sent.filter((x) => x.m === "editMessageText").at(-1).text, /Предупреди работодателя/);
+await msg(801, "Даша", "/forget"); assert.equal(T.bot_shifts.filter((x) => x.chat_id === 801).length, 0);
 console.log("OK", sent.length, "вызовов Telegram");

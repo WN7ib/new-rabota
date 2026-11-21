@@ -145,7 +145,8 @@ async function vkUpdate(u: any): Promise<Response> {
 const MENU = { resize_keyboard: true, keyboard: [
   [{ text: "🔎 Найти работу" }, { text: "📢 Разместить вакансию" }],
   [{ text: "⚖️ Права 14–17" }, { text: "🛡 Как не попасть на обман" }],
-  [{ text: "🎯 Подбор под меня" }, { text: "✉️ Написать команде" }],
+  [{ text: "🎯 Подбор под меня" }, { text: "⏰ Мои смены" }],
+  [{ text: "✉️ Написать команде" }],
 ] };
 // Mini App New.работа (сайт tg.html): кнопка «Вакансии» слева от поля ввода у всех + /app
 const APP = SITE + "tg.html";
@@ -169,7 +170,7 @@ const HELP = "Если что-то не так:\n• не платят или н
 const CONSENT = "Если тебе 14–15 лет, нужно письменное согласие одного из родителей и органа опеки и попечительства (с заявлением в опеку идёт родитель). С 16 лет согласие родителей не нужно. Готовый бланк можно заполнить и распечатать — родитель подпишет: " + SITE + "consent.html";
 const EMP = "Вакансию работодатель добавляет через «📢 Разместить вакансию» — перед публикацией её проверяет модератор. Правила: работа законная и подходит по возрасту (для 14–17 лет — только то, что разрешает Трудовой кодекс); нельзя брать с соискателя деньги за обучение, форму, медкнижку или «бронь»; нельзя предлагать работу с переводом чужих денег, оформлением карт, закладками, алкоголем, табаком и вейпами для несовершеннолетних; указывай реальную оплату, график и рабочий контакт. Вакансия снимается сама, когда истекает выбранный срок. Полные правила: " + SITE + "about.html#rules";
 const PRIVACY_SHORT = "ℹ️ Запоминаю твоё имя (и ник) из Telegram или ВКонтакте, город и подписку на вакансии, а возраст и интересы — если сам укажешь в «🎯 Подбор под меня». Телефон или почту — только если сам оставишь (/contact). Подробнее: /privacy, удалить всё: /forget.";
-const PRIVACY_LONG = "🔒 Что я о тебе храню: имя и ник из Telegram или ВКонтакте, город, возраст и интересы для подборок вакансий (возраст и интересы — только если ты сам их указал), а контакт (телефон или почта) — только если ты сам его оставил командой /contact. Зачем: присылать вакансии и, если ты хочешь, связать тебя с работодателем. Данные видит только команда New.работа. Отписаться от новых вакансий: /stop, от подборки раз в неделю: /weekly. Удалить всё: /forget. Подробнее: " + SITE + "about.html#privacy";
+const PRIVACY_LONG = "🔒 Что я о тебе храню: имя и ник из Telegram или ВКонтакте, город, возраст и интересы для подборок вакансий (возраст и интересы — только если ты сам их указал), твои смены — если ты сам их записал в «⏰ Мои смены» (удаляются через 6 часов после начала), а контакт (телефон или почта) — только если ты сам его оставил командой /contact. Зачем: присылать вакансии и, если ты хочешь, связать тебя с работодателем. Данные видит только команда New.работа. Отписаться от новых вакансий: /stop, от подборки раз в неделю: /weekly. Удалить всё: /forget. Подробнее: " + SITE + "about.html#privacy";
 // Пока всё в Саратове (Никита 21.11): бот так и говорит, другие города — подписка «на будущее» + удалёнка
 const HOME = "Саратов";
 const CITY_NOTE = "Сейчас New.работа работает в Саратове: вакансии, смены и мероприятия — там. Удалённые вакансии подходят для всей России. Если ты из другого города — напиши его в «🔎 Найти работу»: подпишу, и как только там появятся вакансии, напишу первой.";
@@ -495,6 +496,106 @@ async function eventBtn(cbq: any, data: string) {
   await say("");
 }
 
+// ───────── «⏰ Мои смены» (как в боте на телефоне): человек пишет смену словами — напоминаю накануне вечером и за 2 часа ─────────
+// Время — саратовское (UTC+4, без перехода на летнее). Таблица bot_shifts (шаг 24), удаляется вместе с человеком (/forget).
+const SAR = 4 * 3600_000;
+const MON = ["янв", "фев", "мар", "апр", "мая", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];
+const MON_FULL = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"];
+const WD = ["воскресенье", "понедельник", "вторник", "среда", "четверг", "пятница", "суббота"];
+const WD_RE: [RegExp, number][] = [[/понедельник/, 1], [/вторник/, 2], [/сред[ауы]/, 3], [/четверг/, 4], [/пятниц/, 5], [/суббот/, 6], [/воскресень/, 0]];
+const DM_RE = /(?<!\d)(\d{1,2})\s+(янв|фев|мар|апр|мая|май|июн|июл|авг|сен|окт|ноя|дек)[а-я]*/;
+const DD_RE = /(?<![\d:.])(\d{1,2})\.(\d{1,2})(?:\.(?:\d{4}|\d{2}))?(?![\d:])/g;
+const TM_RE = /(?<![\d.])(\d{1,2})[:.](\d{2})(?!\d)/g;
+const TM_V_RE = /(?<![а-яё])(?:в|к|с)\s*(\d{1,2})(?![\d:.])(\s*(?:час\S*\s*)?(утра|дня|вечера|ночи))?/;
+const sarFmt = (ms: number) => { const d = new Date(ms + SAR); return `${d.getUTCDate()} ${MON_FULL[d.getUTCMonth()]}, ${WD[d.getUTCDay()]}, ${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}`; };
+/** «завтра 10:00 кафе», «15 ноября в 9 промо», «15.11 18:30–22:00 ТЦ», «в субботу с 10 до 18», «10:00 склад» → { at (мс UTC), what } или null. */
+function parseShift(t0: string, now = Date.now()): { at: number; what: string } | null {
+  const t = t0.toLowerCase().replace(/ё/g, "е"); const loc = new Date(now + SAR);
+  let y = loc.getUTCFullYear(), mo = loc.getUTCMonth(), d = loc.getUTCDate(); let explicit = false, dated = false;
+  const cut: [number, number][] = [];
+  const dm = t.match(DM_RE);
+  const dd = [...t.matchAll(DD_RE)].find((m) => +m[2] >= 1 && +m[2] <= 12 && +m[1] >= 1 && +m[1] <= 31);
+  const wd = WD_RE.find(([re]) => re.test(t));
+  if (/послезавтра/.test(t)) { d += 2; dated = true; }
+  else if (/завтра/.test(t)) { d += 1; dated = true; }
+  else if (/сегодня/.test(t)) dated = true;
+  else if (dm) { mo = MON.indexOf(dm[2].replace("май", "мая")); d = +dm[1]; explicit = dated = true; cut.push([dm.index!, dm.index! + dm[0].length]); }
+  else if (dd) { mo = +dd[2] - 1; d = +dd[1]; explicit = dated = true; cut.push([dd.index!, dd.index! + dd[0].length]); }
+  else if (wd) { d += (wd[1] - loc.getUTCDay() + 7) % 7; dated = true; }
+  const tm = [...t.matchAll(TM_RE)].find((m) => !cut.some(([a, b]) => m.index! < b && m.index! + m[0].length > a));
+  let h: number, mi = 0;
+  if (tm) { h = +tm[1]; mi = +tm[2]; }
+  else { const v = t.match(TM_V_RE); if (!v) return null; h = +v[1]; if (v[3] && /дня|вечера/.test(v[3]) && h < 12) h += 12; if (v[3] === "ночи" && h === 12) h = 0; }
+  if (h > 23 || mi > 59) return null;
+  let at = Date.UTC(y, mo, d, h, mi) - SAR;
+  if (explicit && at < now - 86400_000) at = Date.UTC(y + 1, mo, d, h, mi) - SAR;              // «5 января», сказанное в декабре
+  else if (!dated && at < now) at += 86400_000;                                                   // только время: сегодня, а если прошло — завтра
+  else if (wd && !/сегодня|завтра/.test(t) && at < now) at += 7 * 86400_000;                     // «в субботу» — ближайшая будущая
+  const what = t0.replace(/послезавтра|завтра|сегодня|в\s+(?:понедельник|вторник|среду|четверг|пятницу|субботу|воскресенье)|понедельник|вторник|среда|четверг|пятница|суббота|воскресенье/gi, " ")
+    .replace(/(?<!\d)\d{1,2}\s+(?:янв|фев|мар|апр|мая|май|июн|июл|авг|сен|окт|ноя|дек)[а-яё]*/gi, " ")
+    .replace(/(?:(?<![а-яё])(?:в|к|с)\s*)?(?<![\d.])\d{1,2}[:.]\d{2}(?:\s*(?:[–—-]|до)\s*\d{1,2}(?:[:.]\d{2})?)?/gi, " ")
+    .replace(/(?<![\d:.])\d{1,2}\.\d{1,2}(?:\.\d{2,4})?(?![\d:])/g, " ")
+    .replace(/(?<![а-яёА-ЯЁ])(?:в|к|с)\s*\d{1,2}(?![\d:.])(?:\s*(?:час\S*\s*)?(?:утра|дня|вечера|ночи))?(?:\s*(?:[–—-]|до)\s*\d{1,2}(?:[:.]\d{2})?)?/gi, " ")
+    .replace(/^\s*(?:моя\s+)?смена(?![а-яё])/i, " ").replace(/\s+/g, " ").trim().replace(/^[,.—–\-\s]+|[,.—–\-\s]+$/g, "") || "смена";
+  return { at, what: what.slice(0, 80) };
+}
+const SHIFT_HOW = "Чтобы добавить, напиши дату, время и где, например:\n«завтра 10:00 кафе Ромашка»\n«15 ноября в 9 промо у ТЦ»\n«в субботу с 10 до 18 склад»\nНапомню накануне вечером и за 2 часа.";
+async function shiftsMenu(chat: number) {
+  const now = Date.now();
+  const own: any[] = (await db("GET", `bot_shifts?select=id,at,text&chat_id=eq.${chat}&at=gt.${enc(new Date(now - 3600_000).toISOString())}&order=at.asc&limit=30`)) ?? [];
+  const sg: any[] = (await db("GET", `event_signups?select=event_id,status&chat_id=eq.${chat}&limit=20`)) ?? [];
+  const evs: string[] = [];
+  for (const s of sg.slice(0, 8)) { const e = await evGet(s.event_id); if (e && new Date(e.starts_at).getTime() > now) evs.push(`• ${sarFmt(new Date(e.starts_at).getTime())} — ${e.title}${e.place ? ", " + e.place : ""}${s.status === "reserve" ? " (резерв)" : ""}`); }
+  const list = own.sort((a, b) => +new Date(a.at) - +new Date(b.at)).map((s) => `• ${sarFmt(new Date(s.at).getTime())} — ${s.text}`);
+  await setUser(chat, { step: "shift" });
+  const kb = own.length ? { inline_keyboard: own.slice(0, 8).map((s) => [{ text: "🗑 " + sarFmt(new Date(s.at).getTime()).split(",")[0] + " " + String(s.text).slice(0, 20), callback_data: `sh:del:${s.id}` }]) } : undefined;
+  await send(chat, (list.length || evs.length ? "⏰ Твои смены:\n" + [...list, ...evs].join("\n") + (evs.length ? "\n(записи с сайта отменяются кнопкой в сообщении о записи)" : "") + "\n\n" : "⏰ Смен пока нет.\n") + SHIFT_HOW + "\n«отмена» — выйти.", kb);
+}
+async function addShift(chat: number, text: string) {
+  const p = parseShift(text);
+  if (!p) { await setUser(chat, { step: "shift" }); await send(chat, "Не поняла дату или время 🙈 Напиши так: «завтра 10:00 кафе» или «15 ноября в 9 промо». «отмена» — выйти."); return; }
+  if (p.at < Date.now()) { await setUser(chat, { step: "shift" }); await send(chat, `Это время уже прошло (${sarFmt(p.at)}). Напиши будущую смену или «отмена».`); return; }
+  const n: any[] = (await db("GET", `bot_shifts?select=id&chat_id=eq.${chat}&at=gt.${enc(new Date().toISOString())}&limit=31`)) ?? [];
+  if (n.length >= 30) { await send(chat, "У тебя уже 30 будущих смен — это максимум. Удали лишние в «⏰ Мои смены».", MENU); return; }
+  await db("POST", "bot_shifts", { chat_id: chat, at: new Date(p.at).toISOString(), text: p.what }, "return=minimal");
+  await send(chat, `✅ Записала: ${sarFmt(p.at)} — ${p.what}\nНапомню накануне вечером и за 2 часа. Ещё смена — просто напиши её, список — «⏰ Мои смены».`, MENU);
+}
+async function shiftBtn(cbq: any, data: string) {
+  const msg = cbq.message; const chat = Number(msg?.chat?.id ?? 0);
+  const [, act, id] = data.split(":");
+  const say = (t = "") => tg("answerCallbackQuery", { callback_query_id: cbq.id, ...(t ? { text: t } : {}) });
+  if (!msg || msg.chat?.type !== "private" || cbq.from?.id !== chat || !/^\d+$/.test(id ?? "")) { await say(); return; }
+  const sh = (await db("GET", `bot_shifts?select=*&id=eq.${id}&chat_id=eq.${chat}`))?.[0];
+  if (act === "del") {
+    if (sh) await db("DELETE", `bot_shifts?id=eq.${id}&chat_id=eq.${chat}`, undefined, "return=minimal");
+    await say(sh ? "Удалила" : "Уже удалена");
+    await send(chat, sh ? `Удалила смену ${sarFmt(new Date(sh.at).getTime())} — ${sh.text}.` : "Эта смена уже удалена.", MENU); return;
+  }
+  if (act !== "ok" && act !== "no") { await say(); return; }
+  await say(act === "ok" ? "Отлично!" : "Поняла");
+  if (sh) await db("PATCH", `bot_shifts?id=eq.${id}`, { answer: act }, "return=minimal");
+  await tg("editMessageText", { chat_id: chat, message_id: msg.message_id, text: String(msg.text ?? "") + (act === "ok" ? "\n\n✅ Отлично, ждут тебя!" : "\n\n❌ Предупреди работодателя как можно раньше — лучше позвонить. Так тебя позовут снова.") });
+}
+/** Напоминания о своих сменах (из обхода, раз в 10 мин): накануне 19–22 ч по Саратову и за 2 часа. */
+async function shiftReminders(): Promise<number> {
+  const now = Date.now(); let n = 0;
+  await db("DELETE", `bot_shifts?at=lt.${enc(new Date(now - 6 * 3600_000).toISOString())}`, undefined, "return=minimal");
+  const list: any[] = (await db("GET", `bot_shifts?select=*&at=gt.${enc(new Date(now).toISOString())}&at=lt.${enc(new Date(now + 30 * 3600_000).toISOString())}&order=at.asc&limit=300`)) ?? [];
+  const loc = new Date(now + SAR), tmr = new Date(now + SAR + 86400_000);
+  for (const s of list) {
+    const at = new Date(s.at).getTime(); const left = at - now; const sl = new Date(at + SAR);
+    const kb = { inline_keyboard: [[{ text: "Буду ✅", callback_data: `sh:ok:${s.id}` }, { text: "Не смогу ❌", callback_data: `sh:no:${s.id}` }]] };
+    if (!s.r2 && left <= 2 * 3600_000 + 10 * 60_000) {
+      await db("PATCH", `bot_shifts?id=eq.${s.id}`, { r1: true, r2: true }, "return=minimal");
+      if (s.answer !== "no") { await send(s.chat_id, `⏰ Скоро смена — в ${sarFmt(at).split(", ").pop()} (через ${left < 90 * 60_000 ? Math.max(1, Math.round(left / 60_000)) + " мин" : "2 ч"}): ${s.text}`, kb); n++; }
+    } else if (!s.r1 && loc.getUTCHours() >= 19 && loc.getUTCHours() <= 22 && sl.getUTCDate() === tmr.getUTCDate() && sl.getUTCMonth() === tmr.getUTCMonth()) {
+      await db("PATCH", `bot_shifts?id=eq.${s.id}`, { r1: true }, "return=minimal");
+      await send(s.chat_id, `⏰ Завтра смена: ${sarFmt(at)} — ${s.text}\nВыспись и выйди заранее 🙌`, kb); n++;
+    }
+  }
+  return n;
+}
+
 // ───────── Gemini на сервере (Никита 21.11): умные ответы 24/7 и картинки к вакансиям ─────────
 // Ключ: секрет GEMINI_API_KEY или владелец шлёт боту «/gemini <ключ>» (сообщение удаляется). Вопросы уходят обезличенно.
 let gemTok = "";
@@ -735,13 +836,15 @@ async function tick() {
   const apps = await newApplications(own);
   const att = await attendanceNotes();
   const wk = await weeklyDigest();
-  return `ok posted=${posted}${apps ? " apps=" + apps : ""}${att ? " att=" + att : ""}${wk ? " weekly=" + wk : ""}`;
+  const shr = await shiftReminders().catch((e) => { console.error(e); return 0; });
+  return `ok posted=${posted}${apps ? " apps=" + apps : ""}${att ? " att=" + att : ""}${wk ? " weekly=" + wk : ""}${shr ? " shifts=" + shr : ""}`;
 }
 
 async function moderate(cbq: any) {
   const data = String(cbq.data ?? "");
   if (/^ev[xyktzrn]:/.test(data)) { await eventBtn(cbq, data); return; }
   if (data.startsWith("pi:")) { await onPick(cbq, data.slice(3)); return; }
+  if (data.startsWith("sh:")) { await shiftBtn(cbq, data); return; }
   await tg("answerCallbackQuery", { callback_query_id: cbq.id });
   const own = await ownerId();
   if (!own || cbq.from?.id !== own) return;
@@ -838,7 +941,7 @@ async function onMessage(m: any) {
   else await setUser(chat, { last_at: new Date().toISOString(), name: from.first_name ?? u.name, username: from.username ?? u.username });
   if (own && from.id === own && await ownerCmd(chat, m, text)) return;
 
-  const menuWord = /^(🔎|📢|⚖️|🛡|✉️|🎯|\/)/.test(text);
+  const menuWord = /^(🔎|📢|⚖️|🛡|✉️|🎯|⏰|\/)/.test(text);
   if (u.step === "city" && !menuWord) { await setUser(chat, { step: null }); await findJobs(chat, text); if (u.age == null) await askAge(chat); return; }
   if (u.step === "p_age" && !menuWord && /^\s*(\d{1,2}\+?|не скажу|не хочу|нет)\s*$/i.test(text)) {
     const a = Number(text.match(/\d+/)?.[0] ?? 0); const age = a ? Math.min(30, Math.max(14, a)) : 99;   // 99 — не сказал, возраст не фильтрую
@@ -854,6 +957,11 @@ async function onMessage(m: any) {
     if (!/[\w.+-]+@[\w-]+\.[\w.]+|\+?\d[\d\s().-]{8,}/.test(c)) { await setUser(chat, { step: "contact" }); await send(chat, "Не вижу ни телефона, ни почты. Напиши номер или адрес, либо «нет».", MENU); return; }
     await setUser(chat, { contact: c, contact_at: new Date().toISOString() });
     await send(chat, "Сохранила 👌 Изменить или удалить: /contact, /forget.", MENU); return;
+  }
+  if (u.step === "shift" && !menuWord) {
+    await setUser(chat, { step: null });
+    if (/^\s*(отмена|стоп|выход|нет)(?![а-яё])/i.test(text)) await send(chat, "Хорошо.", MENU); else await addShift(chat, text);
+    return;
   }
   if (u.step === "ticket" && !menuWord) { await setUser(chat, { step: null }); await ticket(chat, from, text, "написал(а) команде"); return; }
   if (u.step?.startsWith("v_") && !menuWord) { await vacancyStep(chat, u, text, from); return; }
@@ -883,17 +991,20 @@ async function onMessage(m: any) {
   if (text.startsWith("/privacy")) { await send(chat, PRIVACY_LONG, MENU); return; }
   if (text.startsWith("/forget")) {
     await db("DELETE", `bot_questions?chat_id=eq.${chat}`, undefined, "return=minimal");
+    await db("DELETE", `bot_shifts?chat_id=eq.${chat}`, undefined, "return=minimal");
     await db("DELETE", `bot_users?chat_id=eq.${chat}`, undefined, "return=minimal");
-    await send(chat, "Удалила всё, что запомнила о тебе: профиль, подписку, контакт и твои вопросы. Если напишешь снова, начнём с нуля.", MENU); return;
+    await send(chat, "Удалила всё, что запомнила о тебе: профиль, подписку, контакт, смены и твои вопросы. Если напишешь снова, начнём с нуля.", MENU); return;
   }
   if (text.startsWith("/contact")) {
     await setUser(chat, { step: "contact" });
     await send(chat, "Хочешь, чтобы работодатель или команда могли связаться с тобой напрямую? Напиши телефон или почту — по желанию. Данные видит только команда New.работа, удалить можно командой /forget. Если тебе меньше 18, лучше оставь контакт родителей или предупреди их.\nЕсли не хочешь, напиши «нет».", MENU); return;
   }
   if (text.startsWith("🎯") || text === "/me") { await profileStart(chat, u); return; }
+  if (text.startsWith("⏰") || text === "/shifts") { await shiftsMenu(chat); return; }
+  if (/^(моя\s+)?смена\s+\S/i.test(text) && parseShift(text)) { await addShift(chat, text); return; }   // «смена завтра 10:00 кафе» — без кнопки
   if (text === "/weekly") { const on = u.weekly === false; await setUser(chat, { weekly: on }); await send(chat, on ? "Подборка раз в неделю включена 🔔" : "Подборку раз в неделю выключила. Включить — /weekly", MENU); return; }
   if (text === "/stop") { await setUser(chat, { city: null }); await send(chat, "Отписала от новых вакансий. Подписаться снова — «🔎 Найти работу».", MENU); return; }
-  if (text.startsWith("/help")) { await send(chat, "Что я умею:\n🔎 найти вакансии по городу\n🎯 подобрать работу под твой возраст и интересы (/me), подборка раз в неделю (/weekly)\n📢 принять вакансию на проверку\n⚖️ рассказать про права подростков\n📱 /app — все вакансии прямо в Telegram\n🛡 предупредить о мошенниках\n✉️ передать вопрос команде\nА ещё можно просто спросить меня словами.", MENU); return; }
+  if (text.startsWith("/help")) { await send(chat, "Что я умею:\n🔎 найти вакансии по городу\n🎯 подобрать работу под твой возраст и интересы (/me), подборка раз в неделю (/weekly)\n⏰ напомнить о твоих сменах (/shifts)\n📢 принять вакансию на проверку\n⚖️ рассказать про права подростков\n📱 /app — все вакансии прямо в Telegram\n🛡 предупредить о мошенниках\n✉️ передать вопрос команде\nА ещё можно просто спросить меня словами.", MENU); return; }
   if (text.startsWith("🔎") || text.startsWith("/find") || text.startsWith("/jobs")) { await setUser(chat, { step: "city" }); await send(chat, CITY_ASK, CITY_KB); return; }
   if (text.startsWith("📢") || text.startsWith("/add_job") || text.startsWith("/vacancy")) { await setUser(chat, { step: "v_title", draft: {} }); await send(chat, "Разместим вакансию. Отвечай по шагам, «отмена» — выйти.\n1/6. Какая должность? (например: «Бариста на выходные»)"); return; }
   if (text.startsWith("⚖️")) { await send(chat, RIGHTS, MENU); return; }

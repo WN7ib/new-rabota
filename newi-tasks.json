@@ -342,6 +342,28 @@
         ],
         "verify_jwt": false
       }
+    },
+    {
+      "id": "2026-11-21-sql-24",
+      "title": "База: «⏰ Мои смены» для серверного бота (таблица bot_shifts)",
+      "do": "sql",
+      "args": {
+        "files": [
+          "migration-24-bot-shifts.sql"
+        ]
+      }
+    },
+    {
+      "id": "2026-11-21-bot-deploy-4",
+      "title": "Серверный бот: «⏰ Мои смены» — смена словами, напоминания накануне и за 2 часа (после шага 24)",
+      "do": "fn_deploy",
+      "args": {
+        "slug": "tg-bot",
+        "files": [
+          "supabase/functions/tg-bot/index.ts"
+        ],
+        "verify_jwt": false
+      }
     }
   ]
 }
