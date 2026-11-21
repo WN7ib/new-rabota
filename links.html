@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<script>try{var t=localStorage.getItem("nr-theme");if(!t&&/SamsungBrowser/i.test(navigator.userAgent))t="dark";if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<title>Все ссылки · New.работа</title>
+<meta name="description" content="Все ссылки New.работа в одном месте: сайт, канал в Telegram, ВКонтакте, бот, смена под ключ для бизнеса.">
+<meta name="theme-color" content="#2F86F5">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Golos+Text:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="style.css?v=9">
+<style>
+.hub{display:flex;flex-direction:column;gap:10px;margin-top:18px}
+.hub a{display:flex;flex-direction:column;gap:2px;text-decoration:none;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;min-height:56px}
+.hub a b{font-size:17px}
+.hub a span{font-size:14px;color:var(--muted)}
+.hub a.main{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+.hub a.main span{color:inherit;opacity:.85}
+.hub-logo{display:flex;align-items:center;gap:12px}
+.hub-logo img{height:52px}
+</style>
+</head>
+<body>
+<main class="wrap page">
+  <div class="hub-logo"><img src="logo.png" alt=""><h1 style="margin:0">New.работа</h1></div>
+  <p class="lead">Работа и подработка для молодёжи 14+. Вакансии проверяет модератор. Саратов и вся Россия, есть удалёнка.</p>
+  <div class="hub">
+    <a class="main" href="./"><b>🔎 Найти работу</b><span>new-rabota.ru: поиск по городу и возрасту</span></a>
+    <a href="business.html"><b>⚡ Смена под ключ для бизнеса</b><span>Найдём человека, подтвердим выход, заменим бесплатно. Сейчас в Саратове</span></a>
+    <a href="https://t.me/NEWIrabota" target="_blank" rel="noopener"><b>📢 Telegram-канал @NEWIrabota</b><span>Новые вакансии и смены</span></a>
+    <a href="https://vk.ru/im/channels/-243547873" target="_blank" rel="noopener"><b>💬 ВКонтакте</b><span>Канал New.работа</span></a>
+    <a id="botLink" href="#" target="_blank" rel="noopener" hidden><b>🤖 Бот в Telegram</b><span>Подпишись на вакансии своего города</span></a>
+    <a href="guide.html"><b>📘 Гид подростку</b><span>Что разрешает закон, документы, как не попасть на обман</span></a>
+    <a href="consent.html"><b>📝 Согласие родителей</b><span>Готовый бланк для 14–17 лет</span></a>
+    <a href="resume.html"><b>📄 Резюме за 2 минуты</b><span>Конструктор с подсказками</span></a>
+  </div>
+</main>
+<footer class="foot"><div class="wrap"><span>© 2026 New.работа<span id="support"></span></span><span><a href="about.html" style="color:var(--muted)">О проекте и правила</a></span></div></footer>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+// ссылка на бота берётся из настроек сайта; нет настроек — кнопка просто не показывается
+try{NR.settings().then(function(s){var l=s&&s.bot_username?NR.botLink(s.bot_username,""):"";if(l){var a=document.getElementById("botLink");a.href=l;a.hidden=false}}).catch(function(){})}catch(e){}
+</script>
+</body>
+</html>
