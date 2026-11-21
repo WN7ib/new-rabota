@@ -1,6 +1,6 @@
 import assert from "node:assert";
 const T = { bot_config: [], bot_users: [], events: [], event_signups: [], employers: [{ id: "emp1", tg_chat: 500 }], bot_questions: [], bot_seen: [] };
-const sent = [], vkc = []; let seq = 0;
+const sent = [], vkc = [], gem = []; let seq = 0;
 const EID = "11111111-2222-3333-4444-555555555555";
 T.events.push({ id: EID, title: "Раздача листовок", starts_at: new Date(Date.now() + 3 * 86400e3).toISOString(), place: "Саратов", capacity: 2, published: true, employer_id: "emp1" });
 T.bot_config.push({ key: "owner_id", value: "900" });
@@ -20,6 +20,13 @@ const taken = (eid) => T.event_signups.filter((s) => s.event_id === eid && s.sta
 globalThis.fetch = async (url, o = {}) => {
   const u = new URL(url); let body; try { body = o.body ? JSON.parse(o.body) : undefined; } catch { body = undefined; }
   const ok = (j, s = 200) => ({ ok: s < 300, status: s, text: async () => j === undefined ? "" : JSON.stringify(j), json: async () => j });
+  if (u.host === "generativelanguage.googleapis.com") {
+    gem.push({ model: u.pathname.split("/").pop(), key: o.headers?.["x-goog-api-key"], body });
+    if (u.pathname.includes("image")) return ok({ candidates: [{ content: { parts: [{ inlineData: { mimeType: "image/png", data: btoa("PNGDATA") } }] } }] });
+    const q = body.contents[0].parts[0].text;
+    return ok({ candidates: [{ content: { parts: [{ text: /страшно/.test(q) ? "Позвони 8-800-2000-122. ESCALATE" : /погода/.test(q) ? "ESCALATE" : "В 16 лет — до 35 часов в неделю. **Подробнее** https://evil.example/x" }] } }] });
+  }
+  if (u.host === "upload.vk.test") return ok(u.pathname === "/story" ? { response: { upload_result: "UR" } } : { server: 1, photo: "[]", hash: "h" });
   if (u.host === "api.vk.com") {
     const m = u.pathname.split("/").pop(); const b = Object.fromEntries(new URLSearchParams(o.body)); vkc.push({ m, ...b });
     const R = {
@@ -28,7 +35,9 @@ globalThis.fetch = async (url, o = {}) => {
       "groups.getCallbackServers": { items: [] }, "groups.addCallbackServer": { server_id: 7 }, "groups.setCallbackSettings": 1, "groups.setSettings": 1,
       "messages.send": [{ peer_id: +b.peer_ids, conversation_message_id: ++seq }], "users.get": [{ first_name: "Петя" }],
       "messages.getByConversationMessageId": { items: [{ text: "✅ Записала тебя: «Раздача листовок»\nЗа день напомню." }] }, "messages.edit": 1, "messages.sendMessageEventAnswer": 1,
+      "photos.getWallUploadServer": { upload_url: "https://upload.vk.test/x" }, "photos.saveWallPhoto": [{ owner_id: -42, id: 9 }], "wall.post": { post_id: 1 }, "stories.getPhotoUploadServer": { upload_url: "https://upload.vk.test/story" }, "stories.save": { count: 1 },
     };
+    if (m === "wall.post" && globalThis.WALL_DENIED) return ok({ error: { error_code: 27, error_msg: "Group authorization failed: method is unavailable with group auth." } });
     return ok({ response: R[m] });
   }
   if (u.host === "api.telegram.org") {
@@ -176,4 +185,34 @@ assert.ok(ms.some((x) => /В «Москва» вакансий ещё нет —
 assert.equal(T.bot_users.find((x) => x.chat_id === 701).city, "Москва");
 await msg(702, "Олег", "🔎 Найти работу"); await msg(702, "Олег", "Саратов"); assert.ok(to(702).some((x) => /Сборщик/.test(x)) && !to(702).some((x) => /ещё нет/.test(x)));
 await msg(703, "Аня", "а вы в каких городах работаете?"); assert.match(to(703).at(-1), /работает в Саратове/);
+// ───── Gemini: ответы 24/7 и картинки ─────
+await msg(705, "Ира", "а сколько платят за склад если мне 16, мой номер +7 917 123-45-67?");
+assert.ok(to(900).some((x) => /#q\d+/.test(x) && /склад/.test(x)), "без ключа Gemini — как раньше, тикет владельцу");
+await msg(900, "Никита", "/gemini AIza-тестовый");
+assert.ok(sent.some((x) => x.m === "deleteMessage" && x.chat_id === 900)); assert.match(last(900).text, /Gemini: ключ сохранила.*работает ✅/s);
+assert.equal(gem.at(-1).key, "AIza-тестовый");
+await msg(706, "Петя", "можно ли мне работать 30 часов, мой номер +7 917 123-45-67, пиши @petya");
+const ga = to(706).at(-1); assert.match(ga, /до 35 часов/); assert.ok(!/evil\.example|\*\*/.test(ga), "чужие ссылки и markdown вырезаны");
+const sentQ = gem.at(-1).body.contents[0].parts[0].text; assert.ok(!/917|petya/.test(sentQ), "в Gemini уходит обезличенно: " + sentQ);
+assert.equal(T.bot_questions.at(-1).answered_by, "gemini");
+await msg(707, "Оля", "мне страшно, работодатель кричит");
+assert.match(to(707).at(-1), /8-800-2000-122/); assert.ok(!/ESCALATE/.test(to(707).at(-1))); assert.match(last(900).text, /просит взглянуть/);
+await msg(708, "Дэн", "какая завтра погода?"); assert.match(to(708).at(-1), /Передала вопрос/);
+// новая вакансия: картинка от Gemini → в канал фото, в ВК на стену с фото
+T.bot_config.push({ key: "channel", value: "@NEWIrabota" });
+T.vacancies.push({ id: "art1", title: "Бариста", city: "Саратов", pay: "250 ₽/ч", age_min: 16, status: "approved", created_at: new Date().toISOString(), contact: "@b" });
+await post({ tick: 1 });
+assert.ok(gem.some((x) => /image/.test(x.model) && /Бариста/.test(x.body.contents[0].parts[0].text)), "картинку просили у Gemini");
+assert.ok(sent.some((x) => x.m === "sendPhoto"), "в канал ушло фото");
+const wp = vkc.findLast((x) => x.m === "wall.post"); assert.ok(wp && /photo-42_9/.test(wp.attachments) && /Бариста/.test(wp.message), "в ВК на стену с картинкой");
+// ВК не пускает на стену ключом сообщества → история с картинкой + владельцу один раз
+globalThis.WALL_DENIED = true;
+T.vacancies.push({ id: "art2", title: "Промоутер", city: "Саратов", age_min: 14, status: "approved", created_at: new Date().toISOString(), contact: "@p" });
+await post({ tick: 1 });
+assert.ok(vkc.some((x) => x.m === "stories.save" && x.upload_results === "UR"), "ушло историей"); assert.match(last(900).text, /пост на стену не прошёл.*историями/s);
+// обход из базы по ключу x-tick-key (pg_cron), чужой ключ — 403
+T.bot_config.push({ key: "tick_key", value: "k".repeat(64) });
+const tickReq = (k) => handler(new Request("https://x/", { method: "POST", headers: { "x-tick-key": k }, body: '{"tick":true}' }));
+assert.equal((await tickReq("x".repeat(64))).status, 403);
+assert.match(await (await tickReq("k".repeat(64))).text(), /^ok/);
 console.log("OK", sent.length, "вызовов Telegram");

@@ -10,6 +10,9 @@
   с токеном (`nr_emp(t)` и т.п.). Серверные функции — `supabase/functions/` (бот `tg-bot`, оплата `pay`).
 - Боты: рабочий бот New.работа сейчас крутится на телефоне Никиты (мессенджер `WN7ib/navi-assistant`, `TgBot.kt`);
   серверная версия — `supabase/functions/tg-bot` (деплой `deploy-bot.yml`).
+- **21.11 (решение Никиты): бот переезжает на сервер 24/7** (поручение `2026-11-21-bot-server-2`). Там же ВК (Callback API, `/vk <ключ>` владельца),
+  умные ответы и картинки к вакансиям — Gemini (`/gemini <ключ>`, `/art off`), обход раз в 10 мин — pg_cron из базы (migration-23, `bot_config.tick_key`).
+  Проверка без сети: `sh tools/tg-bot-test.sh` (заглушки Telegram/ВК/Gemini/базы).
 - Канал в Telegram: @NEWIrabota (вакансии и посты; бот публикует туда, `bot_config.channel`). Старая группа — @Newrabotaa.
 
 ## Применить миграции
