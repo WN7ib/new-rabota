@@ -208,22 +208,27 @@
 
   // ═════════ режимы: официальный / с Newi ═════════
   let panelOpen=false;
-  function setMode(m,open){
+  // подсказка у дрона: после выбора «С Newi» окно чата само не раскрывается (занимает место), а над дроном на несколько секунд появляется приветствие
+  let hintT=0;
+  function hideHint(){clearTimeout(hintT);const h=$("#droneHint");if(h)h.hidden=true}
+  function showHint(){const h=$("#droneHint");if(!h||panelOpen)return;h.hidden=false;clearTimeout(hintT);hintT=setTimeout(hideHint,9000)}
+  function setMode(m,open,hint){
     const on=m==="newi"; ls.set("nr-mode",m);
     $("#modeNewi").setAttribute("aria-pressed",on);$("#modeOff").setAttribute("aria-pressed",!on);
     $("#drone").hidden=!on;
-    if(!on)openPanel(false); else if(open)openPanel(true);
+    if(!on){openPanel(false);hideHint()} else if(open)openPanel(true); else if(hint)showHint();
   }
   function openPanel(o){
-    panelOpen=o;$("#newiWrap").hidden=!o;$("#drone").setAttribute("aria-expanded",o);
+    panelOpen=o;$("#newiWrap").hidden=!o;$("#drone").setAttribute("aria-expanded",o);if(o)hideHint();
     if(o){Mascot.flash("alert",900);Mascot.wake();showView("chat");$("#droneBadge").hidden=true;renderChat();resumeWaiting();if(ls.get("nr-voice","")==="")$("#voicePick").hidden=false;else $("#voicePick").hidden=true}
     else stopSpeak();
   }
-  $("#modeOff").onclick=()=>setMode("off");$("#modeNewi").onclick=()=>setMode("newi",false);
+  $("#modeOff").onclick=()=>setMode("off");$("#modeNewi").onclick=()=>setMode("newi",false,true);
   $("#drone").onclick=()=>openPanel(!panelOpen);$("#newiClose").onclick=()=>openPanel(false);
   // стартовый выбор режима
   $("#gOff").onclick=()=>{ls.set("nr-chosen",1);$("#gate").hidden=true;setMode("off")};
-  $("#gNewi").onclick=()=>{ls.set("nr-chosen",1);$("#gate").hidden=true;setMode("newi",false);try{$("#droneBadge").hidden=false}catch(_){}};
+  $("#gNewi").onclick=()=>{ls.set("nr-chosen",1);$("#gate").hidden=true;setMode("newi",false,true);try{$("#droneBadge").hidden=false}catch(_){}};
+  {const h=$("#droneHint");if(h)h.onclick=()=>openPanel(true)}
 
   // ═════════ озвучка ═════════
   const synth=window.speechSynthesis;

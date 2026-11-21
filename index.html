@@ -16,7 +16,7 @@
 <meta name="color-scheme" content="light dark">
 <script>try{var t=localStorage.getItem("nr-theme");if(!t&&/SamsungBrowser/i.test(navigator.userAgent))t="dark";if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 <meta name="darkreader-lock">
-<link rel="stylesheet" href="style.css?v=10">
+<link rel="stylesheet" href="style.css?v=11">
 
 </head>
 <body>
@@ -49,6 +49,7 @@
 </header>
 
 <button class="drone" id="drone" type="button" aria-label="Открыть Newi" hidden><span data-mascot></span><span class="drone-badge" id="droneBadge" hidden>1</span></button>
+<div class="drone-hint" id="droneHint" role="button" tabindex="0" hidden>👋 Привет! Я Newi. Нажми: подберу работу и отвечу на вопросы</div>
 <section class="newi-pop" id="newiWrap" hidden aria-label="Newi — помощница New.работа">
   <div class="newi">
     <div class="newi-head"><div class="newi-ava" data-mascot></div><div class="nh"><b>Newi</b><small id="newiState"><span class="dotlive"></span><span id="newiSub">помощница New.работа</span></small></div>
@@ -214,10 +215,10 @@
 </datalist>
 <div class="toast" id="toast" hidden></div>
 
-<script src="vendor/supabase.js"></script>
-<script src="config.js"></script>
-<script src="common.js"></script>
+<script src="vendor/supabase.js?v=1"></script>
+<script src="config.js?v=2"></script>
+<script src="common.js?v=2"></script>
 <script src="mascot.js?v=3"></script>
-<script src="app.js?v=15"></script>
+<script src="app.js?v=16"></script>
 </body>
 </html>
