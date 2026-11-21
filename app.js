@@ -169,6 +169,10 @@
     f.append(el("h2",null,"Вакансия отправлена ✅"),el("p","hint full","«"+title+"» появится на сайте после проверки модератором — обычно в течение дня."),
       el("p","full","Это твоя личная ссылка для управления вакансией: посмотреть статус и отклики, продлить, исправить или закрыть. Сохрани её — она работает без регистрации, и восстановить её нельзя."));
     const box=el("div","field full");const inp=document.createElement("input");inp.readOnly=true;inp.value=url;inp.onclick=()=>inp.select();box.append(inp);f.append(box);
+    {const pr=(state.settings.prices||{}).shift||1000;
+     const nu=el("a","biz-strip");nu.href="business.html#shift";nu.style.textDecoration="none";nu.style.margin="4px 0 0";
+     nu.append(el("span",null,"⚡ Нужен человек на конкретные дни? Закажите смену под ключ: найдём, подтвердим выход, заменим бесплатно. "+pr.toLocaleString("ru-RU")+" ₽ за выход, и только когда человек подтверждён."),el("span","go","Заказать смену →"));
+     f.append(nu)}
     const row=el("div","row");const cp=el("button","btn btn-primary","Скопировать ссылку");cp.type="button";cp.onclick=()=>NR.copy(url);
     const go=el("a","btn btn-ghost","Открыть кабинет");go.href=url;go.style.textDecoration="none";
     const ok=el("button","btn btn-ghost","Готово");ok.type="button";ok.onclick=()=>sh.remove();row.append(cp,go,ok);f.append(row);
@@ -342,7 +346,7 @@
     if(k==="docs")say(DOCS,[{href:"guide.html#docs",title:"Гид: документы",sub:"что взять и где оформить"}]);
     else if(k==="help")say(HELP,[{href:"guide.html#help",title:"Гид: куда обращаться",sub:"если не платят или давят"}]);
     else if(k==="consent")say(CONSENT,[{href:"consent.html",title:"📝 Бланк согласия родителей",sub:"заполни и распечатай"}]);
-    else if(k==="emp")say(EMP,[{href:"about.html#rules",title:"Правила размещения вакансий",sub:"полный текст"}]);
+    else if(k==="emp")say(EMP,[{href:"business.html#shift",title:"⚡ Смена под ключ",sub:"нужен человек на конкретные дни? найдём, подтвердим выход, заменим бесплатно"},{href:"about.html#rules",title:"Правила размещения вакансий",sub:"полный текст"}]);
     else if(k==="priv")say(PRIV,[{href:"about.html#privacy",title:"Персональные данные",sub:"что мы храним и зачем"}]);
     else if(k==="about")say(ABOUT,[{href:"about.html",title:"О проекте",sub:"кто мы и правила"}]);
     else if(k==="rights")say(RIGHTS,[{href:"guide.html#law",title:"Гид: работа с 14 лет",sub:"документы, часы, что нельзя"}]);

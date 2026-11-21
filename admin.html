@@ -284,6 +284,7 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
 
     <!-- ЗАКАЗЫ -->
     <section id="v-orders" hidden style="flex-direction:column;gap:12px;margin-top:14px">
+      <div class="panel" id="income" style="gap:6px"><b>💰 Доход</b><div id="incomeBody" class="help">Считаю…</div></div>
       <div class="tools"><div class="group" id="ordtabs"><button class="chip" type="button" data-o="new" aria-pressed="true">новые</button><button class="chip" type="button" data-o="invoiced" aria-pressed="false">ждут оплаты</button><button class="chip" type="button" data-o="paid" aria-pressed="false">оплачены</button><button class="chip" type="button" data-o="cancelled" aria-pressed="false">отменены</button></div>
         <div class="group" id="ordkind"><button class="chip" type="button" data-k="all" aria-pressed="true">все</button><button class="chip" type="button" data-k="shift" aria-pressed="false">смены под ключ</button><button class="chip" type="button" data-k="promo" aria-pressed="false">продвижение</button></div><span class="status" id="ordstatus"></span></div>
       <p class="help"><b>Смена под ключ:</b> найди человека → «Кандидат подтвердил» → отправь работодателю, как оплатить комиссию → получи деньги, пробей чек в «Мой налог» → «Оплачено». Каждый день смены — отдельный заказ. Если человек нужен и завтра — «Продлить на завтра». Ставку работнику бизнес платит ему сам, не тебе.<br><b>Продвижение:</b> пришли, как оплатить, получи деньги, нажми «Оплачено» — услуга включится сама.</p>
@@ -661,7 +662,27 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
   $$("#ordkind .chip").forEach(b=>b.onclick=()=>{okind=b.dataset.k;$$("#ordkind .chip").forEach(x=>x.setAttribute("aria-pressed",x===b));loadOrders()});
   const rub=n=>(n||0).toLocaleString("ru-RU")+" ₽";
   const dtl=d=>new Date(d).toLocaleString("ru-RU",{weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
+  // доход: что уже оплачено, что выставлено/ждёт оплаты и что ещё в поиске (потенциал). Работнику деньги платит бизнес напрямую — тут только наша комиссия.
+  async function loadIncome(){
+    const box=$("#incomeBody");if(!box)return;
+    const {data,error}=await sb.from("orders").select("product,status,shift_status,price,paid_at,created_at").neq("status","cancelled").limit(3000);
+    if(error){box.textContent="Не посчиталось: "+(error.message||"ошибка базы");return}
+    const m0=new Date();m0.setDate(1);m0.setHours(0,0,0,0);
+    let paidAll=0,paidMonth=0,nPaid=0,toCollect=0,nCollect=0,inSearch=0,nSearch=0;
+    for(const o of data){const p=o.price||0;
+      if(o.status==="paid"){paidAll+=p;nPaid++;if(o.paid_at&&new Date(o.paid_at)>=m0)paidMonth+=p}
+      else if(o.status==="invoiced"||(o.product==="shift"&&["confirmed","replaced","done"].includes(o.shift_status))){toCollect+=p;nCollect++}
+      else if(o.product==="shift"&&o.shift_status==="search"){inSearch+=p;nSearch++}}
+    const avg=nPaid?Math.round(paidAll/nPaid):0;
+    box.textContent="";
+    const line=(t,v,s)=>{const d=el("div");d.style.cssText="display:flex;justify-content:space-between;gap:10px";d.append(el("span",null,t),el("b",null,v+(s?" · "+s:"")));box.append(d)};
+    line("В этом месяце оплачено",rub(paidMonth));line("Оплачено за всё время",rub(paidAll),nPaid+" шт.");
+    line("Ждёт оплаты (кандидат найден или счёт выставлен)",rub(toCollect),nCollect+" шт.");
+    line("Ещё в поиске (потенциал)",rub(inSearch),nSearch+" смен");
+    if(avg)line("Средний заказ",rub(avg));
+  }
   async function loadOrders(){
+    loadIncome();
     $("#ordstatus").textContent="Загружаю…";
     let q=sb.from("orders").select("*, vacancies(title,city,contact)").eq("status",otab);
     if(okind==="shift")q=q.eq("product","shift");else if(okind==="promo")q=q.neq("product","shift");

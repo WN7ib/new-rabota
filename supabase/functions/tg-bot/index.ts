@@ -157,7 +157,7 @@ async function announce(v: any, skipChat?: number): Promise<number> {
   const link = `${SITE}vacancy.html?id=${v.id}`;
   const ch = await cfg("channel");
   if (ch) await send(ch, card(v) + `\n🔗 ${link}\n\n#вакансия` + (v.city ? " #" + String(v.city).replace(/[^\p{L}\d]/gu, "") : "") + (v.remote ? " #удалённо" : ""),
-    { inline_keyboard: [[{ text: "Открыть на сайте", url: link }]] });
+    { inline_keyboard: [[{ text: "Открыть на сайте", url: link }], [{ text: "⚡ Нужен человек на смену? Смена под ключ", url: `${SITE}business.html#shift` }]] });
   const c5 = (v.city ?? "").toLowerCase().slice(0, 5);
   const subs: any[] = (await db("GET", `bot_users?select=chat_id,city&city=not.is.null&limit=1000`)) ?? [];
   let n = 0;
