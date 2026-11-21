@@ -35,9 +35,113 @@ async function ownerId(): Promise<number> {
 
 // ───────── Telegram ─────────
 async function tg(method: string, p: Record<string, unknown>): Promise<any> {
+  if (isVk(p.chat_id) || String(p.callback_query_id ?? "").startsWith("vk:")) return vkTg(method, p);
   const r = await fetch(`https://api.telegram.org/bot${TG}/${method}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(p) });
   try { return await r.json(); } catch { return null; }
 }
+// ───────── ВКонтакте: тот же бот в сообщениях сообщества (Callback API → эта же функция, ?vk=1) ─────────
+// Люди из ВК живут в тех же таблицах с chat_id = VK0 + id ВК — так работают подписки, тикеты, записи и ответы владельца.
+const VK0 = 8e15;
+const isVk = (c: unknown) => typeof c === "number" ? c >= VK0 : /^\d{16}$/.test(String(c ?? "")) && Number(c) >= VK0;
+const vkId = (c: number) => c - VK0;
+const vkLink = (c: number) => `vk.com/id${vkId(c)}`;
+let vkTok = "";
+async function vkToken(): Promise<string> { return vkTok || (vkTok = Deno.env.get("VK_TOKEN") ?? (await cfg("vk_token"))); }
+async function vk(method: string, params: Record<string, unknown>): Promise<any> {
+  const tok = await vkToken(); if (!tok) return null;
+  const body = new URLSearchParams({ access_token: tok, v: "5.199" });
+  for (const [k, v] of Object.entries(params)) if (v !== undefined && v !== null) body.set(k, typeof v === "object" ? JSON.stringify(v) : String(v));
+  const r = await fetch(`https://api.vk.com/method/${method}`, { method: "POST", body });
+  const j = await r.json().catch(() => null);
+  if (j?.error) console.error("vk", method, j.error.error_code, j.error.error_msg);
+  return j;
+}
+function vkKb(m: any): any {
+  if (!m) return undefined;
+  const lbl = (t: string) => String(t).slice(0, 40);
+  if (m.keyboard) return { one_time: false, buttons: m.keyboard.map((r: any[]) => r.map((b) => ({ action: { type: "text", label: lbl(b.text) }, color: "secondary" }))) };
+  if (m.inline_keyboard) {
+    const rows = m.inline_keyboard.map((r: any[]) => r.filter((b) => !String(b.url ?? "").startsWith("https://t.me/")).map((b) =>
+      b.url || b.web_app ? { action: { type: "open_link", link: b.web_app ? SITE : b.url, label: lbl(b.text) } }
+        : { action: { type: "callback", label: lbl(b.text), payload: JSON.stringify({ d: b.callback_data }) } })).filter((r: any[]) => r.length);
+    return rows.length ? { inline: true, buttons: rows } : undefined;
+  }
+  return undefined;
+}
+async function vkText(peer: number, cmid: number): Promise<string> {
+  return (await vk("messages.getByConversationMessageId", { peer_id: peer, conversation_message_ids: cmid }))?.response?.items?.[0]?.text ?? "";
+}
+async function vkTg(method: string, p: any): Promise<any> {
+  if (method === "answerCallbackQuery") {
+    const [, ev, user, peer] = String(p.callback_query_id).split(":");
+    await vk("messages.sendMessageEventAnswer", { event_id: ev, user_id: user, peer_id: peer, event_data: p.text ? { type: "show_snackbar", text: String(p.text).slice(0, 90) } : undefined });
+    return { ok: true };
+  }
+  const peer = vkId(Number(p.chat_id));
+  if (method === "sendMessage") {
+    const r = await vk("messages.send", { peer_ids: peer, random_id: Math.floor(Math.random() * 2e9), message: p.text, keyboard: vkKb(p.reply_markup), dont_parse_links: 1 });
+    const x = r?.response?.[0];
+    return x && !x.error ? { ok: true, result: { message_id: x.conversation_message_id } } : null;
+  }
+  if (method === "editMessageText" || method === "editMessageReplyMarkup") {
+    const text = method === "editMessageText" ? p.text : await vkText(peer, p.message_id);
+    const r = await vk("messages.edit", { peer_id: peer, conversation_message_id: p.message_id, message: text, keyboard: method === "editMessageReplyMarkup" ? (vkKb(p.reply_markup) ?? { inline: true, buttons: [] }) : undefined, dont_parse_links: 1 });
+    return { ok: !!r?.response };
+  }
+  return null;   // остального (кнопка меню, удаление) в ВК нет
+}
+async function vkSecret(): Promise<string> {
+  return Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode("vk:" + KEY)))).map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 32);
+}
+// подключение сообщества: код подтверждения, Callback-сервер (эта функция), события «сообщение» и «нажата кнопка», сообщения и кнопка «Начать»
+async function vkSetup(force = false): Promise<string> {
+  if (!(await vkToken())) return "нет ключа ВК";
+  const url = `${SB}/functions/v1/tg-bot?vk=1`;
+  if (!force && (await cfg("vk_setup")) === url) return "уже подключено";
+  const g = await vk("groups.getById", {});
+  const gr = g?.response?.groups?.[0] ?? g?.response?.[0];
+  if (!gr?.id) return "ключ не подошёл: " + (g?.error?.error_msg ?? "нет ответа ВК");
+  const code = (await vk("groups.getCallbackConfirmationCode", { group_id: gr.id }))?.response?.code;
+  if (!code) return "ВК не дал код подтверждения — у ключа нет права «Управление сообществом»";
+  await setCfg("vk_group", String(gr.id)); await setCfg("vk_confirm", String(code));
+  const secret = await vkSecret();
+  const list: any[] = (await vk("groups.getCallbackServers", { group_id: gr.id }))?.response?.items ?? [];
+  let sid = list.find((x) => x.url === url)?.id;
+  if (sid) await vk("groups.editCallbackServer", { group_id: gr.id, server_id: sid, url, title: "New.работа", secret_key: secret });
+  else sid = (await vk("groups.addCallbackServer", { group_id: gr.id, url, title: "New.работа", secret_key: secret }))?.response?.server_id;
+  if (!sid) return "ВК не добавил Callback-сервер";
+  const st = await vk("groups.setCallbackSettings", { group_id: gr.id, server_id: sid, api_version: "5.199", message_new: 1, message_event: 1 });
+  if (!st?.response) return "ВК не включил события: " + (st?.error?.error_msg ?? "");
+  await vk("groups.setSettings", { group_id: gr.id, messages: 1, bots_capabilities: 1, bots_start_button: 1 });
+  await setCfg("vk_setup", url);
+  return `подключено: ${gr.name ?? "сообщество"} (vk.com/club${gr.id})`;
+}
+async function vkUpdate(u: any): Promise<Response> {
+  if (u.type === "confirmation") return new Response(String(await cfg("vk_confirm")) || "no");
+  if (u.secret !== (await vkSecret())) return new Response("forbidden", { status: 403 });
+  const o = u.object ?? {};
+  if (u.type === "message_new") {
+    const m = o.message ?? {};
+    if (!m.from_id || m.from_id <= 0 || m.peer_id !== m.from_id) return new Response("ok");   // только личные сообщения людей
+    if (await seen(`vkm:${m.id ?? m.conversation_message_id}:${m.from_id}`)) return new Response("ok");   // ВК повторяет событие, если ответ задержался
+    await markSeen(`vkm:${m.id ?? m.conversation_message_id}:${m.from_id}`);
+    let text = String(m.text ?? "").trim();
+    let pl: any = null; try { pl = m.payload ? JSON.parse(m.payload) : null; } catch { pl = null; }
+    if (pl?.command === "start") text = "/start" + (m.ref ? " " + m.ref : "");
+    else if (m.ref && !text) text = "/start " + m.ref;
+    const who = (await vk("users.get", { user_ids: m.from_id }))?.response?.[0] ?? {};
+    const id = VK0 + m.from_id;
+    await onMessage({ chat: { id, type: "private" }, from: { id, first_name: who.first_name ?? "", username: "", vk: m.from_id }, text });
+  } else if (u.type === "message_event") {
+    let d = o.payload?.d; if (typeof o.payload === "string") { try { d = JSON.parse(o.payload).d; } catch { d = ""; } }
+    if (!o.user_id || o.peer_id !== o.user_id || !d) return new Response("ok");
+    const id = VK0 + o.user_id;
+    await moderate({ id: `vk:${o.event_id}:${o.user_id}:${o.peer_id}`, from: { id }, data: d,
+      message: { message_id: o.conversation_message_id, chat: { id, type: "private" }, text: await vkText(o.peer_id, o.conversation_message_id) } });
+  }
+  return new Response("ok");
+}
+
 const MENU = { resize_keyboard: true, keyboard: [
   [{ text: "🔎 Найти работу" }, { text: "📢 Разместить вакансию" }],
   [{ text: "⚖️ Права 14–17" }, { text: "🛡 Как не попасть на обман" }],
@@ -64,8 +168,8 @@ const DOCS = "Для устройства понадобятся:\n• пасп�
 const HELP = "Если что-то не так:\n• не платят или нарушают права — Государственная инспекция труда, сайт онлайнинспекция.рф;\n• трудно, страшно, давят — детский телефон доверия 8-800-2000-122, бесплатно;\n• втягивают в дропперство или закладки — полиция, 102 или 112, и расскажи взрослым, которым доверяешь.\nПодозрительную вакансию на сайте отправь модератору кнопкой «Пожаловаться».";
 const CONSENT = "Если тебе 14–15 лет, нужно письменное согласие одного из родителей и органа опеки и попечительства (с заявлением в опеку идёт родитель). С 16 лет согласие родителей не нужно. Готовый бланк можно заполнить и распечатать — родитель подпишет: " + SITE + "consent.html";
 const EMP = "Вакансию работодатель добавляет через «📢 Разместить вакансию» — перед публикацией её проверяет модератор. Правила: работа законная и подходит по возрасту (для 14–17 лет — только то, что разрешает Трудовой кодекс); нельзя брать с соискателя деньги за обучение, форму, медкнижку или «бронь»; нельзя предлагать работу с переводом чужих денег, оформлением карт, закладками, алкоголем, табаком и вейпами для несовершеннолетних; указывай реальную оплату, график и рабочий контакт. Вакансия снимается сама, когда истекает выбранный срок. Полные правила: " + SITE + "about.html#rules";
-const PRIVACY_SHORT = "ℹ️ Запоминаю твой ник и имя из Telegram, город и подписку на вакансии. Телефон или почту — только если сам оставишь (/contact). Подробнее: /privacy, удалить всё: /forget.";
-const PRIVACY_LONG = "🔒 Что я о тебе храню: имя и ник из Telegram, город для подборок вакансий, а контакт (телефон или почта) — только если ты сам его оставил командой /contact. Зачем: присылать вакансии и, если ты хочешь, связать тебя с работодателем. Данные видит только команда New.работа. Отписаться от подборок: /stop. Удалить всё: /forget. Подробнее: " + SITE + "about.html#privacy";
+const PRIVACY_SHORT = "ℹ️ Запоминаю твоё имя (и ник) из Telegram или ВКонтакте, город и подписку на вакансии. Телефон или почту — только если сам оставишь (/contact). Подробнее: /privacy, удалить всё: /forget.";
+const PRIVACY_LONG = "🔒 Что я о тебе храню: имя и ник из Telegram или ВКонтакте, город для подборок вакансий, а контакт (телефон или почта) — только если ты сам его оставил командой /contact. Зачем: присылать вакансии и, если ты хочешь, связать тебя с работодателем. Данные видит только команда New.работа. Отписаться от подборок: /stop. Удалить всё: /forget. Подробнее: " + SITE + "about.html#privacy";
 const ABOUT = "New.работа — бесплатный сайт вакансий для молодёжи от 14 лет: подработка, стажировки, проекты и волонтёрство по всей России и удалённо. Каждую вакансию перед публикацией проверяет модератор. Делает молодёжная команда из Саратова. Ответы Неви — подсказки, а не юридическая консультация.";
 
 // частые вопросы: отвечаю сразу, без нейросети
@@ -153,7 +257,7 @@ async function ticket(chat: number, from: any, q: string, why: string) {
   const id = ins?.[0]?.id;
   await send(chat, "Передала вопрос. Ответ придёт сюда же — обычно в течение дня 👌", MENU);
   const own = await ownerId();
-  if (own && id) await send(own, `❓ #q${id} · ${from.first_name ?? ""}${from.username ? " (@" + from.username + ")" : ""} ${why}:\n«${q.slice(0, 800)}»\n\nОтветь реплаем на это сообщение — перешлю. Если телефон с Неви в сети, она может ответить раньше.`);
+  if (own && id) await send(own, `❓ #q${id} · ${from.first_name ?? ""}${from.username ? " (@" + from.username + ")" : ""}${isVk(chat) ? " (ВК " + vkLink(chat) + ")" : ""} ${why}:\n«${q.slice(0, 800)}»\n\nОтветь реплаем на это сообщение — перешлю. Если телефон с Неви в сети, она может ответить раньше.`);
 }
 
 // ───────── запись на смену по ссылке t.me/бот?start=ev_<id>[_f<chat друга>] ─────────
@@ -174,7 +278,7 @@ async function botName(): Promise<string> {
 }
 async function friendBtn(chat: number, e: any): Promise<any[]> {
   const bot = await botName(); const param = `ev_${e.id}_f${chat}`;
-  if (!bot || param.length > 64) return [];
+  if (!bot || param.length > 64 || isVk(chat)) return [];
   const link = `https://t.me/${bot}?start=${param}`;
   return [[{ text: "👫 Позвать друга", url: `https://t.me/share/url?url=${enc(link)}&text=${enc(`Пойдём вместе на «${String(e.title).slice(0, 60)}»? Запись в один клик 👇`)}` }]];
 }
@@ -195,8 +299,8 @@ async function eventJoin(chat: number, from: any, arg: string) {
   const e = await evGet(id);
   if (!e || new Date(e.starts_at).getTime() < Date.now()) { await send(chat, "Эта запись уже закрыта.", MENU); return; }
   const name = String(from.first_name ?? "Участник").slice(0, 60).padEnd(2, ".");
-  const who = name + (from.username ? " @" + from.username : "");
-  const contact = from.username ? "@" + from.username : "tg:" + chat;
+  const who = name + (from.username ? " @" + from.username : "") + (isVk(chat) ? " " + vkLink(chat) : "");
+  const contact = from.username ? "@" + from.username : isVk(chat) ? vkLink(chat) : "tg:" + chat;
   const mine = (await db("GET", `event_signups?select=id,status&event_id=eq.${e.id}&chat_id=eq.${chat}`))?.[0];
   if (mine) { await send(chat, mine.status === "reserve" ? `Ты уже в резерве на «${e.title}». Освободится место — сразу напишу.` : `Ты уже записан(а) на «${e.title}», ${evWhen(e)} ✅`, MENU); return; }
   // «пойти с другом»: ссылка работает, только если пригласивший сам записан на это событие (без спама чужим)
@@ -250,7 +354,7 @@ async function eventBtn(cbq: any, data: string) {
   const e = (await db("GET", `events?select=*&id=eq.${id}`))?.[0];
   const title = e?.title ?? "мероприятие";
   const row = (await db("GET", `event_signups?select=id,status,name&event_id=eq.${id}&chat_id=eq.${chat}`))?.[0];
-  const who = String(cbq.from.first_name ?? row?.name ?? "Участник") + (cbq.from.username ? " @" + cbq.from.username : "");
+  const who = String(cbq.from.first_name || row?.name || "Участник") + (cbq.from.username ? " @" + cbq.from.username : "") + (isVk(chat) ? " " + vkLink(chat) : "");
   if (act === "evy") {
     await say("");
     if (!row) { await edit(`${msg.text}\n\nЗаписи уже нет.`); return; }
@@ -263,6 +367,7 @@ async function eventBtn(cbq: any, data: string) {
   }
   if (!e || new Date(e.starts_at).getTime() < Date.now()) { await say("Уже не актуально"); await edit(`${msg.text}\n\nЗапись уже закрыта.`); return; }
   if (act === "evz") {
+    if (row) await markSeen("rto:" + row.id);
     await say("Хорошо, предложу другому");
     await edit(`${msg.text}\n\nОк, предложила место следующему. Ты остаёшься в резерве.`);
     await offerReserve(e); return;
@@ -319,6 +424,7 @@ async function tick() {
     return "init";
   }
   await menuApp();
+  if (await vkToken()) await vkSetup();
   const since = new Date(Date.now() - 4 * 86400_000).toISOString();
   const appr: any[] = (await db("GET", `vacancies?select=*&status=eq.approved&created_at=gte.${enc(since)}&order=created_at.asc&limit=30`)) ?? [];
   let posted = 0;
@@ -362,6 +468,26 @@ async function tick() {
     const ss: any[] = (await db("GET", `event_signups?select=chat_id&event_id=eq.${e.id}&chat_id=not.is.null&status=eq.main`)) ?? [];
     const when = new Date(e.starts_at).toLocaleString("ru-RU", { timeZone: "Europe/Saratov", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
     for (const s of ss) await send(s.chat_id, `⏰ Напоминаю: завтра «${e.title}», ${when}${e.place ? ", " + e.place : ""}. Ждём!`);
+  }
+  // за 2 часа до начала — ещё раз основным участникам
+  const h0 = new Date(Date.now() + 100 * 60_000).toISOString(), h1 = new Date(Date.now() + 130 * 60_000).toISOString();
+  const soon: any[] = (await db("GET", `events?select=id,title,starts_at,place&published=eq.true&starts_at=gte.${enc(h0)}&starts_at=lt.${enc(h1)}`)) ?? [];
+  for (const e of soon) {
+    if (await seen("ev2:" + e.id)) continue;
+    await markSeen("ev2:" + e.id);
+    const ss: any[] = (await db("GET", `event_signups?select=chat_id&event_id=eq.${e.id}&chat_id=not.is.null&status=eq.main`)) ?? [];
+    for (const s of ss) await send(s.chat_id, `⏰ Через 2 часа: «${e.title}», ${evWhen(e)}${e.place ? ", " + e.place : ""}. Выходи заранее 🙌`);
+  }
+  // место из резерва предложили, а человек 30 мин молчит — предлагаю следующему
+  const t30 = new Date(Date.now() - 30 * 60_000).toISOString(), t1d = new Date(Date.now() - 86400_000).toISOString();
+  const late: any[] = (await db("GET", `event_signups?select=id,event_id,chat_id&status=eq.reserve&offered_at=lt.${enc(t30)}&offered_at=gt.${enc(t1d)}&limit=20`)) ?? [];
+  for (const r of late) {
+    if (await seen("rto:" + r.id)) continue;
+    await markSeen("rto:" + r.id);
+    const e = await evGet(r.event_id);
+    if (!e || new Date(e.starts_at).getTime() < Date.now()) continue;
+    if (r.chat_id) await send(r.chat_id, `Ты не ответил(а) за 30 минут — место на «${e.title}» предложила следующему. Ты остаёшься в резерве.`);
+    await offerReserve(e);
   }
   return `ok posted=${posted}`;
 }
@@ -430,6 +556,11 @@ async function ownerCmd(chat: number, m: any, text: string): Promise<boolean> {
     return true;
   }
   if (text === "/all" || text.startsWith("/all ")) { const on = !/\boff\b|выкл|нет|0/i.test(text.slice(4)); await setCfg("broadcast_all", on ? "1" : "0"); await send(chat, on ? "Новые вакансии теперь буду присылать ВСЕМ подписчикам (кто не нажимал /stop)." : "Новые вакансии — только подписчикам своего города и по удалёнке."); return true; }
+  if (text === "/vk" || text.startsWith("/vk ")) {
+    const t = text.slice(3).trim();
+    if (t) { await tg("deleteMessage", { chat_id: chat, message_id: m.message_id }); await setCfg("vk_token", t); vkTok = ""; await setCfg("vk_setup", ""); }
+    await send(chat, "ВК: " + (t ? "ключ сохранила, сообщение с ключом удалила. " : "") + await vkSetup(!!t)); return true;
+  }
   if (text === "/channel" || text.startsWith("/channel ")) { const c = text.slice(8).trim(); await setCfg("channel", c); await send(chat, c ? `Новые вакансии буду публиковать в ${c} (бот должен быть админом канала).` : "Публикация в канал выключена."); return true; }
   return false;
 }
@@ -484,6 +615,7 @@ async function onMessage(m: any) {
     if (arg.startsWith("ev_")) { await eventJoin(chat, from, arg.slice(3)); return; }
     await send(chat, `Привет, ${from.first_name ?? "друг"}! Я Неви, помощница New.работа 🤖\nПомогу найти работу или подработку с 14 лет, разместить вакансию и разобраться с правами.\nВыбери кнопку внизу или просто задай вопрос.\n🌐 Сайт: ${SITE}`, MENU); return;
   }
+  if ((text === "/app" || text.startsWith("/app@")) && isVk(chat)) { await send(chat, "Все вакансии с фильтрами по городу и возрасту: " + SITE, MENU); return; }
   if (text === "/app" || text.startsWith("/app@")) { await send(chat, "Все вакансии с фильтрами по городу и возрасту — прямо в Telegram 👇", appButton(u.city && u.city !== "удалённо" ? u.city : "")); return; }
   if (text.startsWith("/privacy")) { await send(chat, PRIVACY_LONG, MENU); return; }
   if (text.startsWith("/forget")) {
@@ -514,6 +646,7 @@ async function onMessage(m: any) {
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") return new Response("ok");
+  if (new URL(req.url).searchParams.get("vk") === "1") { try { return await vkUpdate(await req.json()); } catch (e) { console.error(e); return new Response("ok"); } }
   // Telegram присылает секрет, который мы задали при setWebhook (sha256 от токена) — чужие запросы отбрасываем
   const want = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(TG)))).map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 32);
   if (req.headers.get("x-telegram-bot-api-secret-token") !== want) return new Response("forbidden", { status: 403 });
