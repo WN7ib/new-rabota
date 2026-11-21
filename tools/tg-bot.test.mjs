@@ -167,4 +167,13 @@ const wk = to(401).slice(before).filter((t) => !/^🆕/.test(t)); assert.match(w
 assert.deepEqual([...T.bot_users.find((x) => x.chat_id === 401).wk_ids].sort(), ["v1", "v5"]);
 const wkn = () => to(401).filter((t) => !/^🆕/.test(t)).length; const n2 = wkn(); await post({ tick: 1 }); assert.equal(wkn(), n2, "второй раз за неделю не шлю");
 globalThis.Date = RealDate;
+// пока всё в Саратове: кнопки «Саратов/Удалённо», чужой город — честно + удалёнка
+T.vacancies.push({ id: "s1", title: "Сборщик", city: "Саратов", status: "approved", created_at: new Date().toISOString(), remote: false, contact: "@x" },
+  { id: "s2", title: "Модератор чата", city: null, status: "approved", created_at: new Date().toISOString(), remote: true, contact: "@y" });
+await msg(701, "Лена", "🔎 Найти работу"); assert.match(last(701).text, /пока работаем в Саратове/); assert.deepEqual(last(701).reply_markup.keyboard[0].map((b) => b.text), ["Саратов", "Удалённо"]);
+await msg(701, "Лена", "Москва"); const ms = to(701);
+assert.ok(ms.some((x) => /В «Москва» вакансий ещё нет — подписала/.test(x))); assert.ok(ms.some((x) => /Модератор чата/.test(x))); assert.ok(!ms.some((x) => /Сборщик/.test(x)), "саратовские москвичу не показываю");
+assert.equal(T.bot_users.find((x) => x.chat_id === 701).city, "Москва");
+await msg(702, "Олег", "🔎 Найти работу"); await msg(702, "Олег", "Саратов"); assert.ok(to(702).some((x) => /Сборщик/.test(x)) && !to(702).some((x) => /ещё нет/.test(x)));
+await msg(703, "Аня", "а вы в каких городах работаете?"); assert.match(to(703).at(-1), /работает в Саратове/);
 console.log("OK", sent.length, "вызовов Telegram");
