@@ -54,6 +54,7 @@ globalThis.fetch = async (url, o = {}) => {
     T.event_signups.push({ id: "s" + (++seq), event_id: e.id, name: body.p_name, contact: body.p_contact, status: st, with_name: body.p_with ?? null, created_at: seq, chat_id: null, offered_at: null });
     return ok(st === "reserve" ? -1 : taken(e.id));
   }
+  if (p === "rpc/person_rel") { const h = T.event_signups.filter((x) => x.attended != null && x.chat_id === body.p_chat); return ok([{ came: h.filter((x) => x.attended).length, missed: h.filter((x) => !x.attended).length, reliable: h.length >= 3 && h.slice(-3).every((x) => x.attended) }]); }
   if (p.startsWith("rpc/")) return ok({ message: "function not found" }, 404);
   const qs = new URLSearchParams(u.search);
   if (o.method === "GET") return ok(rows(p, qs));
@@ -215,4 +216,24 @@ T.bot_config.push({ key: "tick_key", value: "k".repeat(64) });
 const tickReq = (k) => handler(new Request("https://x/", { method: "POST", headers: { "x-tick-key": k }, body: '{"tick":true}' }));
 assert.equal((await tickReq("x".repeat(64))).status, 403);
 assert.match(await (await tickReq("k".repeat(64))).text(), /^ok/);
+// ───── новые анкеты → работодателю, отметки явки → человеку ─────
+T.applications = [
+  { id: "a1", created_at: new Date().toISOString(), name: "Маша", age: 16, contact: "@masha", message: "Хочу летом", vacancy_id: "v1", notified: false, vacancies: { title: "Бариста", employer_id: "11111111-0000-0000-0000-000000000001" } },
+  { id: "a2", created_at: new Date().toISOString(), name: "Коля", age: 19, contact: "+7900", vacancy_id: "v2", notified: false, vacancies: { title: "Курьер", employer_id: null } },
+  { id: "a3", created_at: new Date(Date.now() - 10 * 86400e3).toISOString(), name: "Старый", contact: "@old", vacancy_id: "v2", notified: false, vacancies: { title: "Курьер" } }];
+T.employers.push({ id: "11111111-0000-0000-0000-000000000001", tg_chat: 510 });
+await post({ tick: 1 });
+assert.match(to(510).at(-1), /Новая анкета на «Бариста».*Маша, 16 лет.*@masha.*Хочу летом.*ст\. 63/s);
+assert.ok(to(900).some((t) => /Новая анкета на «Курьер».*Коля.*пишу тебе/s), "без работодателя — владельцу");
+assert.ok(!sent.some((x) => /Старый/.test(x.text ?? "")), "старые анкеты не шлю");
+assert.ok(T.applications.every((x) => x.notified), "все отмечены");
+const n510 = to(510).length; await post({ tick: 1 }); assert.equal(to(510).length, n510, "без дублей");
+const E4 = "44444444-2222-3333-4444-555555555555";
+for (let i = 0; i < 3; i++) T.event_signups.push({ id: "at" + i, event_id: E4, chat_id: 601, contact: "@sasha", status: "main", attended: true, att_notified: i < 2 ? true : null, events: { title: "Склад " + i } });
+T.event_signups.push({ id: "at9", event_id: E4, chat_id: 602, contact: "@no", status: "main", attended: false, att_notified: null, events: { title: "Промо" } });
+await post({ tick: 1 });
+assert.match(to(602).at(-1), /не пришёл\(ла\) на «Промо»/); assert.match(to(601).at(-1), /значок «✓ Надёжный»/);
+T.event_signups.push({ id: "at4", event_id: E4, chat_id: 601, contact: "@sasha", status: "main", attended: true, att_notified: null, events: { title: "Ещё" } });
+const n601 = to(601).length; await post({ tick: 1 }); assert.equal(to(601).length, n601, "значок — один раз");
+assert.ok(T.event_signups.filter((x) => x.attended != null).every((x) => x.att_notified));
 console.log("OK", sent.length, "вызовов Telegram");

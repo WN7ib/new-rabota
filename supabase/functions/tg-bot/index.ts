@@ -614,6 +614,46 @@ async function announce(v: any, skipChat?: number): Promise<number> {
 
 // ───────── обход по расписанию (GitHub Actions раз в ~10 минут) ─────────
 // вакансии, одобренные в админке сайта → в канал и подписчикам; новые заявки и жалобы с сайта → владельцу с кнопками
+// новые анкеты-отклики с сайта → работодателю этой вакансии (вошёл в кабинет через бота), иначе владельцу
+async function newApplications(own: number): Promise<number> {
+  const aps: any[] = (await db("GET", "applications?select=id,created_at,name,age,contact,message,vacancy_id,vacancies(title,employer_id)&notified=eq.false&order=created_at.asc&limit=30")) ?? [];
+  const old = Date.now() - 3 * 86400_000; let n = 0;
+  for (const ap of aps) {
+    if (await seen("app:" + ap.id)) continue;
+    await markSeen("app:" + ap.id);   // сначала отметка — второй обход (или телефон) не пришлёт дубль
+    await db("PATCH", `applications?id=eq.${ap.id}`, { notified: true }, "return=minimal");
+    if (new Date(ap.created_at).getTime() < old) continue;   // старые не шлю (накопились, пока никто не присылал)
+    const v = ap.vacancies ?? {};
+    const txt = `📝 Новая анкета на «${v.title ?? "вакансию"}»\n👤 ${String(ap.name ?? "").slice(0, 60)}${ap.age ? ", " + ap.age + " лет" : ""}` +
+      `\n☎️ ${String(ap.contact ?? "").slice(0, 120)}${ap.message ? "\n💬 " + String(ap.message).slice(0, 600) : ""}` +
+      `${ap.age && ap.age < 18 ? "\n\nℹ️ До 18 лет: нужен трудовой договор и согласие родителя (ст. 63 ТК РФ), не больше 4–7 ч в день (ст. 92, 94)." : ""}` +
+      `\n\nВсе анкеты: ${SITE}cabinet.html`;
+    const ec = UUID.test(String(v.employer_id ?? "")) ? Number((await db("GET", `employers?select=tg_chat&id=eq.${v.employer_id}`))?.[0]?.tg_chat ?? 0) : 0;
+    if (ec) await send(ec, txt); else if (own) await send(own, txt + "\n(у вакансии нет работодателя с ботом — пишу тебе)");
+    n++;
+  }
+  return n;
+}
+
+// работодатель отметил в кабинете «пришёл / не пришёл» → человеку: мягко про неявку, значок «✓ Надёжный» — один раз
+async function attendanceNotes(): Promise<number> {
+  const ss: any[] = (await db("GET", "event_signups?select=id,chat_id,contact,attended,events(title)&attended=not.is.null&att_notified=is.null&chat_id=not.is.null&limit=50")) ?? [];
+  let n = 0;
+  for (const s of ss) {
+    await db("PATCH", `event_signups?id=eq.${s.id}`, { att_notified: true }, "return=minimal");
+    const title = s.events?.title ?? "смену";
+    if (!s.attended) { await send(s.chat_id, `Привет! Работодатель отметил, что ты не пришёл(ла) на «${title}». Бывает 🙂 В следующий раз, если не получается, нажми «Не смогу» в напоминании или напиши заранее — место отдадут другому, а у тебя сохранится хорошая репутация.`); n++; continue; }
+    const r = await rpc("person_rel", { p_chat: s.chat_id, p_contact: s.contact ?? "" });
+    const rel = Array.isArray(r.val) ? r.val[0] : r.val;
+    if (r.ok && rel?.reliable && !(await seen("rel:" + s.chat_id))) {
+      await markSeen("rel:" + s.chat_id);
+      await send(s.chat_id, "🏅 Ты отработал(а) 3 смены подряд без пропусков — теперь у тебя значок «✓ Надёжный». Работодатели это видят, и места из резерва тебе предлагаются первыми.");
+      n++;
+    }
+  }
+  return n;
+}
+
 async function tick() {
   const own = await ownerId();
   if (!(await cfg("tick_init"))) {
@@ -692,8 +732,10 @@ async function tick() {
     if (r.chat_id) await send(r.chat_id, `Ты не ответил(а) за 30 минут — место на «${e.title}» предложила следующему. Ты остаёшься в резерве.`);
     await offerReserve(e);
   }
+  const apps = await newApplications(own);
+  const att = await attendanceNotes();
   const wk = await weeklyDigest();
-  return `ok posted=${posted}${wk ? " weekly=" + wk : ""}`;
+  return `ok posted=${posted}${apps ? " apps=" + apps : ""}${att ? " att=" + att : ""}${wk ? " weekly=" + wk : ""}`;
 }
 
 async function moderate(cbq: any) {
