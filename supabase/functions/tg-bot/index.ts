@@ -329,27 +329,37 @@ async function eventJoin(chat: number, from: any, arg: string) {
 }
 
 // освободилось место → предлагаю первому из резерва (кому ещё не предлагали); «Не могу» → следующему
+// Как на телефоне: одно предложение за раз (ждём 30 мин), отказ → offered_at = 1970 (больше не предлагаю), надёжные — первыми.
+const DECLINED = "1970-01-02T00:00:00Z";
 async function offerReserve(e: any) {
   if (!e?.capacity || (await taken(e)) >= e.capacity) return;
-  const r = (await db("GET", `event_signups?select=id,chat_id&event_id=eq.${e.id}&status=eq.reserve&chat_id=not.is.null&offered_at=is.null&order=created_at.asc&limit=1`))?.[0];
-  if (!r) return;
+  const res: any[] = (await db("GET", `event_signups?select=id,chat_id,name,contact,offered_at&event_id=eq.${e.id}&status=eq.reserve&order=created_at.asc`)) ?? [];
+  const t30 = Date.now() - 30 * 60_000;
+  if (res.some((x) => x.offered_at && new Date(x.offered_at).getTime() > t30)) return;   // уже ждём ответа
+  const fresh = res.filter((x) => !x.offered_at);
+  const ord = await rpc("event_reserve_order", { eid: e.id });
+  const ids: string[] = ord.ok && Array.isArray(ord.val) ? ord.val.map((x: any) => x.id) : [];
+  const r = ids.map((i) => fresh.find((x) => x.id === i)).find(Boolean) ?? fresh[0];
+  if (!r) { if (!res.length) await tellOrganizer(e, `🔔 На «${e.title}» (${evWhen(e)}) освободилось место, а резерва нет. Опубликовать смену снова — в кабинете: ${SITE}cabinet.html`); return; }
   await db("PATCH", `event_signups?id=eq.${r.id}`, { offered_at: new Date().toISOString() }, "return=minimal");
-  await send(r.chat_id, `🎉 Освободилось место на «${e.title}», ${evWhen(e)}${e.place ? ", " + e.place : ""}. Берёшь? Кто первый нажмёт — того и место.`,
-    { inline_keyboard: [[{ text: "✅ Беру", callback_data: `evt:${e.id}` }, { text: "Не могу", callback_data: `evz:${e.id}` }]] });
+  if (!r.chat_id) { await tellOrganizer(e, `🔔 Освободилось место на «${e.title}». Первый в резерве записался на сайте: ${r.name} — ${r.contact}. Свяжись и отметь основным в кабинете.`); return; }
+  await send(r.chat_id, `🔥 Освободилось место на «${e.title}», ${evWhen(e)}${e.place ? ", " + e.place : ""}. Берёшь? Ответь в течение 30 минут — потом предложу следующему.`,
+    { inline_keyboard: [[{ text: "Беру ✅", callback_data: `evt:${e.id}` }, { text: "Не могу ❌", callback_data: `evz:${e.id}` }]] });
 }
 
 async function eventBtn(cbq: any, data: string) {
   const msg = cbq.message; const chat = Number(msg?.chat?.id ?? 0);
   if (!msg || msg.chat?.type !== "private" || cbq.from?.id !== chat) { await tg("answerCallbackQuery", { callback_query_id: cbq.id }); return; }
-  const [act, id] = data.split(":");
+  let [act, id, id3] = data.split(":");
+  if (id3) { id = id3; act = act === "evr" ? "evt" : act === "evn" ? "evz" : act; }   // кнопки, которые прислал бот на телефоне: evr/evn:<запись>:<событие>
   const say = (t: string) => tg("answerCallbackQuery", { callback_query_id: cbq.id, text: t });
   const edit = (t: string) => tg("editMessageText", { chat_id: chat, message_id: msg.message_id, text: t });
   if (act === "evx") {   // сначала спрашиваю, чтобы не отменить случайно
     await say("");
-    await tg("editMessageReplyMarkup", { chat_id: chat, message_id: msg.message_id, reply_markup: { inline_keyboard: [[{ text: "Да, отменить", callback_data: `evy:${id}` }, { text: "Нет, иду ✅", callback_data: `evn:${id}` }]] } });
+    await tg("editMessageReplyMarkup", { chat_id: chat, message_id: msg.message_id, reply_markup: { inline_keyboard: [[{ text: "Да, отменить", callback_data: `evy:${id}` }, { text: "Нет, иду ✅", callback_data: `evk:${id}` }]] } });
     return;
   }
-  if (act === "evn") { await say("Отлично, ждём!"); await tg("editMessageReplyMarkup", { chat_id: chat, message_id: msg.message_id, reply_markup: { inline_keyboard: [[{ text: "❌ Отменить запись", callback_data: `evx:${id}` }]] } }); return; }
+  if (act === "evk") { await say("Отлично, ждём!"); await tg("editMessageReplyMarkup", { chat_id: chat, message_id: msg.message_id, reply_markup: { inline_keyboard: [[{ text: "❌ Отменить запись", callback_data: `evx:${id}` }]] } }); return; }
   if (!UUID.test(id)) { await say(""); return; }
   const e = (await db("GET", `events?select=*&id=eq.${id}`))?.[0];
   const title = e?.title ?? "мероприятие";
@@ -367,7 +377,7 @@ async function eventBtn(cbq: any, data: string) {
   }
   if (!e || new Date(e.starts_at).getTime() < Date.now()) { await say("Уже не актуально"); await edit(`${msg.text}\n\nЗапись уже закрыта.`); return; }
   if (act === "evz") {
-    if (row) await markSeen("rto:" + row.id);
+    if (row) { await markSeen("rto:" + row.id); await db("PATCH", `event_signups?id=eq.${row.id}`, { offered_at: DECLINED }, "return=minimal"); }
     await say("Хорошо, предложу другому");
     await edit(`${msg.text}\n\nОк, предложила место следующему. Ты остаёшься в резерве.`);
     await offerReserve(e); return;
@@ -376,7 +386,7 @@ async function eventBtn(cbq: any, data: string) {
     if (!row) { await say(""); await edit(`${msg.text}\n\nТвоей записи в резерве уже нет.`); return; }
     if (row.status === "main") { await say("Место уже твоё ✅"); return; }
     if ((await taken(e)) >= (e.capacity ?? 1e9)) { await say("Не успел(а) 😔"); await edit(`${msg.text}\n\nМесто уже заняли — ты остаёшься в резерве. Освободится ещё — напишу.`); return; }
-    await db("PATCH", `event_signups?id=eq.${row.id}`, { status: "main" }, "return=minimal");
+    await db("PATCH", `event_signups?id=eq.${row.id}`, { status: "main", offered_at: null }, "return=minimal");
     await say("Место твоё ✅");
     await edit(`✅ Место твоё: «${title}», ${evWhen(e)}${e.place ? "\n📍 " + e.place : ""}\nЗа день напомню.`);
     await tg("editMessageReplyMarkup", { chat_id: chat, message_id: msg.message_id, reply_markup: { inline_keyboard: [[{ text: "❌ Отменить запись", callback_data: `evx:${id}` }]] } });
@@ -486,6 +496,7 @@ async function tick() {
     await markSeen("rto:" + r.id);
     const e = await evGet(r.event_id);
     if (!e || new Date(e.starts_at).getTime() < Date.now()) continue;
+    await db("PATCH", `event_signups?id=eq.${r.id}&status=eq.reserve`, { offered_at: DECLINED }, "return=minimal");
     if (r.chat_id) await send(r.chat_id, `Ты не ответил(а) за 30 минут — место на «${e.title}» предложила следующему. Ты остаёшься в резерве.`);
     await offerReserve(e);
   }
@@ -494,7 +505,7 @@ async function tick() {
 
 async function moderate(cbq: any) {
   const data = String(cbq.data ?? "");
-  if (/^ev[xyntz]:/.test(data)) { await eventBtn(cbq, data); return; }
+  if (/^ev[xyktzrn]:/.test(data)) { await eventBtn(cbq, data); return; }
   await tg("answerCallbackQuery", { callback_query_id: cbq.id });
   const own = await ownerId();
   if (!own || cbq.from?.id !== own) return;

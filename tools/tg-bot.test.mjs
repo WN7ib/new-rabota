@@ -43,6 +43,7 @@ globalThis.fetch = async (url, o = {}) => {
     T.event_signups.push({ id: "s" + (++seq), event_id: e.id, name: body.p_name, contact: body.p_contact, status: st, with_name: body.p_with ?? null, created_at: seq, chat_id: null, offered_at: null });
     return ok(st === "reserve" ? -1 : taken(e.id));
   }
+  if (p.startsWith("rpc/")) return ok({ message: "function not found" }, 404);
   const qs = new URLSearchParams(u.search);
   if (o.method === "GET") return ok(rows(p, qs));
   if (o.method === "POST") { if (o.headers?.Prefer?.includes("ignore-duplicates") && T[p].some((x) => x.key === body.key)) return ok(undefined); if (p === "bot_config") { T.bot_config = T.bot_config.filter((x) => x.key !== body.key); } const row = { id: ++seq, ...body, created_at: seq }; T[p].push(row); return ok([row]); }
@@ -121,4 +122,14 @@ await post({ tick: 1 });
 assert.match(vsent(6).at(-1).message, /не ответил\(а\) за 30 минут/);
 await vmsg(7, "у меня странный вопрос про налоги"); const qid = T.bot_questions.at(-1).id ?? null;
 assert.ok(to(900).some((t) => /ВК vk\.com\/id7/.test(t)));
+// кнопки от бота на телефоне (evr:<запись>:<событие>) тоже работают на сервере
+const E3 = "33333333-2222-3333-4444-555555555555";
+T.events.push({ id: E3, title: "Склад", starts_at: new Date(Date.now() + 5 * 86400e3).toISOString(), capacity: 1, published: true });
+T.event_signups.push({ id: "r1", event_id: E3, name: "Зоя", contact: "@zoya", status: "reserve", chat_id: 301, created_at: ++seq, offered_at: new Date().toISOString() });
+await cb(301, "evr:r1:" + E3); assert.equal(T.event_signups.find((x) => x.id === "r1").status, "main"); assert.equal(T.event_signups.find((x) => x.id === "r1").offered_at, null);
+// одно предложение за раз: пока первый думает, второму не предлагаю; отказ — сразу следующему
+T.event_signups.push({ id: "r2", event_id: E3, name: "Ян", contact: "@yan", status: "reserve", chat_id: 302, created_at: ++seq, offered_at: null });
+T.event_signups.push({ id: "r3", event_id: E3, name: "Ия", contact: "@iya", status: "reserve", chat_id: 303, created_at: ++seq, offered_at: null });
+await cb(301, "evy:" + E3); assert.match(last(302).text, /Освободилось место/); assert.ok(!to(303).length, "второму пока не предлагаю");
+await cb(302, "evz:" + E3); assert.match(last(303).text, /Освободилось место/);
 console.log("OK", sent.length, "вызовов Telegram");
