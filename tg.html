@@ -58,6 +58,14 @@ textarea.in{min-height:84px;resize:vertical;font:inherit}
 .err{color:#e5484d;font-size:14px;margin:8px 0}
 .note{color:var(--hint);font-size:13px;margin:6px 0 0}
 .toast{position:fixed;left:12px;right:12px;bottom:18px;z-index:20;background:var(--tx);color:var(--bg);border-radius:12px;padding:11px 14px;text-align:center;font-size:14px}
+.goal{background:var(--card);border-radius:14px;padding:10px 14px;cursor:pointer}
+.goal .gt{display:flex;justify-content:space-between;gap:8px;font-size:14px}
+.goal .gt span:last-child{color:var(--hint);white-space:nowrap}
+.bar{height:8px;border-radius:4px;background:var(--bg2);overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;background:var(--btn);border-radius:4px}
+.t.pig{color:var(--link)}
+.qa{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.qa .chip{font-size:13px}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -80,6 +88,7 @@ textarea.in{min-height:84px;resize:vertical;font:inherit}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
 <script src="common.js"></script>
+<script src="piggy.js"></script>
 <script>
 (function(){
   const tg=window.Telegram&&Telegram.WebApp&&Telegram.WebApp.initData!==undefined?Telegram.WebApp:null;
@@ -103,7 +112,9 @@ textarea.in{min-height:84px;resize:vertical;font:inherit}
       try{localStorage.setItem("nr-tg-"+k,v)}catch(_){}}
   };
 
-  const S={items:[],q:"",city:"",age:0,remote:false,fav:false,favs:new Set(),ready:false,profile:{},applied:new Set()};
+  const S={items:[],q:"",city:"",age:0,remote:false,fav:false,favs:new Set(),ready:false,profile:{},applied:new Set(),goal:null};
+  const P=window.Piggy||null;
+  const rub=n=>Math.round(n).toLocaleString("ru-RU")+" ₽";
   const AGES=[14,15,16,17,18];
 
   function chips(){
@@ -112,6 +123,7 @@ textarea.in{min-height:84px;resize:vertical;font:inherit}
     AGES.forEach(a=>add(a===18?"мне 18+":"мне "+a,S.age===a,()=>S.age=S.age===a?0:a));
     add("🏠 Удалённо",S.remote,()=>S.remote=!S.remote);
     add("★ Избранное"+(S.favs.size?" "+S.favs.size:""),S.fav,()=>S.fav=!S.fav);
+    if(P&&!S.goal){const b=el("button","chip","🐷 Копилка");b.type="button";b.onclick=()=>goalView();c.append(b)}
   }
   function save(){store.set("age",String(S.age||""));store.set("city",S.city);store.set("remote",S.remote?"1":"");store.set("favs",[...S.favs].slice(-80).join(","))}
 
@@ -135,12 +147,15 @@ textarea.in{min-height:84px;resize:vertical;font:inherit}
     t.append(el("span","t","с "+(v.age_min||14)+" лет"),el("span","t",v.type||"Подработка"));
     if(v.remote)t.append(el("span","t","удалённо"));
     if(v.expires_at)t.append(el("span","t",NR.expiryText(v.expires_at)));
+    const g=P&&S.goal&&P.toGoal(v.pay,S.goal);
+    if(g&&g.text)t.append(el("span","t pig","🐷 "+g.text));
     return t;
   }
   function render(){
     const list=$("list");list.textContent="";
     if(!S.ready)return;
     const items=filtered();
+    if(P&&S.goal)list.append(goalBanner());
     $("status").textContent=S.items.length?word(items.length)+(S.city?" · "+S.city:""):"";
     if(!items.length){
       const e=el("div","empty");
@@ -189,6 +204,57 @@ textarea.in{min-height:84px;resize:vertical;font:inherit}
     if(c.copy)NR.copy(c.copy);
   }
 
+  // ── 🐷 Копилка на цель: «на что коплю» → сколько смен/часов на каждой вакансии (piggy.js) ──
+  function saveGoal(){store.set("goal",S.goal?JSON.stringify(S.goal):"")}
+  function goalBanner(){
+    const g=S.goal,pct=Math.min(100,Math.round(g.have/g.need*100));
+    const b=el("div","goal");const t=el("div","gt");
+    t.append(el("span",null,"🐷 "+g.name),el("span",null,g.have>=g.need?"✓ собрано!":rub(g.have)+" из "+rub(g.need)));
+    const bar=el("div","bar"),i=document.createElement("i");i.style.width=pct+"%";bar.append(i);
+    b.append(t,bar);b.onclick=()=>goalView();return b;
+  }
+  function piggyBox(v){
+    if(!P||!S.goal)return null;
+    const g=P.toGoal(v.pay,S.goal);if(!g)return null;
+    const b=el("div","box");b.append(el("b",null,"🐷 Копилка «"+S.goal.name+"»"));
+    if(g.done){b.append(el("div",null,"Цель уже собрана — поздравляем! Можно поставить новую."));return b}
+    const left=S.goal.need-S.goal.have;
+    let s="До цели "+rub(left)+": здесь это "+g.text+" (по нижней ставке "+rub(g.rate.amount)+")";
+    if(g.unit==="hour"){const a=S.age||(+v.age_min||14);const day=a<15?4:a<16?5:a<18?7:8;const dd=Math.ceil(g.n/day);s+=" — примерно "+dd+" "+(dd%10===1&&dd%100!==11?"рабочий день":dd%10>=2&&dd%10<=4&&(dd%100<12||dd%100>14)?"рабочих дня":"рабочих дней")+" по "+day+" ч"}
+    b.append(el("div",null,s+". Это прикидка: из зарплаты могут удержать налог 13%, а точную сумму скажет работодатель."));
+    return b;
+  }
+  function goalView(){
+    haptic();mode="goal";
+    const f=$("formView");f.textContent="";
+    if(!inTg){const bb=el("button","btn ghost","← Назад");bb.type="button";bb.onclick=back;f.append(bb)}
+    const g=S.goal||{name:"",need:"",have:""};
+    f.append(el("h2",null,"🐷 Копилка на цель"),el("div","note","Напиши, на что копишь, — у каждой вакансии появится, сколько смен или часов нужно до цели. Хранится только у тебя в Telegram."));
+    const name=field(f,"На что коплю",input(g.name,40,"Наушники, велосипед, поездка…"));
+    const need=field(f,"Сколько нужно, ₽",input(g.need,8,"6000","numeric"));
+    const have=field(f,"Уже есть, ₽",input(g.have,8,"0","numeric"));
+    if(S.goal){
+      const qa=el("div","qa");f.append(el("div","note","Заработал — добавь в копилку:"),qa);
+      [500,1000,2000].forEach(n=>{const b=el("button","chip","+"+rub(n));b.type="button";b.onclick=()=>{have.value=String((parseInt(have.value.replace(/\D/g,""),10)||0)+n);haptic()};qa.append(b)});
+    }
+    const showErr=finish(f,null,"Сохранить");
+    if(S.goal){const del=el("button","btn ghost","Убрать копилку");del.type="button";del.style.color="#e5484d";
+      del.onclick=()=>{S.goal=null;saveGoal();mode=null;submit=null;chips();close();render();toast("Копилка убрана")};f.append(del)}
+    $("detailView").hidden=true;$("listView").hidden=true;f.hidden=false;window.scrollTo(0,0);
+    if(inTg){tg.BackButton.show();tg.MainButton.setText("Сохранить");tg.MainButton.show()}
+    submit=()=>{
+      const n=parseInt(need.value.replace(/\D/g,""),10)||0,h=parseInt(have.value.replace(/\D/g,""),10)||0;
+      if(!name.value.trim())return showErr("Напиши, на что копишь.");
+      if(n<100)return showErr("Укажи сумму цели — от 100 ₽.");
+      const ng=P.cleanGoal({name:name.value,need:n,have:h});if(!ng)return showErr("Проверь сумму.");
+      const was=S.goal&&S.goal.have<S.goal.need;
+      S.goal=ng;saveGoal();buzz("success");
+      const v=cur;mode=null;submit=null;$("formView").hidden=true;chips();
+      if(v)open(v);else{close();render()}
+      toast(ng.have>=ng.need?(was?"🎉 Цель собрана! Ты молодец.":"Копилка сохранена"):"Копилка сохранена: осталось "+rub(ng.need-ng.have));
+    };
+  }
+
   let cur=null;
   function open(v){
     cur=v;haptic();
@@ -197,6 +263,7 @@ textarea.in{min-height:84px;resize:vertical;font:inherit}
     if(v.description)d.append(el("div","desc",v.description));
     const ct=el("div","box");ct.append(el("b",null,"Как откликнуться"),el("div",null,v.contact||"контакт не указан"));d.append(ct);
     const law=lawBox(v);if(law)d.append(law);
+    const pg=piggyBox(v);if(pg)d.append(pg);
     const sh=el("div","box");sh.append(el("b",null,"🛡 Осторожно"),el("div",null,"Честный работодатель не просит денег за обучение или форму, не просит оформить на себя карту или сим-карту и не платит «только наличными курьером». Сомневаешься — нажми «Пожаловаться» внизу."));d.append(sh);
     const fav=S.favs.has(String(v.id));
     const bf=el("button","btn ghost",fav?"★ В избранном":"☆ В избранное");bf.type="button";
@@ -304,10 +371,11 @@ textarea.in{min-height:84px;resize:vertical;font:inherit}
   $("siteLink").onclick=e=>{e.preventDefault();go(SITE)};
 
   async function load(){
-    const [age,city,remote,favs,profile,applied]=await Promise.all(["age","city","remote","favs","profile","applied"].map(k=>store.get(k)));
+    const [age,city,remote,favs,profile,applied,goal]=await Promise.all(["age","city","remote","favs","profile","applied","goal"].map(k=>store.get(k)));
     S.age=+age||0;S.remote=remote==="1";S.favs=new Set((favs||"").split(",").filter(Boolean));
     try{S.profile=JSON.parse(profile||"{}")||{}}catch(_){S.profile={}}
     S.applied=new Set((applied||"").split(",").filter(Boolean));
+    try{S.goal=P&&goal?P.cleanGoal(JSON.parse(goal)):null}catch(_){S.goal=null}
     // город из ссылки бота: t.me/бот?startapp=city_Москва или tg.html?city=…
     const sp=(inTg&&tg.initDataUnsafe&&tg.initDataUnsafe.start_param)||"";
     const urlCity=new URLSearchParams(location.search).get("city")||(sp.startsWith("city_")?decodeURIComponent(sp.slice(5)).replace(/_/g," "):"");
