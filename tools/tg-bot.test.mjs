@@ -121,7 +121,7 @@ T.event_signups.find((x) => x.chat_id === 8e15 + 6).offered_at = new Date(Date.n
 await post({ tick: 1 });
 assert.match(vsent(6).at(-1).message, /не ответил\(а\) за 30 минут/);
 await vmsg(7, "у меня странный вопрос про налоги"); const qid = T.bot_questions.at(-1).id ?? null;
-assert.ok(to(900).some((t) => /ВК vk\.com\/id7/.test(t)));
+assert.ok(to(900).some((t) => /ВК vk\.com\/id7/.test(t))); assert.equal(T.bot_questions.at(-1).escalated, true, "помощник на телефоне ВК-вопросы не берёт");
 // кнопки от бота на телефоне (evr:<запись>:<событие>) тоже работают на сервере
 const E3 = "33333333-2222-3333-4444-555555555555";
 T.events.push({ id: E3, title: "Склад", starts_at: new Date(Date.now() + 5 * 86400e3).toISOString(), capacity: 1, published: true });

@@ -253,7 +253,8 @@ async function vacancyStep(chat: number, u: any, text: string, from: any) {
 }
 
 async function ticket(chat: number, from: any, q: string, why: string) {
-  const ins = await db("POST", "bot_questions", { chat_id: chat, name: from.first_name ?? "", username: from.username ?? "", q: q.slice(0, 1000) }, "return=representation");
+  // вопросы из ВК — сразу «владельцу»: помощник на телефоне отвечает через Telegram и до ВК не достучится (пока ответ не идёт через сервер)
+  const ins = await db("POST", "bot_questions", { chat_id: chat, name: from.first_name ?? "", username: from.username ?? "", q: q.slice(0, 1000), ...(isVk(chat) ? { escalated: true } : {}) }, "return=representation");
   const id = ins?.[0]?.id;
   await send(chat, "Передала вопрос. Ответ придёт сюда же — обычно в течение дня 👌", MENU);
   const own = await ownerId();
