@@ -30,8 +30,8 @@
     <a class="main" href="./"><b>🔎 Найти работу</b><span>new-rabota.ru: поиск по городу и возрасту</span></a>
     <a href="business.html"><b>⚡ Смена под ключ для бизнеса</b><span>Найдём человека, подтвердим выход, заменим бесплатно. Сейчас в Саратове</span></a>
     <a href="https://t.me/NEWIrabota" target="_blank" rel="noopener"><b>📢 Telegram-канал @NEWIrabota</b><span>Новые вакансии и смены</span></a>
-    <a href="https://vk.ru/im/channels/-243547873" target="_blank" rel="noopener"><b>💬 ВКонтакте</b><span>Канал New.работа</span></a>
-    <a id="botLink" href="#" target="_blank" rel="noopener" hidden><b>🤖 Бот в Telegram</b><span>Подпишись на вакансии своего города</span></a>
+    <a href="https://vk.ru/club243548676" target="_blank" rel="noopener"><b>💬 ВКонтакте</b><span>Сообщество New.работа</span></a>
+    <a href="https://t.me/New_Net_rabota_bot" target="_blank" rel="noopener"><b>🤖 Бот @New_Net_rabota_bot</b><span>Пришлёт новые вакансии. Отписаться: /stop</span></a>
     <a href="guide.html"><b>📘 Гид подростку</b><span>Что разрешает закон, документы, как не попасть на обман</span></a>
     <a href="consent.html"><b>📝 Согласие родителей</b><span>Готовый бланк для 14–17 лет</span></a>
     <a href="resume.html"><b>📄 Резюме за 2 минуты</b><span>Конструктор с подсказками</span></a>
@@ -41,9 +41,5 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
 <script src="common.js"></script>
-<script>
-// ссылка на бота берётся из настроек сайта; нет настроек — кнопка просто не показывается
-try{NR.settings().then(function(s){var l=s&&s.bot_username?NR.botLink(s.bot_username,""):"";if(l){var a=document.getElementById("botLink");a.href=l;a.hidden=false}}).catch(function(){})}catch(e){}
-</script>
 </body>
 </html>

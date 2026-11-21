@@ -114,7 +114,7 @@
 
   /** Ссылка подписки в бот на конкретный город (Telegram принимает только латиницу, поэтому город кодируем). */
   function botLink(bot, city){
-    const u=String(bot||"").replace(/^@/,"").trim(); if(!u) return null;
+    const u=String(bot||"New_Net_rabota_bot").replace(/^@/,"").trim(); if(!u) return null;
     if(!city) return "https://t.me/"+u;
     const b=btoa(unescape(encodeURIComponent(city.trim().slice(0,30)))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
     return "https://t.me/"+u+"?start=c_"+b;

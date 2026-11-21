@@ -72,7 +72,7 @@
         const acts=el("div","acts");
         {const link=NR.botLink(state.settings.bot_username,state.city);if(link){const a=el("a","btn btn-primary","🔔 Подписаться в боте");a.href=link;a.target="_blank";a.rel="noopener";acts.append(a)}}
         {const a=el("a","btn btn-ghost","📢 Канал @NEWIrabota");a.href="https://t.me/NEWIrabota";a.target="_blank";a.rel="noopener";acts.append(a)}
-        {const a=el("a","btn btn-ghost","💬 Мы ВКонтакте");a.href="https://vk.ru/im/channels/-243547873";a.target="_blank";a.rel="noopener";acts.append(a)}
+        {const a=el("a","btn btn-ghost","💬 Мы ВКонтакте");a.href="https://vk.ru/club243548676";a.target="_blank";a.rel="noopener";acts.append(a)}
         box.append(acts,el("h3",null,"Ищете сотрудников 14–25 лет?"),el("p",null,"Разместите вакансию бесплатно или закажите «Смену под ключ»: найдём человека, проконтролируем выход и бесплатно заменим, если он не придёт."));
         const acts2=el("div","acts");
         if(state.settings.submissions_open!==false){const b=el("button","btn btn-primary","＋ Разместить смену или вакансию");b.type="button";b.onclick=chooseForm;acts2.append(b)}

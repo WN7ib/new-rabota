@@ -292,11 +292,14 @@ async function announce(v: any, skipChat?: number): Promise<number> {
   if (ch) await send(ch, card(v) + `\n🔗 ${link}\n\n#вакансия` + (v.city ? " #" + String(v.city).replace(/[^\p{L}\d]/gu, "") : "") + (v.remote ? " #удалённо" : ""),
     { inline_keyboard: [[{ text: "Открыть на сайте", url: link }], [{ text: "⚡ Нужен человек на смену? Смена под ключ", url: `${SITE}business.html#shift` }]] });
   const c5 = (v.city ?? "").toLowerCase().slice(0, 5);
+  // «всем»: по умолчанию новая вакансия уходит ВСЕМ подписчикам бота (у кого выбран город; кто нажал /stop — не получает).
+  // Владелец может сузить до «только свой город» командой /all off.
+  const toAll = (await cfg("broadcast_all")) !== "0";
   const subs: any[] = (await db("GET", `bot_users?select=chat_id,city&city=not.is.null&limit=1000`)) ?? [];
   let n = 0;
   for (const s of subs) {
     const sc = String(s.city).toLowerCase();
-    if ((c5 && sc.startsWith(c5)) || (v.remote && sc.startsWith("удал"))) { if (s.chat_id !== skipChat) { await send(s.chat_id, "🆕 Новая вакансия:\n" + card(v) + `\n🔗 ${link}`); n++; } }
+    if (toAll || (c5 && sc.startsWith(c5)) || (v.remote && sc.startsWith("удал"))) { if (s.chat_id !== skipChat) { await send(s.chat_id, "🆕 Новая вакансия:\n" + card(v) + `\n🔗 ${link}`); n++; } }
     if (n >= 200) break;
   }
   return n;
@@ -426,6 +429,7 @@ async function ownerCmd(chat: number, m: any, text: string): Promise<boolean> {
     await send(chat, `Бот на сервере, работает 24/7.\nПодписчиков: ${users}, вакансий на проверке: ${pend.length}.\n` + (open.length ? "Без ответа:\n" + open.map((q) => `#q${q.id} ${q.name}: «${String(q.q).slice(0, 80)}»`).join("\n") : "Все вопросы отвечены."));
     return true;
   }
+  if (text === "/all" || text.startsWith("/all ")) { const on = !/\boff\b|выкл|нет|0/i.test(text.slice(4)); await setCfg("broadcast_all", on ? "1" : "0"); await send(chat, on ? "Новые вакансии теперь буду присылать ВСЕМ подписчикам (кто не нажимал /stop)." : "Новые вакансии — только подписчикам своего города и по удалёнке."); return true; }
   if (text === "/channel" || text.startsWith("/channel ")) { const c = text.slice(8).trim(); await setCfg("channel", c); await send(chat, c ? `Новые вакансии буду публиковать в ${c} (бот должен быть админом канала).` : "Публикация в канал выключена."); return true; }
   return false;
 }
