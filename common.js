@@ -135,5 +135,33 @@
   // уходя со страницы — отправить изменения (избранное, отклики и т.д.)
   document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden"&&syncKey())syncPush()});
 
-  window.NR = {sb, el, toast, today, settings, contactLink, respondButton, applyButton, reportDialog, botLink, copy, ageWord, expiryText, syncKey, syncPush, syncPull, syncBundle};
+  // ── согласие на обработку персональных данных (152-ФЗ, с 01.09.2025 — отдельным документом): перед первой отправкой
+  // формы с именем или контактом показываю окно с галочкой и ссылкой на текст согласия. Формы кода не меняются.
+  const PD_VER="pd-2026-11-25";
+  let pdMem=false;   // если хранилище браузера закрыто — согласие помню до перезагрузки страницы
+  const pdOk=()=>{if(pdMem)return true;try{return localStorage.getItem("nr-pd")===PD_VER}catch(_){return false}};
+  const PD_RX=/контакт|телефон|telegram|телеграм|почт|e-?mail|имя|как к тебе|фио|name|contact|phone/i;
+  const pdForm=f=>{if(!f||f.dataset.nopd!=null||/^(login|newpass|searchForm|askForm)$/.test(f.id||"")||/admin\.html/.test(location.pathname))return false;
+    return [...f.querySelectorAll("input,textarea")].some(i=>i.type!=="hidden"&&i.type!=="checkbox"&&i.name!=="website"&&PD_RX.test([i.name,i.id,i.placeholder,i.getAttribute("aria-label")].join(" ")))};
+  function pdDialog(onYes){
+    const sh=el("div","sheet"); const f=el("form","form"); f.dataset.nopd="";
+    f.append(el("h2",null,"Согласие на обработку данных"),el("p","hint full","Чтобы отправить форму, нужно твоё согласие на обработку указанных в ней данных (имя, контакт и т.п.). Они нужны только для этой цели: передать отклик, опубликовать вакансию или ответить тебе."));
+    const lab=el("label","full"); lab.style.cssText="display:flex;gap:10px;align-items:flex-start;margin:6px 0";
+    const cb=document.createElement("input"); cb.type="checkbox"; cb.style.cssText="margin-top:4px;width:20px;height:20px;flex:none";
+    const t=el("span"); t.innerHTML='Согласен(на) на обработку персональных данных по <a href="soglasie.html" target="_blank">тексту согласия</a> и <a href="privacy.html" target="_blank">политике</a>. Если мне нет 18 — с ведома родителей.';
+    lab.append(cb,t); f.append(lab);
+    const err=el("p","err","Поставь галочку — без согласия отправить нельзя."); err.hidden=true; f.append(err);
+    const row=el("div","row"); const no=el("button","btn btn-ghost","Отмена"); no.type="button"; const yes=el("button","btn btn-primary","Согласен(на), отправить"); yes.type="submit"; row.append(no,yes); f.append(row);
+    sh.append(f); document.body.append(sh);
+    no.onclick=()=>sh.remove();
+    f.addEventListener("submit",e=>{e.preventDefault(); if(!cb.checked){err.hidden=false;return}
+      pdMem=true; try{localStorage.setItem("nr-pd",PD_VER);localStorage.setItem("nr-pd-at",new Date().toISOString())}catch(_){}
+      sh.remove(); onYes()});
+  }
+  document.addEventListener("submit",e=>{const f=e.target; if(pdOk()||!pdForm(f))return;
+    e.preventDefault(); e.stopImmediatePropagation();
+    pdDialog(()=>{ try{f.requestSubmit()}catch(_){f.dispatchEvent(new Event("submit",{cancelable:true,bubbles:true}))} });
+  },true);
+
+  window.NR = {sb, el, toast, today, settings, contactLink, respondButton, applyButton, reportDialog, botLink, copy, ageWord, expiryText, syncKey, syncPush, syncPull, syncBundle, pdOk};
 })();

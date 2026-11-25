@@ -9,7 +9,7 @@
 <meta name="description" content="Конструктор резюме для первой работы: заполни поля — Newi подскажет, что добавить, и соберёт готовое резюме для печати или PDF.">
 <meta name="theme-color" content="#2F86F5">
 <link rel="icon" type="image/png" href="favicon.png">
-<link rel="stylesheet" href="style.css?v=11">
+<link rel="stylesheet" href="style.css?v=12">
 <style>
 .rs{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;margin-top:14px;align-items:start}
 @media (max-width:860px){.rs{grid-template-columns:minmax(0,1fr)}}
@@ -44,7 +44,7 @@
   <div class="rs">
     <div style="display:flex;flex-direction:column;gap:12px;min-width:0">
       <div class="tips" aria-live="polite"><div class="ava" data-mascot></div><div><b>Newi подсказывает</b><ul id="tips"></ul></div></div>
-      <form id="rf" autocomplete="on">
+      <form id="rf" data-nopd autocomplete="on">
         <label>Имя и фамилия<input name="name" maxlength="60" placeholder="Анна Смирнова"></label>
         <label>Возраст<input name="age" type="number" min="14" max="30" inputmode="numeric" placeholder="16"></label>
         <label>Город<input name="city" maxlength="40" placeholder="Саратов"></label>
@@ -69,11 +69,11 @@
     </div>
   </div>
 </main>
-<footer class="foot"><div class="wrap"><span>© 2026 New.работа<span id="support"></span></span><span><a href="guide.html#resume" style="color:var(--muted)">Как написать резюме — гид</a></span></div></footer>
+<footer class="foot"><div class="wrap"><span>© 2026 New.работа<span id="support"></span></span><span><a href="guide.html#resume" style="color:var(--muted)">Как написать резюме — гид</a> · <a href="privacy.html" style="color:var(--muted)">Персональные данные</a></span></div></footer>
 <div class="toast" id="toast" hidden></div>
 <script src="vendor/supabase.js?v=1"></script>
 <script src="config.js?v=2"></script>
-<script src="common.js?v=2"></script>
+<script src="common.js?v=3"></script>
 <script src="mascot.js?v=3"></script>
 <script>
 (function(){

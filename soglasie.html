@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<script>try{var t=localStorage.getItem("nr-theme");if(!t&&/SamsungBrowser/i.test(navigator.userAgent))t="dark";if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<title>Согласие на обработку персональных данных · New.работа</title>
+<meta name="description" content="Текст согласия на обработку персональных данных на сайте New.работа.">
+<meta name="theme-color" content="#2F86F5">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="stylesheet" href="style.css?v=12">
+</head>
+<body>
+<header class="mininav"><div class="wrap"><a class="home" href="./"><img src="logo.png?v=2" alt="">New.работа</a><a href="./">Вакансии →</a></div></header>
+<main class="wrap page">
+  <h1>Согласие на обработку персональных данных</h1>
+  <p class="lead">Отдельный документ (ч. 1 ст. 9 152-ФЗ). Ты даёшь это согласие, когда ставишь галочку «Согласен(на) на обработку персональных данных» перед отправкой формы на сайте.</p>
+  <p>Я, отправляя форму на сайте new-rabota.ru, свободно, своей волей и в своём интересе даю согласие оператору — <span data-owner>владелец сайта New.работа (ФИО — в разделе «О проекте»)</span>, г. Саратов, почта <a data-email href="about.html#contactsP">адрес почты указан в разделе «О проекте»</a> — на обработку моих персональных данных:</p>
+  <ol>
+    <li><b>Данные:</b> имя, возраст, город, контакт (ник Telegram, телефон или адрес почты), текст, который я сам написал в форме (о себе, вакансия, вопрос, отзыв, заказ).</li>
+    <li><b>Цели:</b> передать мой отклик или запись работодателю или организатору; опубликовать вакансию и контакт для отклика (если я работодатель); ответить на мой вопрос или обращение; присылать подходящие вакансии, если я подписался.</li>
+    <li><b>Действия:</b> сбор, запись, систематизация, хранение, уточнение, использование, передача адресату отклика (работодателю или организатору), публикация контакта работодателя в вакансии, обезличивание, блокирование, удаление — с использованием средств автоматизации и без них.</li>
+    <li><b>Срок:</b> до достижения целей, но не дольше 6 месяцев после закрытия вакансии или мероприятия; для подписки — пока я подписан.</li>
+    <li><b>Отзыв:</b> я могу отозвать согласие в любой момент, написав на почту оператора или в бот поддержки; данные будут удалены в течение 10 рабочих дней (ч. 2 ст. 9, ч. 5 ст. 21 152-ФЗ).</li>
+    <li>Если мне нет 18 лет, я отправляю данные с ведома родителей или законных представителей.</li>
+  </ol>
+  <p>Подробнее — в <a href="privacy.html">Политике обработки персональных данных</a>.</p>
+</main>
+<footer class="foot"><div class="wrap"><span>© 2026 New.работа</span><span><a href="privacy.html" style="color:var(--muted)">Политика ПД</a> · <a href="soglasie.html" style="color:var(--muted)">Согласие</a> · <a href="about.html" style="color:var(--muted)">О проекте</a></span></div></footer>
+<script src="vendor/supabase.js?v=1"></script>
+<script src="config.js?v=2"></script>
+<script src="common.js?v=3"></script>
+<script>
+NR.settings().then(s=>{
+  document.querySelectorAll("[data-owner]").forEach(e=>{if(s.about_owner)e.textContent=s.about_owner});
+  document.querySelectorAll("[data-email]").forEach(e=>{if(s.contact_email){e.textContent=s.contact_email;if(e.tagName==="A")e.href="mailto:"+s.contact_email}});
+}).catch(()=>{});
+</script>
+</body>
+</html>

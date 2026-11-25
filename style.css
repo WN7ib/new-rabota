@@ -278,3 +278,5 @@ main.page{display:block}
 
 .drone-hint{position:fixed;right:max(10px,env(safe-area-inset-right,0px));bottom:calc(max(10px,env(safe-area-inset-bottom,0px)) + 80px);z-index:65;max-width:min(240px,calc(100vw - 24px));background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:14px 14px 4px 14px;padding:10px 13px;font-size:14px;line-height:1.35;box-shadow:0 6px 20px rgba(0,0,0,.25);cursor:pointer}
 .drone-hint[hidden]{display:none}
+.pd{margin:8px 0 14px}.pd th,.pd td{border:1px solid var(--line,#ddd);padding:8px;vertical-align:top;text-align:left}
+@media (max-width:560px){.pd,.pd tbody,.pd tr,.pd td,.pd th{display:block;width:100%}.pd tr:first-child{display:none}.pd tr{margin-bottom:10px}.pd td:first-child{font-weight:600}}
