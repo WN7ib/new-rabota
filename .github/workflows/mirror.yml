@@ -1,0 +1,27 @@
+# Зеркало сайта для тех, у кого домен new-rabota.ru заблокирован оператором:
+# после каждой правки в main ветка «mirror» = тот же сайт, но без файла CNAME (без привязки к домену).
+# Её публикует копия хранилища (fork) на github.io — там адрес другой и не заблокирован.
+name: mirror
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency: mirror
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Ветка mirror без CNAME
+        run: |
+          git config user.name "mirror-bot"
+          git config user.email "mirror-bot@users.noreply.github.com"
+          git checkout -B mirror
+          git rm -q --cached CNAME || true
+          rm -f CNAME
+          git commit -q -m "Зеркало: сайт без привязки к домену (из main ${GITHUB_SHA::7})" || true
+          git push -f origin mirror
