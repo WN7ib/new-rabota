@@ -1,0 +1,16 @@
+# New.работа поверх официального docker-compose.yml Supabase (подключается через COMPOSE_FILE в .env).
+services:
+  functions:
+    env_file:
+      - path: ./functions.env       # TG_TOKEN, PLATEGA_*, … — только на сервере, chmod 600
+        required: false
+  # Пулер Postgres не нужен (сайт ходит через API, перенос и миграции — через docker exec) и наружу его не открываем.
+  supavisor:
+    profiles: ["off"]
+  # Сайт не использует файлы (storage) и realtime — не запускаем: меньше памяти и меньше открытого наружу.
+  storage:
+    profiles: ["off"]
+  imgproxy:
+    profiles: ["off"]
+  realtime:
+    profiles: ["off"]

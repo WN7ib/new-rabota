@@ -96,7 +96,7 @@ async function vkSecret(): Promise<string> {
 // подключение сообщества: код подтверждения, Callback-сервер (эта функция), события «сообщение» и «нажата кнопка», сообщения и кнопка «Начать»
 async function vkSetup(force = false): Promise<string> {
   if (!(await vkToken())) return "нет ключа ВК";
-  const url = `${SB}/functions/v1/tg-bot?vk=1`;
+  const url = `${Deno.env.get("SUPABASE_PUBLIC_URL") ?? SB}/functions/v1/tg-bot?vk=1`;   // на своём сервере SB — внутренний адрес
   if (!force && (await cfg("vk_setup")) === url) return "уже подключено";
   const g = await vk("groups.getById", {});
   const gr = g?.response?.groups?.[0] ?? g?.response?.[0];
