@@ -1,5 +1,5 @@
 {
-  "name": "New.работа — работа и смены для молодёжи",
+  "name": "New.работа",
   "short_name": "New.работа",
   "description": "Карта Саратова: смены, вакансии с 14 лет, отзывы о работодателях и помощница Неви.",
   "lang": "ru",
@@ -7,15 +7,41 @@
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#0B1424",
+  "background_color": "#FFFFFF",
   "theme_color": "#2F86F5",
   "icons": [
-    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
-    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
-    {"src": "apple-touch-icon.png", "sizes": "180x180", "type": "image/png"}
+    {
+      "src": "app-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "app-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "app-icon-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
   ],
   "shortcuts": [
-    {"name": "Вакансии списком", "url": "./"},
-    {"name": "Смены и мероприятия", "url": "events.html"}
+    {
+      "name": "Вакансии списком",
+      "url": "./"
+    },
+    {
+      "name": "Смены и мероприятия",
+      "url": "events.html"
+    }
   ]
 }
