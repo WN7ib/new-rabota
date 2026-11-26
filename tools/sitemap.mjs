@@ -2,14 +2,15 @@
 import { readFileSync, writeFileSync } from "node:fs";
 const cfg = readFileSync("config.js", "utf8");
 const url = cfg.match(/supabaseUrl\s*:\s*"([^"]+)"/)[1], key = cfg.match(/supabaseKey\s*:\s*"([^"]+)"/)[1];
-const SITE = "https://new-rabota.ru/";
+// домен new-rabota.ru заблокирован (26.11) — пока сайт на github.io; вернуть домен — поменять тут и в robots.txt
+const SITE = "https://wn7ib.github.io/new-rabota/";
 async function q(path) {
   try { const r = await fetch(`${url}/rest/v1/${path}`, { headers: { apikey: key, Authorization: `Bearer ${key}` } }); return r.ok ? await r.json() : []; }
   catch { return []; }
 }
 const today = new Date().toISOString().slice(0, 10);
 const pages = [["", "hourly", "1.0"], ["events.html", "daily", "0.8"], ["map.html", "daily", "0.6"], ["resume.html", "monthly", "0.7"],
-  ["guide.html", "monthly", "0.7"], ["business.html", "monthly", "0.8"], ["about.html", "monthly", "0.3"]];
+  ["guide.html", "monthly", "0.7"], ["business.html", "monthly", "0.8"], ["about.html", "monthly", "0.3"], ["nikita-yagodin.html", "monthly", "0.6"]];
 const vac = await q("vacancies?select=id,created_at,expires_at&status=eq.approved&order=created_at.desc&limit=5000");
 const live = vac.filter((v) => !v.expires_at || v.expires_at >= today);
 const x = (s) => s.replace(/&/g, "&amp;");
