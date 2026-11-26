@@ -400,6 +400,20 @@
         ],
         "verify_jwt": false
       }
+    },
+    {
+      "id": "2026-11-26-auth-urls",
+      "title": "Письма «сбросить пароль» админки — на новый адрес сайта (wn7ib.github.io)",
+      "do": "auth_urls",
+      "args": {
+        "site": "https://wn7ib.github.io/new-rabota/",
+        "allow": [
+          "https://wn7ib.github.io/new-rabota/**",
+          "https://new-rabota.ru/**",
+          "https://www.new-rabota.ru/**",
+          "https://nw7ib.github.io/new-rabota/**"
+        ]
+      }
     }
   ]
 }
