@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<script>try{var t=localStorage.getItem("nr-theme");if(!t&&/SamsungBrowser/i.test(navigator.userAgent))t="dark";if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<title>Карта Саратова · New.работа</title>
+<meta name="description" content="New.работа — карта Саратова: смены, мероприятия и вакансии для молодёжи от 14 лет, честные отзывы о работодателях, маршрут и помощница Неви.">
+<link rel="canonical" href="https://wn7ib.github.io/new-rabota/karta.html">
+<meta name="theme-color" content="#2F86F5">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="style.css?v=13">
+<style>
+html,body{height:100%;overflow:hidden}
+body{margin:0;-webkit-tap-highlight-color:transparent}
+#map{position:fixed;inset:0;z-index:1;background:var(--bg)}
+.leaflet-control-attribution{font-size:10px;background:color-mix(in srgb,var(--surface) 70%,transparent)!important;color:var(--muted)!important}
+.leaflet-control-attribution a{color:var(--muted)!important}
+:root[data-theme="dark"] .leaflet-tile-pane{filter:invert(92%) hue-rotate(190deg) brightness(88%) contrast(105%) saturate(80%)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .leaflet-tile-pane{filter:invert(92%) hue-rotate(190deg) brightness(88%) contrast(105%) saturate(80%)}}
+
+.glass{background:color-mix(in srgb,var(--surface) 92%,transparent);border:1px solid var(--line);box-shadow:0 8px 28px rgb(6 18 40 / .18);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.hud{position:fixed;top:max(10px,env(safe-area-inset-top));left:12px;right:12px;z-index:20;display:grid;gap:8px;pointer-events:none}
+.bar{pointer-events:auto;display:flex;align-items:center;gap:8px;border-radius:18px;padding:7px}
+.bar img.klogo{width:34px;height:34px;border-radius:11px;flex:none}
+.bar input{flex:1;min-width:0;border:0;background:transparent;padding:6px 2px;font:500 15px var(--f-body);color:var(--ink);outline:none}
+.bar input::placeholder{color:var(--muted)}
+.sq{width:36px;height:36px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink);display:grid;place-items:center;font-size:16px;cursor:pointer;flex:none}
+.lvl{border:1px solid color-mix(in srgb,var(--accent) 40%,transparent);background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--accent);border-radius:12px;padding:7px 10px;font:700 12px var(--f-body);white-space:nowrap;cursor:pointer}
+.chips{pointer-events:auto;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:0 2px}
+.chips::-webkit-scrollbar{display:none}
+.chips .chip{flex:none;box-shadow:0 4px 14px rgb(6 18 40 / .12)}
+
+.rail{position:fixed;right:12px;top:calc(max(10px,env(safe-area-inset-top)) + 112px);z-index:18;display:grid;gap:8px;justify-items:center}
+.rail .sq{width:42px;height:42px;font-size:18px;font-weight:700}
+.nevi{width:62px;height:66px;border-radius:18px;border:1.5px solid color-mix(in srgb,var(--accent) 55%,transparent);display:grid;place-items:center;padding:4px 4px 2px;cursor:pointer;background:var(--surface)}
+.nevi img{width:44px;height:44px;display:block}
+.nevi b{font:800 9px var(--f-body);letter-spacing:.08em;color:var(--accent)}
+.nevi.talk{animation:pulse 1s ease-in-out infinite alternate}
+@keyframes pulse{to{box-shadow:0 0 0 6px color-mix(in srgb,var(--accent) 25%,transparent)}}
+
+.ksheet{position:fixed;left:0;right:0;bottom:0;z-index:25;border-radius:24px 24px 0 0;border-bottom:0;padding:6px 16px calc(14px + env(safe-area-inset-bottom));max-height:56dvh;overflow-y:auto;transition:max-height .25s ease;overscroll-behavior:contain}
+.ksheet.min{max-height:64px;overflow:hidden}
+.grip{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:4px 0 10px;cursor:pointer}
+.grip i{width:40px;height:5px;border-radius:9px;background:var(--line);display:block}
+.grip .r{justify-self:end}
+.pill{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;padding:4px 10px;font:600 12px var(--f-body);cursor:pointer}
+.ttl{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.ttl h2{margin:0;font:800 18px/1.25 var(--f-head,var(--f-body));font-family:"Unbounded",var(--f-body);letter-spacing:-.01em}
+.sub{color:var(--muted);font-size:13px;margin-top:3px}
+.star{flex:none;background:var(--accent);color:var(--accent-ink);border-radius:12px;padding:6px 10px;font:800 13px var(--f-body)}
+.item span.star{color:var(--accent-ink)}.item span.star.none{color:var(--muted)}.item span.star.bad{color:#fff}
+a.btn{text-decoration:none}
+.star.bad{background:var(--danger);color:#fff}.star.none{background:var(--chip);color:var(--muted)}
+.ktags{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.tg{font:600 12px var(--f-body);padding:4px 9px;border-radius:9px;background:var(--chip);color:var(--accent)}
+.tg.good{color:var(--good);background:color-mix(in srgb,var(--good) 14%,transparent)}
+.tg.bad{color:var(--danger);background:color-mix(in srgb,var(--danger) 14%,transparent)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+.stat{border:1px solid var(--line);background:var(--bg);border-radius:12px;padding:8px 10px}
+.stat small{display:block;color:var(--muted);font-size:11px}.stat b{font-size:14px}
+.cta{display:grid;grid-template-columns:1.25fr 1fr 1fr;gap:8px;margin:4px 0 12px}
+.cta .btn{padding:11px 6px;font-size:13.5px;justify-content:center;border-radius:12px}
+.sec{font:700 13px var(--f-body);color:var(--muted);margin:12px 0 8px;display:flex;justify-content:space-between}
+.item{border:1px solid var(--line);background:var(--bg);border-radius:12px;padding:10px 12px;margin-bottom:8px;display:block;color:var(--ink);text-decoration:none}
+.item b{display:block}.item span{color:var(--muted);font-size:13px}
+.rv .h{display:flex;justify-content:space-between;font:700 12.5px var(--f-body);margin-bottom:3px}.rv .h span{color:var(--accent)}
+.rv p{margin:0;font-size:13.5px;line-height:1.4}
+.klist .item{display:flex;justify-content:space-between;gap:10px;align-items:center;cursor:pointer}
+.step{display:flex;gap:10px;align-items:flex-start}.step em{flex:none;font-style:normal;width:24px;height:24px;border-radius:8px;background:var(--chip);color:var(--accent);display:grid;place-items:center;font:800 12px var(--f-body)}
+.kmodes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0}
+.mode{border:1px solid var(--line);background:var(--bg);border-radius:12px;padding:8px;text-align:center;cursor:pointer;color:var(--ink)}
+.mode b{display:block;font-size:15px}.mode small{color:var(--muted)}
+.mode[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}.mode[aria-pressed="true"] small{color:inherit;opacity:.85}
+
+.ov{position:fixed;inset:0;z-index:40;background:rgb(4 11 22 / .55);backdrop-filter:blur(3px);display:none;align-items:flex-end}
+.ov.on{display:flex}
+.dr{width:100%;max-height:86dvh;overflow-y:auto;background:var(--surface);border-radius:24px 24px 0 0;border-top:1px solid var(--line);padding:16px 16px calc(20px + env(safe-area-inset-bottom))}
+.dh{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
+.dh h3{margin:0;font:800 17px "Unbounded",var(--f-body)}
+.who{display:flex;gap:12px;align-items:center}.who img{width:64px;height:64px}
+.bubble{border:1px solid var(--line);background:var(--bg);border-radius:16px;padding:12px 14px;font-size:14px;line-height:1.5;margin-bottom:10px}
+.track{height:9px;border-radius:9px;background:var(--chip);overflow:hidden;margin:8px 0 4px}.track i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--good));border-radius:9px;transition:width .3s}
+.week{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:10px}
+.week span{border:1px solid var(--line);border-radius:12px;padding:8px 0;text-align:center;font:700 12px var(--f-body);color:var(--muted)}
+.week span.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:4px;margin:12px 0}
+.tabs button{border:0;background:none;border-radius:10px;padding:8px;font:700 13px var(--f-body);color:var(--muted);cursor:pointer}
+.tabs button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.q{border:1px solid var(--line);background:var(--bg);border-radius:14px;padding:11px 12px;margin-bottom:8px}
+.q .h{display:flex;justify-content:space-between;gap:8px;font-weight:700}.q .h span{color:var(--accent);white-space:nowrap}
+.q small{color:var(--muted)}
+.ach{display:grid;grid-template-columns:1fr 1fr;gap:8px}.ach div{border:1px solid var(--line);background:var(--bg);border-radius:14px;padding:10px}.ach div.lock{opacity:.5}
+.ach small{display:block;color:var(--muted);font-size:12px}
+.fld{margin-bottom:10px}.fld label{display:block;font:600 12px var(--f-body);color:var(--muted);margin-bottom:4px}
+.rate{display:flex;gap:6px}.rate button{flex:1;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:8px 0;font-size:17px;cursor:pointer;color:var(--muted)}.rate button.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.note{font-size:12px;color:var(--muted);margin-top:8px}
+.pin{transform:translate(-50%,-100%);display:inline-flex;align-items:center;gap:4px;white-space:nowrap;border-radius:12px;padding:4px 9px;font:800 12px var(--f-body);color:#fff;background:var(--accent);border:2px solid #fff;box-shadow:0 5px 14px rgb(6 18 40 / .35)}
+.pin.ev{background:var(--good)}.pin.city{background:#7c4dff;font-size:13px;padding:6px 11px}.pin.sel{outline:3px solid color-mix(in srgb,var(--accent) 45%,transparent)}
+.mepin{width:18px;height:18px;border-radius:50%;background:var(--accent);border:3px solid #fff;box-shadow:0 0 0 6px color-mix(in srgb,var(--accent) 30%,transparent)}
+@media (min-width:760px){.ksheet{left:12px;right:auto;width:420px;bottom:12px;border-radius:24px;border-bottom:1px solid var(--line)}.dr{max-width:520px;margin:0 auto;border-radius:24px 24px 0 0}}
+</style>
+</head>
+<body>
+<div id="map" role="region" aria-label="Карта Саратова"></div>
+
+<div class="hud">
+  <div class="bar glass">
+    <a href="./" title="На сайт New.работа"><img class="klogo" src="logo.png?v=2" alt="New.работа"></a>
+    <input id="q" type="search" placeholder="Поиск по Саратову: кафе, промо, смена…" autocomplete="off" aria-label="Поиск">
+    <button class="lvl" id="lvl" type="button">Ур. 1 · 0</button>
+    <button class="sq" id="themeBtn" type="button" aria-label="Тема">◐</button>
+  </div>
+  <div class="chips" id="chips">
+    <button class="chip" data-f="all" aria-pressed="true">Всё</button>
+    <button class="chip" data-f="ev" aria-pressed="false">🟢 Смены и события</button>
+    <button class="chip" data-f="vac" aria-pressed="false">💼 Вакансии</button>
+    <button class="chip" data-f="14" aria-pressed="false">С 14 лет</button>
+    <button class="chip" data-f="good" aria-pressed="false">★ Хорошие отзывы</button>
+  </div>
+</div>
+
+<div class="rail">
+  <button class="sq glass" type="button" id="zin" aria-label="Приблизить">+</button>
+  <button class="sq glass" type="button" id="zout" aria-label="Отдалить">−</button>
+  <button class="sq glass" type="button" id="locBtn" aria-label="Где я">➤</button>
+  <button class="nevi glass" type="button" id="neviBtn" aria-label="Неви"><span data-mascot></span><b>НЕВИ</b></button>
+</div>
+
+<section class="ksheet glass" id="sheet">
+  <div class="grip" id="grip"><span class="pill" id="minBtn">Свернуть</span><i></i><a class="pill r" href="./" style="text-decoration:none">Списком</a></div>
+  <div id="content"><div class="sub">Загружаю Саратов…</div></div>
+</section>
+
+<div class="ov" id="ov"><div class="dr" id="dr"></div></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="vendor/supabase.js?v=1"></script>
+<script src="config.js?v=2"></script>
+<script src="common.js?v=3"></script>
+<script src="geo.js"></script>
+<script src="mascot.js"></script>
+<script>
+(function(){
+  const {sb}=NR, $=s=>document.querySelector(s);
+  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const word=(n,a,b,c)=>n%10===1&&n%100!==11?a:n%10>=2&&n%10<=4&&(n%100<10||n%100>=20)?b:c;
+  const fmt=d=>new Date(d).toLocaleString("ru-RU",{day:"numeric",month:"long",hour:"2-digit",minute:"2-digit"});
+  const SAR=[51.5331,46.0342];   // центр Саратова (Театральная площадь)
+  const isSar=c=>/саратов/i.test(String(c||""));
+  Mascot.mount();
+
+  // ── прогресс (только на этом телефоне) ──
+  const PK="nr-karta-prog";
+  const wk=()=>{const d=new Date(),j=new Date(d.getFullYear(),0,1);return d.getFullYear()+"-"+Math.ceil(((d-j)/864e5+j.getDay()+1)/7)};
+  let P={xp:0,pts:0,week:wk(),shifts:0,done:{},routes:0,reviews:0,voice:0,opened:{}};
+  try{Object.assign(P,JSON.parse(localStorage.getItem(PK)||"{}"))}catch(e){}
+  if(P.week!==wk()){P.week=wk();P.shifts=0;delete P.done.week}
+  const save=()=>{try{localStorage.setItem(PK,JSON.stringify(P))}catch(e){}};
+  const lvl=()=>1+Math.floor(P.xp/100);
+  const hud=()=>{$("#lvl").textContent="Ур. "+lvl()+" · "+P.pts+" очк."};
+  const QUESTS=[
+    {id:"week",t:"Ритм недели: 5 смен",d:"Отмечай смены кнопкой «+ Смена»",pts:3,xp:60,ok:()=>P.shifts>=5,prog:()=>[P.shifts,5]},
+    {id:"route",t:"Точно вовремя",d:"Построй маршрут до смены",pts:1,xp:20,ok:()=>P.routes>=1,prog:()=>[Math.min(P.routes,1),1]},
+    {id:"voice",t:"Голосовой напарник",d:"Попроси Неви прочитать карточку вслух",pts:1,xp:15,ok:()=>P.voice>=1,prog:()=>[Math.min(P.voice,1),1]},
+    {id:"review",t:"Честный разбор",d:"Оставь отзыв о работодателе (после проверки он появится у всех)",pts:2,xp:35,ok:()=>P.reviews>=1,prog:()=>[Math.min(P.reviews,1),1]},
+    {id:"scout",t:"Разведчик",d:"Открой 5 разных мест на карте",pts:1,xp:20,ok:()=>Object.keys(P.opened).length>=5,prog:()=>[Math.min(Object.keys(P.opened).length,5),5]}
+  ];
+  const ACH=[["Первая смена","Отметить смену",()=>P.shifts>=1||P.done.week],["5 смен за неделю","Закрыть ритм недели",()=>!!P.done.week],["Знаю дорогу","Построить маршрут",()=>P.routes>=1],["Голос команды","Оставить отзыв",()=>P.reviews>=1],["Разведчик Саратова","5 мест на карте",()=>Object.keys(P.opened).length>=5],["Уровень 3","Набрать 200 опыта",()=>lvl()>=3]];
+  function bump(k){P[k]=(P[k]||0)+1;P.xp+=5;save();hud()}
+
+  // ── тема ──
+  $("#themeBtn").onclick=()=>{const r=document.documentElement,dark=r.getAttribute("data-theme")==="dark"||(!r.getAttribute("data-theme")&&matchMedia("(prefers-color-scheme: dark)").matches);r.setAttribute("data-theme",dark?"light":"dark");try{localStorage.setItem("nr-theme",dark?"light":"dark")}catch(e){};NR.toast(dark?"Светлая тема":"Тёмная тема")};
+
+  // ── карта ──
+  const map=L.map("map",{zoomControl:false,attributionControl:true}).setView(SAR,13);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"}).addTo(map);
+  $("#zin").onclick=()=>map.zoomIn();$("#zout").onclick=()=>map.zoomOut();
+  const layer=L.layerGroup().addTo(map);let line=null,meMark=null,me=null;
+
+  // ── данные ──
+  let EV=[],VAC=[],RV={},filter="all",sel=null,routeMode="foot";
+  const key=s=>String(s||"").toLowerCase().replace(/ё/g,"е").replace(/[«»"']/g,"").replace(/\s+/g," ").trim();
+  function companyRating(name){const r=RV[key(name)];if(!r||!r.length)return null;return (r.reduce((a,x)=>a+x.rating,0)/r.length)}
+  function companies(){const m={};for(const v of VAC){const k=key(v.company)||"__"+v.id;(m[k]=m[k]||{kind:"co",id:"co:"+k,name:v.company||v.title,vac:[]}).vac.push(v)}return Object.values(m)}
+  function pass(o){
+    const q=key($("#q").value);
+    if(q&&!key([o.name,o.title,o.place,o.kind,...(o.vac||[]).map(v=>v.title+" "+v.type)].join(" ")).includes(q))return false;
+    if(filter==="ev")return o.kind==="ev";
+    if(filter==="vac")return o.kind==="co";
+    if(filter==="14")return o.kind==="co"?o.vac.some(v=>v.age_min<=14):false;
+    if(filter==="good"){const r=companyRating(o.kind==="co"?o.name:"");return r!=null&&r>=4}
+    return true;
+  }
+  function draw(){
+    layer.clearLayers();
+    for(const e of EV){if(!pass(e))continue;
+      const html=`<div class="pin ev${sel&&sel.id===e.id?" sel":""}">🟢 ${esc(e.title.slice(0,22))}</div>`;
+      L.marker([e.lat,e.lng],{icon:L.divIcon({className:"",html,iconSize:[0,0]}),title:e.title}).on("click",()=>open(e)).addTo(layer)}
+    const cos=companies().filter(pass);
+    if(cos.length){const n=cos.reduce((a,c)=>a+c.vac.length,0);
+      L.marker(SAR,{icon:L.divIcon({className:"",html:`<div class="pin city">💼 ${n} ${word(n,"вакансия","вакансии","вакансий")}</div>`,iconSize:[0,0]}),title:"Вакансии Саратова"}).on("click",()=>listVac()).addTo(layer)}
+  }
+
+  // ── нижняя карточка ──
+  const sheet=$("#sheet"),C=$("#content");
+  function setMin(m){sheet.classList.toggle("min",m);$("#minBtn").textContent=m?"Развернуть":"Свернуть"}
+  $("#grip").onclick=e=>{if(e.target.closest("a"))return;setMin(!sheet.classList.contains("min"))};
+  let ty=0;sheet.addEventListener("touchstart",e=>{ty=e.touches[0].clientY},{passive:true});
+  sheet.addEventListener("touchend",e=>{const d=e.changedTouches[0].clientY-ty;if(sheet.scrollTop<=0&&d>50)setMin(true);else if(d<-50)setMin(false)},{passive:true});
+
+  function home(){
+    sel=null;closeRoute(false);
+    const cos=companies(),nv=VAC.length,ne=EV.length;
+    C.innerHTML=`<div class="ttl"><div><h2>Саратов</h2><div class="sub">${ne} ${word(ne,"смена или событие","смены и события","смен и событий")} на карте · ${nv} ${word(nv,"вакансия","вакансии","вакансий")}</div></div></div>
+      <div class="sec">Ближайшие смены и события</div><div class="klist">${EV.slice(0,4).map(e=>`<div class="item" data-ev="${e.id}"><div><b>${esc(e.title)}</b><span>${esc([e.evkind,fmt(e.starts_at)].join(" · "))}</span></div><span>›</span></div>`).join("")||'<div class="sub">Пока нет смен с точным адресом.</div>'}</div>
+      <div class="sec">Работодатели <a href="#" id="allVac" style="color:var(--accent)">все →</a></div><div class="klist">${cos.slice(0,4).map(coRow).join("")||'<div class="sub">Вакансий в Саратове пока нет.</div>'}</div>
+      <div class="note">Удалёнка для всей России — на <a href="./?remote=1">главной</a>.</div>`;
+    bindRows();const a=$("#allVac");if(a)a.onclick=e=>{e.preventDefault();listVac()};
+  }
+  function coRow(c){const r=companyRating(c.name);return `<div class="item" data-co="${esc(c.id)}"><div><b>${esc(c.name)}</b><span>${c.vac.length} ${word(c.vac.length,"вакансия","вакансии","вакансий")}${c.vac.some(v=>v.age_min<=14)?" · с 14 лет":""}</span></div><span class="star ${r==null?"none":r<3?"bad":""}">★ ${r==null?"—":r.toFixed(1)}</span></div>`}
+  function bindRows(){C.querySelectorAll("[data-ev]").forEach(x=>x.onclick=()=>open(EV.find(e=>e.id===x.dataset.ev)));C.querySelectorAll("[data-co]").forEach(x=>x.onclick=()=>open(companies().find(c=>c.id===x.dataset.co)))}
+  function listVac(){
+    sel=null;setMin(false);const cos=companies().filter(pass);
+    C.innerHTML=`<div class="ttl"><div><h2>Вакансии Саратова</h2><div class="sub">Нажми на работодателя — вакансии и отзывы</div></div><button class="pill" id="back">‹ Назад</button></div><div class="klist" style="margin-top:10px">${cos.map(coRow).join("")||'<div class="sub">Ничего не нашлось.</div>'}</div>`;
+    bindRows();$("#back").onclick=home;
+  }
+  function summary(o){
+    if(o.kind==="ev")return `${o.title}. ${o.evkind}. ${fmt(o.starts_at)}. ${o.place?"Адрес: "+o.place+".":""}`;
+    const r=companyRating(o.name);return `${o.name}. ${o.vac.length} ${word(o.vac.length,"вакансия","вакансии","вакансий")}: ${o.vac.slice(0,3).map(v=>v.title+(v.pay?", "+v.pay:"")).join("; ")}. ${r==null?"Отзывов пока нет.":"Средняя оценка "+r.toFixed(1)+" из 5."}`;
+  }
+  function open(o){
+    if(!o)return;sel=o;P.opened[o.id]=1;save();closeRoute(false);setMin(false);draw();
+    if(o.kind==="ev"){
+      map.setView([o.lat,o.lng],Math.max(map.getZoom(),15));
+      C.innerHTML=`<div class="ttl"><div><h2>${esc(o.title)}</h2><div class="sub">${esc([o.place,"Саратов"].filter(Boolean).join(", "))}</div></div><span class="star" style="background:var(--good)">${esc(o.evkind)}</span></div>
+        <div class="ktags"><span class="tg good">📅 ${esc(fmt(o.starts_at))}</span>${o.capacity?`<span class="tg">мест: ${o.capacity}</span>`:""}</div>
+        <div class="cta"><button class="btn btn-primary" id="rt">➤ Маршрут</button><a class="btn btn-ghost" href="events.html#e-${o.id}">Записаться</a><button class="btn btn-ghost" id="vc">🔊 Голос</button></div>
+        ${o.description?`<div class="item"><span style="white-space:pre-line">${esc(o.description.slice(0,600))}</span></div>`:""}
+        <div class="sec">Отметил выход на смену?</div><button class="btn btn-ghost" id="sh" style="width:100%;justify-content:center">+ Смена (для прокачки Неви)</button>`;
+      $("#rt").onclick=()=>route(o);$("#sh").onclick=shift;
+    }else{
+      const rv=RV[key(o.name)]||[],r=companyRating(o.name),pays=o.vac.map(v=>v.pay).filter(Boolean),ages=Math.min(...o.vac.map(v=>v.age_min));
+      C.innerHTML=`<div class="ttl"><div><h2>${esc(o.name)}</h2><div class="sub">Саратов · ${o.vac.length} ${word(o.vac.length,"вакансия","вакансии","вакансий")}</div></div><span class="star ${r==null?"none":r<3?"bad":""}">★ ${r==null?"нет":r.toFixed(1)}</span></div>
+        <div class="ktags">${o.vac.some(v=>v.verified)?'<span class="tg">✓ Проверено New.работа</span>':""}${ages<=14?'<span class="tg good">С 14 лет</span>':""}${o.vac.some(v=>v.weekend)?'<span class="tg">По выходным</span>':""}${r!=null&&r<3?'<span class="tg bad">Есть жалобы в отзывах</span>':""}</div>
+        <div class="stats"><div class="stat"><small>Отзывы</small><b>${rv.length?r.toFixed(1)+" / 5":"нет"}</b></div><div class="stat"><small>Оплата</small><b>${esc(pays[0]||"договорная")}</b></div><div class="stat"><small>Возраст</small><b>с ${ages} лет</b></div></div>
+        <div class="cta"><a class="btn btn-primary" href="vacancy.html?id=${o.vac[0].id}">Откликнуться</a><button class="btn btn-ghost" id="rvb">+ Отзыв</button><button class="btn btn-ghost" id="vc">🔊 Голос</button></div>
+        <div class="sec">Вакансии</div>${o.vac.map(v=>`<a class="item" href="vacancy.html?id=${v.id}"><b>${esc(v.title)}</b><span>${esc([v.type,v.pay||"по договорённости","с "+v.age_min+" лет"].join(" · "))}</span></a>`).join("")}
+        <div class="sec">Отношение к сотрудникам <span>${rv.length} ${word(rv.length,"отзыв","отзыва","отзывов")}</span></div>
+        ${rv.slice(0,8).map(x=>`<div class="item rv"><div class="h"><b>${esc(x.author||"Аноним")}</b><span>${"★".repeat(x.rating)}${"☆".repeat(5-x.rating)}</span></div><p>${esc(x.body)}</p></div>`).join("")||'<div class="sub">Отзывов пока нет. Работал здесь? Расскажи честно — это поможет ребятам.</div>'}
+        <div class="note">Точный адрес — у работодателя после отклика.</div>`;
+      $("#rvb").onclick=()=>review(o);
+    }
+    $("#vc").onclick=()=>speak(summary(o));
+  }
+
+  // ── маршрут: от тебя (или от центра) — время примерное, точный путь — в Яндекс Картах ──
+  function km(a,b){const r=Math.PI/180,d1=(b[0]-a[0])*r,d2=(b[1]-a[1])*r,x=Math.sin(d1/2)**2+Math.cos(a[0]*r)*Math.cos(b[0]*r)*Math.sin(d2/2)**2;return 6371*2*Math.asin(Math.sqrt(x))}
+  function closeRoute(redraw){if(line){map.removeLayer(line);line=null}if(redraw&&sel)open(sel)}
+  function route(o){
+    bump("routes");const from=me||SAR,to=[o.lat,o.lng],d=Math.max(.3,km(from,to)*1.3);
+    const t={foot:Math.round(d*12)+2,bus:Math.round(d*4)+8,car:Math.round(d*2.5)+4};
+    if(line)map.removeLayer(line);
+    line=L.polyline([from,to],{color:getComputedStyle(document.documentElement).getPropertyValue("--accent").trim()||"#2F86F5",weight:5,opacity:.9,dashArray:"2 10",lineCap:"round"}).addTo(map);
+    map.fitBounds(line.getBounds(),{padding:[90,60]});
+    const draw=()=>{C.innerHTML=`<div class="ttl"><div><h2>≈ ${t[routeMode]} мин · ${d.toFixed(1)} км</h2><div class="sub">${me?"От тебя":"От центра Саратова (нажми ➤, чтобы от тебя)"} до «${esc(o.title)}»</div></div><button class="pill" id="x">✕</button></div>
+      <div class="kmodes">${[["foot","Пешком"],["bus","Автобус"],["car","Такси"]].map(([k,n])=>`<button class="mode" data-m="${k}" aria-pressed="${k===routeMode}"><b>${t[k]} мин</b><small>${n}</small></button>`).join("")}</div>
+      <div class="item step"><em>1</em><span>Открой точный маршрут — с остановками и пересадками.</span></div>
+      <div class="item step"><em>2</em><span>Выходи заранее: на смену лучше прийти за 10 минут.</span></div>
+      <div class="item step"><em>3</em><span>${esc(o.place||"Адрес")} — на месте спроси старшего смены.</span></div>
+      <div class="cta" style="grid-template-columns:1.4fr 1fr"><a class="btn btn-primary" target="_blank" rel="noopener" href="${NRGeo.route(o.lat,o.lng)}">Точный маршрут ↗</a><button class="btn btn-ghost" id="vc">🔊 Озвучить</button></div>
+      <div class="note">Время примерное (по прямой). Точный путь строят Яндекс Карты.</div>`;
+      C.querySelectorAll("[data-m]").forEach(b=>b.onclick=()=>{routeMode=b.dataset.m;draw()});
+      $("#x").onclick=()=>closeRoute(true);$("#vc").onclick=()=>speak(`До «${o.title}» примерно ${t[routeMode]} минут, ${d.toFixed(1)} километра. Выходи заранее, удачной смены!`)};
+    draw();
+  }
+  $("#locBtn").onclick=()=>{
+    if(!navigator.geolocation){NR.toast("Браузер не умеет определять место");return}
+    navigator.geolocation.getCurrentPosition(p=>{me=[p.coords.latitude,p.coords.longitude];if(meMark)meMark.remove();meMark=L.marker(me,{icon:L.divIcon({className:"",html:'<div class="mepin"></div>',iconSize:[18,18]})}).addTo(map);map.setView(me,15);NR.toast("Ты здесь")},()=>NR.toast("Разреши доступ к месту, чтобы считать путь от тебя"),{timeout:12000,maximumAge:600000});
+  };
+
+  // ── голос Неви ──
+  function speak(t){
+    bump("voice");Mascot.set("speak");$("#neviBtn").classList.add("talk");
+    const end=()=>{Mascot.set("happy");$("#neviBtn").classList.remove("talk")};
+    if(!("speechSynthesis" in window)){NR.toast(t);setTimeout(end,1500);return}
+    speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang="ru-RU";u.rate=1.02;u.onend=end;u.onerror=end;speechSynthesis.speak(u);
+  }
+
+  // ── выдвижные окна ──
+  const ov=$("#ov"),dr=$("#dr");
+  ov.onclick=e=>{if(e.target===ov)closeDr()};
+  function openDr(html){dr.innerHTML=html;ov.classList.add("on");Mascot.mount()}
+  function closeDr(){ov.classList.remove("on")}
+  $("#neviBtn").onclick=nevi;$("#lvl").onclick=()=>progress("q");
+
+  function nevi(){
+    const s=sel?summary(sel):`Я Неви. В Саратове сейчас ${EV.length} ${word(EV.length,"смена или событие","смены и события","смен и событий")} на карте и ${VAC.length} ${word(VAC.length,"вакансия","вакансии","вакансий")}. Нажми на точку — расскажу про неё.`;
+    openDr(`<div class="dh"><div class="who"><span data-mascot></span><div><h3>Неви</h3><div class="sub">Уровень ${lvl()} · ${P.pts} очк. · смен на неделе: ${P.shifts}/5</div></div></div><button class="pill" id="cx">✕</button></div>
+      <div class="bubble" id="nb">${esc(s)}</div>
+      <div class="cta" style="grid-template-columns:1fr 1fr"><button class="btn btn-primary" id="say">🔊 Прочитай вслух</button><button class="btn btn-ghost" id="pr">⭐ Прокачка</button></div>
+      <div class="sec">Спроси Неви</div>
+      <div class="klist">${TIPS.map((x,i)=>`<div class="item" data-tip="${i}"><b>${esc(x[0])}</b><span>›</span></div>`).join("")}</div>
+      <div class="note">Полная Неви с голосом и памятью — в приложении Newi на телефоне Никиты; здесь — помощница по карте.</div>`);
+    $("#cx").onclick=closeDr;$("#say").onclick=()=>speak($("#nb").textContent);$("#pr").onclick=()=>progress("q");
+    dr.querySelectorAll("[data-tip]").forEach(x=>x.onclick=()=>{const t=TIPS[+x.dataset.tip][1];$("#nb").textContent=t;Mascot.flash("think",900)});
+  }
+  const TIPS=[
+    ["Как не нарваться на обман?","Никогда не плати за «оформление», «форму» или «обучение» — честный работодатель денег с тебя не берёт. Не отдавай данные карты и коды из СМС. Договорись об оплате заранее и лучше письменно. Видишь красный ★ — почитай отзывы."],
+    ["Мне 14–15, можно работать?","Можно лёгкую работу: с 14 лет — с письменного согласия родителя, не больше 4 часов в день в каникулы и 2,5 часа в учебные дни (ст. 63 и 94 ТК РФ). Ночью и на вредной работе — нельзя. Согласие можно оформить на сайте: раздел «Согласие родителей»."],
+    ["Что взять на первую смену?","Паспорт (или свидетельство), телефон с зарядкой, воду, удобную обувь. Узнай заранее имя старшего смены и как будет оплата — переводом или наличными."],
+    ["Не заплатили — что делать?","Спокойно напомни работодателю и сохрани переписку. Если не помогло — оставь честный отзыв здесь и пожалуйся на вакансию на сайте: модератор проверит. Для серьёзных случаев — трудовая инспекция (онлайнинспекция.рф)."]
+  ];
+  function progress(tab){
+    const w=Math.min(5,P.shifts),pct=Math.min(100,P.xp%100);
+    const qs=QUESTS.map(q=>{const [a,b]=q.prog(),done=!!P.done[q.id],can=q.ok()&&!done;
+      return `<div class="q"><div class="h">${esc(q.t)}<span>+${q.pts} очк.</span></div><small>${esc(q.d)}</small><div class="track"><i style="width:${Math.round(a/b*100)}%"></i></div><div style="display:flex;justify-content:space-between;align-items:center"><small>${a}/${b}</small>${done?'<span class="pill">✓ Получено</span>':can?`<button class="btn btn-primary" style="padding:6px 12px" data-claim="${q.id}">Забрать</button>`:""}</div></div>`}).join("");
+    const tree=[["Голос",1,"Неви читает карточки вслух"],["Маршруты",2,"Подсказки в дороге"],["Разведка",3,"Больше советов по работодателям"],["Наставник",5,"Разбор твоих смен за неделю"]].map(([n,l,d])=>`<div class="q" style="${lvl()>=l?"":"opacity:.55"}"><div class="h">${lvl()>=l?"✦":"🔒"} ${n}<span>ур. ${l}</span></div><small>${d}</small></div>`).join("");
+    const ach=`<div class="ach">${ACH.map(([t,d,f])=>`<div class="${f()?"":"lock"}"><b>${f()?"🏆":"◦"} ${t}</b><small>${d}</small></div>`).join("")}</div>`;
+    openDr(`<div class="dh"><div class="who"><span data-mascot></span><div><h3>Прокачка и Неви</h3><div class="sub">Ур. ${lvl()} · ${P.xp%100}/100 опыта · ${P.pts} очк.</div><div class="track" style="width:160px"><i style="width:${pct}%"></i></div></div></div><button class="pill" id="cx">✕</button></div>
+      <div class="q"><div class="h">Цель недели: 5 смен<span>+3 очк.</span></div><small>Выходи на смены и прокачивай Неви</small><div class="week">${[1,2,3,4,5].map(i=>`<span class="${i<=w?"on":""}">${i<=w?"✓":i}</span>`).join("")}</div><button class="btn btn-primary" id="sh" style="width:100%;justify-content:center;margin-top:10px">+ Смена</button></div>
+      <div class="tabs">${[["q","Квесты"],["t","Древо Неви"],["a","Ачивки"]].map(([k,n])=>`<button data-t="${k}" aria-pressed="${k===tab}">${n}</button>`).join("")}</div>
+      ${tab==="q"?qs:tab==="t"?tree:ach}
+      <div class="note">Прогресс хранится на этом телефоне.</div>`);
+    $("#cx").onclick=closeDr;$("#sh").onclick=()=>{shift();progress(tab)};
+    dr.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>progress(b.dataset.t));
+    dr.querySelectorAll("[data-claim]").forEach(b=>b.onclick=()=>{const q=QUESTS.find(x=>x.id===b.dataset.claim);P.done[q.id]=1;P.pts+=q.pts;P.xp+=q.xp;save();hud();Mascot.flash("happy",1500);progress(tab)});
+  }
+  function shift(){P.shifts++;P.xp+=30;save();hud();Mascot.flash("happy",1200);NR.toast(P.shifts>=5?"5 смен за неделю! Забери награду в «Прокачке»":"Смена отмечена: "+Math.min(P.shifts,5)+"/5")}
+
+  let stars=0;
+  function review(o){
+    stars=0;
+    openDr(`<div class="dh"><h3>Отзыв: ${esc(o.name)}</h3><button class="pill" id="cx">✕</button></div>
+      <div class="fld"><label>Как к вам относились и как платили</label><div class="rate" id="rate">${[1,2,3,4,5].map(i=>`<button data-s="${i}">★</button>`).join("")}</div></div>
+      <div class="fld"><label>Что делал и как всё прошло</label><textarea id="rb" rows="4" maxlength="1500" placeholder="Честно: руководство, перерывы, когда и как перевели деньги…"></textarea></div>
+      <div class="fld"><label>Подпись (необязательно)</label><input type="text" id="ra" maxlength="40" placeholder="Например: Максим, 15 лет"></div>
+      <button class="btn btn-primary" id="send" style="width:100%;justify-content:center">Отправить на проверку</button>
+      <div class="note">Отзыв появится после проверки модератором. Не пиши телефоны и фамилии.</div>`);
+    $("#cx").onclick=closeDr;
+    dr.querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>{stars=+b.dataset.s;dr.querySelectorAll("[data-s]").forEach(x=>x.classList.toggle("on",+x.dataset.s<=stars))});
+    $("#send").onclick=async()=>{
+      const body=$("#rb").value.trim();
+      if(!stars){NR.toast("Поставь оценку звёздами");return}
+      if(body.length<10){NR.toast("Напиши хотя бы пару предложений");return}
+      if(!sb){NR.toast("Сайт не подключён к базе");return}
+      $("#send").disabled=true;
+      const {error}=await sb.from("reviews").insert({company:o.name.slice(0,120),rating:stars,body,author:$("#ra").value.trim()||null});
+      if(error){$("#send").disabled=false;NR.toast("Не отправилось, попробуй позже");return}
+      bump("reviews");closeDr();NR.toast("Спасибо! Отзыв на проверке.");
+    };
+  }
+
+  // поиск и фильтры
+  $("#q").addEventListener("input",()=>{draw();if(!sel)home()});
+  document.querySelectorAll("#chips [data-f]").forEach(b=>b.onclick=()=>{filter=b.dataset.f;document.querySelectorAll("#chips [data-f]").forEach(x=>x.setAttribute("aria-pressed",x===b));draw();if(filter==="vac"||filter==="14"||filter==="good")listVac();else home()});
+
+  // ── загрузка ──
+  hud();
+  (async()=>{
+    if(!sb){C.innerHTML='<div class="sub">Сайт не подключён к базе.</div>';return}
+    const today=NR.today();
+    let v=await sb.from("vacancies").select("id,title,company,city,type,age_min,pay,remote,verified,weekend,expires_at").eq("status","approved").order("created_at",{ascending:false}).limit(500);
+    if(v.error)v=await sb.from("vacancies").select("id,title,company,city,type,age_min,pay,remote").eq("status","approved").limit(500);
+    VAC=(v.data||[]).filter(x=>isSar(x.city)&&!x.remote&&(!x.expires_at||x.expires_at>=today));
+    let e=await sb.from("events").select("id,title,starts_at,place,city,kind,description,capacity,listed,lat,lng").gte("starts_at",new Date().toISOString()).order("starts_at").limit(300);
+    EV=(e.data||[]).filter(x=>x.listed!==false&&x.lat!=null&&x.lng!=null).map(x=>({...x,evkind:x.kind,kind:"ev"}));
+    const r=await sb.from("reviews").select("company,rating,body,author,created_at").eq("status","approved").order("created_at",{ascending:false}).limit(1000);
+    for(const x of r.data||[])(RV[key(x.company)]=RV[key(x.company)]||[]).push(x);
+    draw();home();
+    if(EV.length){const b=L.latLngBounds(EV.map(x=>[x.lat,x.lng]).concat([SAR]));map.fitBounds(b,{padding:[120,60],maxZoom:14})}
+    const want=(location.search.match(/[?&]e=([0-9a-f-]{36})/)||[])[1];if(want)open(EV.find(x=>x.id===want));
+  })();
+})();
+</script>
+</body>
+</html>
