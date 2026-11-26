@@ -63,7 +63,7 @@ globalThis.fetch = async (url, o = {}) => {
   if (o.method === "DELETE") { const del = new Set(rows(p, qs)); T[p] = T[p].filter((x) => !del.has(x)); return ok(undefined); }
 };
 let handler; globalThis.Deno = { env: { get: (k) => ({ SUPABASE_URL: "https://sb.test", SUPABASE_SERVICE_ROLE_KEY: "k", TG_TOKEN: "tok", OWNER_ID: "900" })[k] }, serve: (h) => { handler = h; } };
-await import(process.env.BOT_JS);
+const BOT = await import(process.env.BOT_JS);
 const crypto = await import("node:crypto");
 const secret = crypto.createHash("sha256").update("tok").digest("hex").slice(0, 32);
 const post = (u) => handler(new Request("https://x/", { method: "POST", headers: { "x-telegram-bot-api-secret-token": secret }, body: JSON.stringify(u) }));
@@ -293,4 +293,29 @@ assert.ok(!sent.slice(ph0).some((x) => x.chat_id === "@NEWIrabota"), "в кан�
 assert.ok(to(950).some((t) => /Новая вакансия:\n[\s\S]*Курьер/.test(t)), "подписчику — да");
 assert.ok(!to(900).slice(own0).some((t) => /Ждёт проверки|Жалоба/.test(t)), "на проверку — только с телефона");
 await msg(900, "Никита", "/publish server"); assert.match(last(900).text, /Публикует сервер/);
+// ── признаки обмана: сервер = scam.js сайта, ловит схемы и не трогает обычные вакансии ──
+{
+  const { createRequire } = await import("node:module"); const siteScam = createRequire(import.meta.url)("../scam.js");
+  const V = (title, description, pay, age_min = 16, remote = false) => ({ title, description, pay, age_min, remote });
+  const cases = [
+    [V("Бариста", "Кофейня в центре, обучение бесплатно, график 2/2 по 4 часа", "250 ₽/час"), []],
+    [V("Оператор call-центра", "Звонки по скрипту, офис, официальное оформление", "300 ₽/час", 18), []],
+    [V("Промоутер", "Раздача листовок у ТЦ, выходные", "от 1 500 ₽ за смену"), []],
+    [V("Курьер", "Забери пакет у человека и передай по адресу, оплата наличными", "3000 в день"), [/забери пакет/]],
+    [V("Лёгкий заработок", "Оформи карту на себя и дай данные карты, за каждого приглашённого бонус", "до 100 000"), [/дропперство|карту\/симку/, /пирамиду/, /высокая оплата/]],
+    [V("Отзывы", "Ставить лайки и писать отзывы, нужна предоплата за доступ", "500"), [/предоплатой|деньги с соискателя/]],
+    [V("Помощник", "Работа ночью до утра", "1 руб/час", 14), [/ТК 96/, /ниже МРОТ/]],
+    [V("Грузчик", "Склад, пиши только в личку, без договора", "200 ₽/час", 14), [/14–15/, /в личку/]],
+    [V("Официант", "Кафе", "250 ₽/ч", 16, true), [/очная/]],
+    [V("Пункт выдачи", "Сотрудник ПВЗ 24/7", "220 ₽/час", 16), [/круглосуточно/]],
+    [V("Крипто", "Арбитраж трафика, пассивный доход", "от 30 000 в неделю", 18), [/лайки|задания/, /пирамиду/]],
+  ];
+  for (const [v, want] of cases) {
+    const got = BOT.scamFlags(v); const site = siteScam(v);
+    assert.deepStrictEqual(site, got, "scam.js и сервер расходятся: " + v.title);
+    if (!want.length) assert.deepStrictEqual(got, [], "ложная тревога: " + v.title + " → " + got.join("; "));
+    for (const re of want) assert.ok(got.some((x) => re.test(x)), `${v.title}: нет ${re} в ${JSON.stringify(got)}`);
+  }
+  console.log("OK scamFlags", cases.length, "примеров");
+}
 console.log("OK", sent.length, "вызовов Telegram");

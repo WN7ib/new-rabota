@@ -148,6 +148,8 @@ td.n{font-family:var(--f-mono);white-space:nowrap}
 .stat b{display:block;font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:28px;line-height:1.1}
 .stat span{color:var(--muted);font-size:13px}
 .stat.warn b{color:var(--danger)}
+.scam{grid-column:1/-1;margin-top:8px;padding:8px 10px;border-radius:10px;border:1px solid var(--danger);color:var(--danger);font-size:13px;line-height:1.4}
+.scam b{display:block;margin-bottom:2px}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:12px}
 .chart{display:flex;align-items:flex-end;gap:4px;height:120px;padding-top:8px}
 .chart .col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0;height:100%;justify-content:flex-end}
@@ -351,6 +353,7 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
 <script src="vendor/supabase.js?v=1"></script>
 <script src="config.js?v=2"></script>
 <script src="geo.js"></script>
+<script src="scam.js?v=1"></script>
 <script>
 (function(){
   const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
@@ -472,6 +475,8 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
       if(v.clicks)tags.append(el("span","t","✉ откликов: "+v.clicks));
       tags.append(el("span","t t-age","с "+v.age_min+" лет"),el("span","t",v.type),el("span","date",new Date(v.created_at).toLocaleString("ru-RU",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})));c.append(tags);
       if(v.description)c.append(el("p","desc",v.description));
+      const risk=v.status!=="rejected"&&window.nrScam?window.nrScam(v):[];
+      if(risk.length){const w=el("div","scam");w.append(el("b",null,"⚠ Проверь перед публикацией"));for(const x of risk)w.append(el("div",null,"• "+x));c.append(w)}
       const ct=el("div","contact");ct.append(el("span","lbl","Контакт"),el("code",null,v.contact));c.append(ct);
       const a=el("div","row-actions");
       const mk=(t,cls,fn)=>{const b=el("button","btn btn-sm "+cls,t);b.type="button";b.onclick=fn;a.append(b)};
