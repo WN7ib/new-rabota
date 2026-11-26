@@ -167,7 +167,7 @@ a.btn{text-decoration:none}
   function syncBack(){if(!tg)return;const busy=document.getElementById("ov").classList.contains("on")||window.__sel;busy?tg.BackButton.show():tg.BackButton.hide()}
   // ── «как приложение»: установка на главный экран ──
   let installEv=null;window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();installEv=e});
-  const standalone=matchMedia("(display-mode: standalone)").matches||navigator.standalone;
+  const standalone=matchMedia("(display-mode: standalone)").matches||navigator.standalone||/NewRabotaApp/.test(navigator.userAgent);
   if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
   async function install(){
     if(installEv){installEv.prompt();const r=await installEv.userChoice;installEv=null;NR.toast(r.outcome==="accepted"?"Готово! Ищи New.работа на главном экране":"Можно установить позже");return}
