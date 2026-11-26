@@ -24,51 +24,6 @@
       }
     },
     {
-      "id": "2026-11-11-bot-swap",
-      "title": "Бот «New.работа» — официальный, тебе — новый личный «Newi»",
-      "do": "bot_swap"
-    },
-    {
-      "id": "2026-11-10-work-bot",
-      "title": "Рабочий бот New.работа",
-      "do": "bot_create",
-      "args": {
-        "kind": "work"
-      }
-    },
-    {
-      "id": "2026-11-10-channel",
-      "title": "Канал с вакансиями и автопостинг",
-      "do": "channel_create",
-      "args": {
-        "title": "New.работа — вакансии для молодёжи",
-        "about": "Работа и подработка с 14 лет по всей России и удалённо. Каждая вакансия проверена модератором. Сайт: wn7ib.github.io/new-rabota",
-        "usernames": [
-          "newrabota",
-          "new_rabota",
-          "newrabota_jobs",
-          "newrabota_vakansii",
-          "new_rabota_jobs"
-        ]
-      }
-    },
-    {
-      "id": "2026-11-11-channel-fix",
-      "title": "Проверить ссылку на канал вакансий и исправить, если её нет",
-      "do": "channel_create",
-      "args": {
-        "title": "New.работа — вакансии для молодёжи",
-        "about": "Работа и подработка с 14 лет по всей России и удалённо. Каждая вакансия проверена модератором. Сайт: wn7ib.github.io/new-rabota",
-        "usernames": [
-          "newrabota",
-          "new_rabota",
-          "newrabota_jobs",
-          "newrabota_vakansii",
-          "new_rabota_jobs"
-        ]
-      }
-    },
-    {
       "id": "2026-11-10-site-settings",
       "title": "Подключить бота к сайту и включить чат с Newi",
       "do": "site_settings",
@@ -106,14 +61,6 @@
       "do": "manual",
       "args": {
         "text": "Чтобы брать деньги за продвижение: зарегистрируйся самозанятым в приложении «Мой налог» (до 18 лет нужно письменное согласие родителей), потом впиши в админке → Настройки → «Как оплатить» свои реквизиты СБП. Подробно — в бизнес-плане."
-      }
-    },
-    {
-      "id": "2026-11-11-channel-newrabotaa",
-      "title": "Подключить группу @Newrabotaa: бот публикует туда вакансии",
-      "do": "channel_set",
-      "args": {
-        "addr": "@Newrabotaa"
       }
     },
     {
@@ -225,14 +172,6 @@
           "migration-13-shift-schedule.sql",
           "migration-14-shift-formats.sql"
         ]
-      }
-    },
-    {
-      "id": "2026-11-18-channel-newirabota",
-      "title": "Канал @NEWIrabota: бот публикует туда вакансии и посты",
-      "do": "channel_set",
-      "args": {
-        "addr": "@NEWIrabota"
       }
     },
     {
