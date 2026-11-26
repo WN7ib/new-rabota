@@ -469,6 +469,28 @@
         ],
         "verify_jwt": false
       }
+    },
+    {
+      "id": "2026-11-26-chat-tg-db",
+      "title": "База: ответы работодателя соискателю в Telegram (по его кнопке)",
+      "do": "sql",
+      "args": {
+        "files": [
+          "migration-27-chat-tg.sql"
+        ]
+      }
+    },
+    {
+      "id": "2026-11-26-bot-chat-tg",
+      "title": "Бот New.работа: ответы работодателя соискателю, /chatoff",
+      "do": "fn_deploy",
+      "args": {
+        "slug": "tg-bot",
+        "files": [
+          "supabase/functions/tg-bot/index.ts"
+        ],
+        "verify_jwt": false
+      }
     }
   ]
 }

@@ -824,14 +824,30 @@ async function newApplications(own: number): Promise<number> {
   return n;
 }
 
-// переписка в приложении (шаг 26): новое сообщение соискателя → работодателю в Telegram (текст + ссылка в кабинет)
+// t.me/бот?start=ch_КОД (кнопка «Получать ответы в Telegram» в переписке, шаг 27) — сам соискатель подключает уведомления
+async function chatBind(chat: number, code0: string) {
+  const code = code0.trim().toLowerCase();
+  if (isVk(chat) || !/^[a-f0-9]{20}$/.test(code)) { await send(chat, "Ссылка устарела. Открой переписку в приложении New.работа и нажми «🔔 Ответы в Telegram» ещё раз.", MENU); return; }
+  const r = await db("PATCH", `applications?chat_bind=eq.${code}`, { chat_tg: chat, chat_bind: null }, "return=representation");
+  const ok = Array.isArray(r) && r.length > 0;
+  await send(chat, ok ? "🔔 Готово! Когда работодатель ответит в переписке, я пришлю его сообщение сюда.\nОтвечать — в приложении New.работа → 💬 Сообщения. Отключить: /chatoff" : "Ссылка устарела. Открой переписку в приложении New.работа и нажми «🔔 Ответы в Telegram» ещё раз.", MENU);
+}
+
+// переписка в приложении (шаги 26–27): сообщение соискателя → работодателю, ответ работодателя → соискателю (если подключил Telegram)
 async function newChatMessages(): Promise<number> {
-  const ms: any[] = (await db("GET", "app_messages?select=id,body,created_at,application_id,applications(name,vacancies(title,employer_id))&notified=eq.false&from_emp=eq.false&order=id.asc&limit=50")) ?? [];
+  const ms: any[] = (await db("GET", "app_messages?select=id,body,created_at,from_emp,application_id,applications(name,chat_tg,vacancies(title,company,employer_id))&notified=eq.false&order=id.asc&limit=50")) ?? [];
   let n = 0;
   for (const m of ms) {
-    await db("PATCH", `app_messages?id=eq.${m.id}`, { notified: true }, "return=minimal");
+    // забираю сообщение себе атомарно: телефон обходит то же самое — дубля не будет
+    const got = await db("PATCH", `app_messages?id=eq.${m.id}&notified=eq.false`, { notified: true }, "return=representation");
+    if (!Array.isArray(got) || !got.length) continue;
     if (Date.now() - new Date(m.created_at).getTime() > 3 * 86400_000) continue;
     const ap = m.applications ?? {}, v = ap.vacancies ?? {};
+    if (m.from_emp) {
+      const to = Number(ap.chat_tg ?? 0);
+      if (to) { await send(to, `💬 ${String(v.company || "Работодатель").slice(0, 60)} ответил по «${String(v.title ?? "вакансии").slice(0, 80)}»:\n${String(m.body ?? "").slice(0, 900)}\n\nОтветить — в приложении New.работа → 💬 Сообщения (там же, где отправлял анкету). Не плати за «оформление» и не присылай паспорт.`); n++; }
+      continue;
+    }
     const ec = UUID.test(String(v.employer_id ?? "")) ? Number((await db("GET", `employers?select=tg_chat&id=eq.${v.employer_id}`))?.[0]?.tg_chat ?? 0) : 0;
     if (!ec) continue;
     await send(ec, `💬 ${String(ap.name ?? "Соискатель").slice(0, 60)} пишет по «${String(v.title ?? "вакансии").slice(0, 80)}»:\n${String(m.body ?? "").slice(0, 900)}\n\nОтветить: ${SITE}cabinet.html`);
@@ -1105,6 +1121,7 @@ async function onMessage(m: any) {
     }
     if (arg.startsWith("ev_")) { await eventJoin(chat, from, arg.slice(3)); return; }
     if (arg.startsWith("vv_")) { await videoStart(chat, arg.slice(3)); return; }
+    if (arg.startsWith("ch_")) { await chatBind(chat, arg.slice(3)); return; }
     await send(chat, `Привет, ${from.first_name ?? "друг"}! Я Неви, помощница New.работа 🤖\nПомогу найти работу или подработку с 14 лет, разместить вакансию и разобраться с правами.\n📍 Сейчас мы в Саратове, удалёнка — для всей России.\nВыбери кнопку внизу или просто задай вопрос.\n🌐 Сайт: ${SITE}`, MENU); return;
   }
   if ((text === "/app" || text.startsWith("/app@")) && isVk(chat)) { await send(chat, "Все вакансии с фильтрами по городу и возрасту: " + SITE, MENU); return; }
@@ -1124,6 +1141,7 @@ async function onMessage(m: any) {
   if (text.startsWith("⏰") || text === "/shifts") { await shiftsMenu(chat); return; }
   if (/^(моя\s+)?смена\s+\S/i.test(text) && parseShift(text)) { await addShift(chat, text); return; }   // «смена завтра 10:00 кафе» — без кнопки
   if (text === "/weekly") { const on = u.weekly === false; await setUser(chat, { weekly: on }); await send(chat, on ? "Подборка раз в неделю включена 🔔" : "Подборку раз в неделю выключила. Включить — /weekly", MENU); return; }
+  if (text === "/chatoff") { await db("PATCH", `applications?chat_tg=eq.${chat}`, { chat_tg: null }, "return=minimal"); await send(chat, "Больше не присылаю ответы работодателей. Переписка — в приложении New.работа → 💬 Сообщения.", MENU); return; }
   if (text === "/stop") { await setUser(chat, { city: null }); await send(chat, "Отписала от новых вакансий. Подписаться снова — «🔎 Найти работу».", MENU); return; }
   if (text.startsWith("/help")) { await send(chat, "Что я умею:\n🔎 найти вакансии по городу\n🎯 подобрать работу под твой возраст и интересы (/me), подборка раз в неделю (/weekly)\n⏰ напомнить о твоих сменах (/shifts)\n📢 принять вакансию на проверку\n⚖️ рассказать про права подростков\n📱 /app — все вакансии прямо в Telegram\n🛡 предупредить о мошенниках\n✉️ передать вопрос команде\nА ещё можно просто спросить меня словами.", MENU); return; }
   if (text.startsWith("🔎") || text.startsWith("/find") || text.startsWith("/jobs")) { await setUser(chat, { step: "city" }); await send(chat, CITY_ASK, CITY_KB); return; }

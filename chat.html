@@ -99,6 +99,7 @@ main{flex:1;max-width:720px;width:100%;margin:0 auto;padding:12px 14px}
       if(stick)scrollTo(0,document.body.scrollHeight);
     };
     await draw();scrollTo(0,document.body.scrollHeight);
+    tgBar(c);
     let s=document.querySelector(".send");if(s)s.remove();
     s=document.createElement("form");s.className="send";s.innerHTML='<textarea id="tx" rows="1" maxlength="1000" placeholder="Сообщение работодателю…"></textarea><button aria-label="Отправить">➤</button>';document.body.append(s);
     const tx=$("#tx");tx.oninput=()=>{tx.style.height="auto";tx.style.height=Math.min(120,tx.scrollHeight)+"px"};
@@ -108,6 +109,20 @@ main{flex:1;max-width:720px;width:100%;margin:0 auto;padding:12px 14px}
       try{tg&&tg.HapticFeedback.impactOccurred("light")}catch(_){}
       await draw();scrollTo(0,document.body.scrollHeight)};
     clearInterval(timer);timer=setInterval(draw,8000);
+  }
+  // шаг 27: ответы работодателя — в Telegram (сам человек жмёт кнопку и подтверждает в боте)
+  async function tgBar(c){
+    const {data:on,error}=await sb.rpc("app_chat_tg",{tok:c.tok});if(error)return;
+    const d=document.createElement("div");if(!$("#msgs"))return;d.className="warn";d.style.cssText+="display:flex;gap:10px;align-items:center;justify-content:space-between";
+    if(on){d.innerHTML='<span>🔔 Ответы работодателя приходят тебе в Telegram</span>';M.prepend(d);return}
+    d.innerHTML='<span>Не пропусти ответ — пришлю его в Telegram</span><button class="btn btn-primary btn-sm" type="button">🔔 Ответы в Telegram</button>';M.prepend(d);
+    d.querySelector("button").onclick=async()=>{
+      const {data:code}=await sb.rpc("app_chat_bind",{tok:c.tok});if(!code){NR.toast("Не получилось — попробуй позже");return}
+      let bot="New_Net_rabota_bot";try{const r=await sb.from("settings").select("data").eq("id",1).maybeSingle();const b=String((r.data&&r.data.data&&r.data.data.bot_username)||"").replace(/^@/,"");if(/^[A-Za-z0-9_]{4,40}$/.test(b))bot=b}catch(_){}
+      const u="https://t.me/"+bot+"?start=ch_"+code;
+      if(tg&&tg.openTelegramLink)tg.openTelegramLink(u);else location.href=u;
+      d.innerHTML='<span>Нажми «Старт» в боте — и ответы будут приходить туда ✅</span>';
+    };
   }
   async function report(d){
     const why=prompt("Что не так? (просят деньги, данные, грубят…)");if(!why)return;
