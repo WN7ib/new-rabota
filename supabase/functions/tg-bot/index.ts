@@ -240,6 +240,7 @@ async function setUser(chat: number, patch: Record<string, unknown>) {
 async function findJobs(chat: number, city0: string) {
   const city = city0.trim().toLowerCase(); const remote = city.startsWith("удал");
   await setUser(chat, { city: remote ? "удалённо" : city0.trim() });
+  await db("PATCH", `bot_users?chat_id=eq.${chat}&stopped=eq.true`, { stopped: false }, "return=minimal");
   const since = new Date(Date.now() - 60 * 86400_000).toISOString();
   const far = !remote && !city.startsWith(HOME.toLowerCase().slice(0, 5));   // не Саратов: честно говорю и показываю удалёнку
   if (far) await send(chat, `Пока New.работа работает в Саратове 📍 В «${city0.trim()}» вакансий ещё нет — подписала: как появятся, напишу первой 🔔` + "\nА пока — удалённые, они подходят для любого города:");
@@ -791,12 +792,18 @@ async function toSubscribers(v: any, link: string, skipChat?: number): Promise<n
   // «всем»: по умолчанию новая вакансия уходит ВСЕМ подписчикам бота (у кого выбран город; кто нажал /stop — не получает).
   // Владелец может сузить до «только свой город» командой /all off.
   const toAll = (await cfg("broadcast_all")) !== "0";
-  const subs: any[] = (await db("GET", `bot_users?select=chat_id,city&city=not.is.null&limit=1000`)) ?? [];
+  // шаг 28: «всем» — каждому, кто писал боту, кроме нажавших /stop (база без шага 28 — как раньше, только с городом)
+  const all: any[] | null = toAll ? await db("GET", `bot_users?select=chat_id,city&or=(stopped.is.null,stopped.eq.false)&limit=3000`) : null;
+  const subs: any[] = all ?? (await db("GET", `bot_users?select=chat_id,city&city=not.is.null&limit=1000`)) ?? [];
+  const own = Number(await cfg("owner_id")) || 0;   // владельцу вакансии и так приходят на проверку
   let n = 0;
   for (const s of subs) {
-    const sc = String(s.city).toLowerCase();
-    if (toAll || (c5 && sc.startsWith(c5)) || (v.remote && sc.startsWith("удал"))) { if (s.chat_id !== skipChat) { await send(s.chat_id, "🆕 Новая вакансия:\n" + card(v) + `\n🔗 ${link}`); n++; } }
-    if (n >= 200) break;
+    if (all && Number(s.chat_id) === own) continue;
+    const sc = String(s.city ?? "").toLowerCase();
+    if (toAll || (c5 && sc.startsWith(c5)) || (v.remote && sc.startsWith("удал"))) {
+      if (s.chat_id !== skipChat) { await send(s.chat_id, "🆕 Новая вакансия:\n" + card(v) + `\n🔗 ${link}\n\nНе присылать: /stop`); n++; if (n % 25 === 0) await new Promise((r) => setTimeout(r, 1100)); }   // лимит Telegram ~30 сообщений в секунду
+    }
+    if (n >= 1500) break;
   }
   return n;
 }
@@ -1122,6 +1129,7 @@ async function onMessage(m: any) {
     if (arg.startsWith("ev_")) { await eventJoin(chat, from, arg.slice(3)); return; }
     if (arg.startsWith("vv_")) { await videoStart(chat, arg.slice(3)); return; }
     if (arg.startsWith("ch_")) { await chatBind(chat, arg.slice(3)); return; }
+    await db("PATCH", `bot_users?chat_id=eq.${chat}&stopped=eq.true`, { stopped: false }, "return=minimal");   // обычный /start — снова получать вакансии
     await send(chat, `Привет, ${from.first_name ?? "друг"}! Я Неви, помощница New.работа 🤖\nПомогу найти работу или подработку с 14 лет, разместить вакансию и разобраться с правами.\n📍 Сейчас мы в Саратове, удалёнка — для всей России.\nВыбери кнопку внизу или просто задай вопрос.\n🌐 Сайт: ${SITE}`, MENU); return;
   }
   if ((text === "/app" || text.startsWith("/app@")) && isVk(chat)) { await send(chat, "Все вакансии с фильтрами по городу и возрасту: " + SITE, MENU); return; }
@@ -1142,7 +1150,7 @@ async function onMessage(m: any) {
   if (/^(моя\s+)?смена\s+\S/i.test(text) && parseShift(text)) { await addShift(chat, text); return; }   // «смена завтра 10:00 кафе» — без кнопки
   if (text === "/weekly") { const on = u.weekly === false; await setUser(chat, { weekly: on }); await send(chat, on ? "Подборка раз в неделю включена 🔔" : "Подборку раз в неделю выключила. Включить — /weekly", MENU); return; }
   if (text === "/chatoff") { await db("PATCH", `applications?chat_tg=eq.${chat}`, { chat_tg: null }, "return=minimal"); await send(chat, "Больше не присылаю ответы работодателей. Переписка — в приложении New.работа → 💬 Сообщения.", MENU); return; }
-  if (text === "/stop") { await setUser(chat, { city: null }); await send(chat, "Отписала от новых вакансий. Подписаться снова — «🔎 Найти работу».", MENU); return; }
+  if (text === "/stop") { await setUser(chat, { city: null }); await db("PATCH", `bot_users?chat_id=eq.${chat}`, { stopped: true }, "return=minimal"); await send(chat, "Отписала от новых вакансий. Подписаться снова — /start или «🔎 Найти работу».", MENU); return; }
   if (text.startsWith("/help")) { await send(chat, "Что я умею:\n🔎 найти вакансии по городу\n🎯 подобрать работу под твой возраст и интересы (/me), подборка раз в неделю (/weekly)\n⏰ напомнить о твоих сменах (/shifts)\n📢 принять вакансию на проверку\n⚖️ рассказать про права подростков\n📱 /app — все вакансии прямо в Telegram\n🛡 предупредить о мошенниках\n✉️ передать вопрос команде\nА ещё можно просто спросить меня словами.", MENU); return; }
   if (text.startsWith("🔎") || text.startsWith("/find") || text.startsWith("/jobs")) { await setUser(chat, { step: "city" }); await send(chat, CITY_ASK, CITY_KB); return; }
   if (text.startsWith("📢") || text.startsWith("/add_job") || text.startsWith("/vacancy")) { await setUser(chat, { step: "v_title", draft: {} }); await send(chat, "Разместим вакансию. Отвечай по шагам, «отмена» — выйти.\n1/6. Какая должность? (например: «Бариста на выходные»)"); return; }

@@ -284,13 +284,15 @@ await msg(903, "Ян", "/start vv_fedcba9876543210"); await msg(903, "Ян", "о
 await msg(900, "Никита", "/publish phone"); assert.match(last(900).text, /Публикует телефон/); assert.equal(T.bot_config.find((x) => x.key === "publish").value, "phone");
 T.bot_config = T.bot_config.filter((x) => x.key !== "publish");   // ключа нет — тоже телефон
 const ph0 = sent.length, vk0 = vkc.length, own0 = to(900).length;
-T.bot_users.push({ chat_id: 950, city: "Саратов", step: null });
+T.bot_users.push({ chat_id: 950, city: "Саратов", step: null }, { chat_id: 951, city: null, step: null }, { chat_id: 952, city: null, step: null, stopped: true });
 T.vacancies.push({ id: "ph1", title: "Курьер", city: "Саратов", age_min: 16, status: "approved", created_at: new Date().toISOString(), contact: "@c" },
   { id: "ph2", title: "Ждёт проверки", city: "Саратов", age_min: 16, status: "pending", created_at: new Date().toISOString(), contact: "@d" });
 T.reports.push({ id: "rp1", reason: "обман", vacancy_id: "ph1", status: "new" });
 await post({ tick: 1 });
 assert.ok(!sent.slice(ph0).some((x) => x.chat_id === "@NEWIrabota"), "в канал не постит"); assert.ok(!vkc.slice(vk0).some((x) => x.m === "wall.post" || x.m === "stories.save"), "в ВК не постит");
 assert.ok(to(950).some((t) => /Новая вакансия:\n[\s\S]*Курьер/.test(t)), "подписчику — да");
+assert.ok(to(951).some((t) => /Новая вакансия:\n[\s\S]*Курьер/.test(t)), "без города — тоже (всем, шаг 28)");
+assert.ok(!to(952).some((t) => /Курьер/.test(t)), "нажавшему /stop — нет");
 assert.ok(!to(900).slice(own0).some((t) => /Ждёт проверки|Жалоба/.test(t)), "на проверку — только с телефона");
 await msg(900, "Никита", "/publish server"); assert.match(last(900).text, /Публикует сервер/);
 // ── признаки обмана: сервер = scam.js сайта, ловит схемы и не трогает обычные вакансии ──

@@ -430,6 +430,28 @@
         ],
         "verify_jwt": false
       }
+    },
+    {
+      "id": "2026-11-26-bot-all-db",
+      "title": "База бота: рассылка новых вакансий всем (кроме /stop)",
+      "do": "sql",
+      "args": {
+        "files": [
+          "migration-28-bot-all.sql"
+        ]
+      }
+    },
+    {
+      "id": "2026-11-26-bot-all",
+      "title": "Бот New.работа: новые вакансии — всем, кто писал боту",
+      "do": "fn_deploy",
+      "args": {
+        "slug": "tg-bot",
+        "files": [
+          "supabase/functions/tg-bot/index.ts"
+        ],
+        "verify_jwt": false
+      }
     }
   ]
 }
