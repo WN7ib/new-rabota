@@ -496,6 +496,28 @@
         ],
         "verify_jwt": false
       }
+    },
+    {
+      "id": "2026-11-26-urgent-reviews-db",
+      "title": "База: «🔥 Срочно нужен человек» с надбавкой и проверенные отзывы «✓ работал здесь»",
+      "do": "sql",
+      "args": {
+        "files": [
+          "migration-31-urgent-reviews.sql"
+        ]
+      }
+    },
+    {
+      "id": "2026-11-26-bot-urgent",
+      "title": "Бот: «🔥 Срочно» — всем подписчикам один раз, с надбавкой",
+      "do": "fn_deploy",
+      "args": {
+        "slug": "tg-bot",
+        "files": [
+          "supabase/functions/tg-bot/index.ts"
+        ],
+        "verify_jwt": false
+      }
     }
   ]
 }

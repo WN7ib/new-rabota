@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-title" content="New.работа">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
-<link rel="stylesheet" href="style.css?v=13">
+<link rel="stylesheet" href="style.css?v=14">
 <style>
 html,body{height:100%;overflow:hidden}
 body{margin:0;-webkit-tap-highlight-color:transparent}
@@ -146,7 +146,7 @@ a.btn{text-decoration:none}
 <script src="vendor/leaflet/leaflet.js"></script>
 <script src="vendor/supabase.js?v=1"></script>
 <script src="config.js?v=2"></script>
-<script src="common.js?v=4"></script>
+<script src="common.js?v=5"></script>
 <script src="geo.js"></script>
 <script src="mascot.js"></script>
 <script>
@@ -278,7 +278,7 @@ a.btn{text-decoration:none}
     }else{
       const rv=RV[key(o.name)]||[],r=companyRating(o.name),pays=o.vac.map(v=>v.pay).filter(Boolean),ages=Math.min(...o.vac.map(v=>v.age_min));
       C.innerHTML=`<div class="ttl"><div><h2>${esc(o.name)}</h2><div class="sub">Саратов · ${o.vac.length} ${word(o.vac.length,"вакансия","вакансии","вакансий")}</div></div><span class="star ${r==null?"none":r<3?"bad":""}">★ ${r==null?"нет":r.toFixed(1)}</span></div>
-        <div class="ktags">${o.vac.some(v=>v.verified)?'<span class="tg">✓ Проверено New.работа</span>':""}${ages<=14?'<span class="tg good">С 14 лет</span>':""}${o.vac.some(v=>v.weekend)?'<span class="tg">По выходным</span>':""}${r!=null&&r<3?'<span class="tg bad">Есть жалобы в отзывах</span>':""}</div>
+        <div class="ktags">${o.vac.some(v=>NR.isUrgent(v))?'<span class="tg bad">'+esc(NR.urgentText(o.vac.find(v=>NR.isUrgent(v))))+'</span>':""}${o.vac.some(v=>v.verified)?'<span class="tg">✓ Проверено New.работа</span>':""}${ages<=14?'<span class="tg good">С 14 лет</span>':""}${o.vac.some(v=>v.weekend)?'<span class="tg">По выходным</span>':""}${r!=null&&r<3?'<span class="tg bad">Есть жалобы в отзывах</span>':""}</div>
         <div class="stats"><div class="stat"><small>Отзывы</small><b>${rv.length?r.toFixed(1)+" / 5":"нет"}</b></div><div class="stat"><small>Оплата</small><b>${esc(pays[0]||"договорная")}</b></div><div class="stat"><small>Возраст</small><b>с ${ages} лет</b></div></div>
         <div class="cta"><a class="btn btn-primary" href="vacancy.html?id=${o.vac[0].id}">Откликнуться</a><button class="btn btn-ghost" id="rvb">+ Отзыв</button><button class="btn btn-ghost" id="vc">🔊 Голос</button></div>
         <div class="sec">Вакансии</div>${o.vac.map(v=>`<a class="item" href="vacancy.html?id=${v.id}"><b>${esc(v.title)}</b><span>${esc([v.type,v.pay||"по договорённости","с "+v.age_min+" лет"].join(" · "))}</span></a>`).join("")}
@@ -401,7 +401,8 @@ a.btn{text-decoration:none}
   (async()=>{
     if(!sb){C.innerHTML='<div class="sub">Сайт не подключён к базе.</div>';return}
     const today=NR.today();
-    let v=await sb.from("vacancies").select("id,title,company,city,type,age_min,pay,remote,verified,weekend,expires_at").eq("status","approved").order("created_at",{ascending:false}).limit(500);
+    let v=await sb.from("vacancies").select("id,title,company,city,type,age_min,pay,remote,verified,weekend,expires_at,bonus,urgent_until").eq("status","approved").order("created_at",{ascending:false}).limit(500);   // шаг 31
+    if(v.error)v=await sb.from("vacancies").select("id,title,company,city,type,age_min,pay,remote,verified,weekend,expires_at").eq("status","approved").order("created_at",{ascending:false}).limit(500);
     if(v.error)v=await sb.from("vacancies").select("id,title,company,city,type,age_min,pay,remote").eq("status","approved").limit(500);
     const allV=(v.data||[]).filter(x=>!x.expires_at||x.expires_at>=today);
     VAC=allV.filter(x=>isSar(x.city)&&!x.remote);

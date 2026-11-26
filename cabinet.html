@@ -9,7 +9,7 @@
 <title>Кабинет работодателя · New.работа</title>
 <meta name="theme-color" content="#2F86F5">
 <link rel="icon" type="image/png" href="favicon.png">
-<link rel="stylesheet" href="style.css?v=13">
+<link rel="stylesheet" href="style.css?v=14">
 <style>
 .cab{display:flex;flex-direction:column;gap:12px;margin-top:14px}
 .cab .vac h3{margin:0 0 4px;font-size:18px}
@@ -51,7 +51,7 @@
 <div class="toast" id="toast" hidden></div>
 <script src="vendor/supabase.js?v=1"></script>
 <script src="config.js?v=2"></script>
-<script src="common.js?v=4"></script>
+<script src="common.js?v=5"></script>
 <script src="geo.js"></script>
 <script>
 (function(){
@@ -142,6 +142,9 @@
         const {error:e}=await sb.rpc("my_vacancy_close",{vid:v.id,k:it.k});toast(e?"Не получилось":"Вакансия закрыта и убрана с сайта");render()});
       b("Скопировать личную ссылку","btn-ghost",()=>NR.copy(new URL("cabinet.html#v="+v.id+"."+it.k,location.href).href));
       if(v.status==="approved"||v.status==="pending"){const pb=b("🚀 Продвинуть","btn-primary",()=>promote(v,it.k));a.prepend(pb)}
+      // шаг 31: «🔥 Срочно нужен человек» — бот расскажет всем в Telegram, можно добавить надбавку сверху
+      if(v.status==="approved"){const ub=b("🔥 Срочно нужен человек","btn-primary",()=>urgentForm(v,it.k));a.prepend(ub)}
+      if(v.urgent_until&&new Date(v.urgent_until)>new Date())box.append(el("p","hint","🔥 Срочно — до "+new Date(v.urgent_until).toLocaleString("ru-RU",{day:"numeric",month:"long",hour:"2-digit",minute:"2-digit"})+(v.bonus?" · +"+v.bonus+" ₽ сверху":"")))
       box.append(a);
       // заказы продвижения
       const {data:os,error:oe}=await sb.rpc("my_orders",{vid:v.id,k:it.k});
@@ -153,6 +156,27 @@
           const p2=el("button","btn btn-sm btn-ghost","Картой");p2.type="button";p2.onclick=()=>payNow(o,v.id,it.k,"card",p2);pr.append(p1,p2);box.append(pr)}
         if(un.length&&S.pay_info){const pi=el("p","hint");pi.style.whiteSpace="pre-line";pi.textContent="Или по реквизитам: "+S.pay_info+"\nНомер заказа: "+un[0].id.slice(0,8);box.append(pi)}}
     }
+  }
+
+  // ═════════ «🔥 Срочно нужен человек» (шаг 31) ═════════
+  function urgentForm(v,k){
+    const sh=el("div","sheet"),f=el("form","form");f.noValidate=true;
+    f.append(el("h2",null,"🔥 Срочно: «"+v.title+"»"),
+      el("p","hint full","Бот New.работа сразу расскажет о смене всем подписчикам в Telegram, а на сайте и в приложении вакансия будет с пометкой «🔥 Срочно». Можно раз в сутки. Сейчас — бесплатно."));
+    const fld=(lab,node,hint)=>{const d=el("div","field");d.append(el("label",null,lab),node);if(hint)d.append(el("p","hint",hint));f.append(d)};
+    const bonus=document.createElement("input");bonus.type="number";bonus.min="0";bonus.max="100000";bonus.step="50";bonus.placeholder="например, 300";bonus.inputMode="numeric";
+    fld("Доплачу сверху за срочность, ₽",bonus,"Необязательно. Так быстрее найдётся человек — надбавку увидят все.");
+    const hrs=document.createElement("select");[["6","на 6 часов"],["12","на 12 часов"],["24","на сутки"],["48","на 2 дня"]].forEach(([x,t])=>{const o=el("option",null,t);o.value=x;if(x==="24")o.selected=true;hrs.append(o)});
+    fld("Сколько держать «срочно»",hrs);
+    const err=el("p","err");err.hidden=true;f.append(err);
+    const row=el("div","row");const c=el("button","btn btn-ghost","Отмена");c.type="button";c.onclick=()=>sh.remove();
+    const go=el("button","btn btn-primary","🔥 Рассказать всем");go.type="submit";row.append(c,go);f.append(row);
+    f.onsubmit=async e=>{e.preventDefault();err.hidden=true;go.disabled=true;
+      const {error}=await sb.rpc("my_vacancy_urgent",{vid:v.id,k:k,p_bonus:Math.max(0,Math.min(100000,parseInt(bonus.value||"0",10)||0)),p_hours:+hrs.value});
+      go.disabled=false;
+      if(error){const m=error.message||"";err.textContent=/once a day/.test(m)?"«Срочно» можно включать раз в сутки — попробуй завтра.":/not approved/.test(m)?"Сначала вакансию должен одобрить модератор.":/need pay/.test(m)?"Бесплатный период закончился: закажи «Срочно + пост в канале» в «🚀 Продвинуть».":/function|my_vacancy_urgent/.test(m)?"Функция ещё включается — попробуй через час.":"Не получилось: "+m;err.hidden=false;return}
+      sh.remove();toast("🔥 Готово! Бот разошлёт смену всем в течение 10 минут.");render()};
+    sh.append(f);document.body.append(sh);sh.onclick=e=>{if(e.target===sh)sh.remove()};bonus.focus();
   }
 
   // ═════════ анкеты ═════════

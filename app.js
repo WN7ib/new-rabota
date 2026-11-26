@@ -28,7 +28,7 @@
       if(c&&!v.remote&&!norm(v.city).includes(c))return false;
       if(q){const hay=norm([v.title,v.company,v.description,v.city,v.type].join(" "));if(!q.split(/\s+/).every(w=>hay.includes(w)))return false}
       return true;
-    }).sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0));
+    }).sort((a,b)=>(NR.isUrgent(b)?2:0)+(b.pinned?1:0)-(NR.isUrgent(a)?2:0)-(a.pinned?1:0));
   }
 
   // ═════════ карточки ═════════
@@ -39,8 +39,10 @@
     left.append(h,el("div","where",[v.company,v.remote&&!v.city?"Удалённо":v.city].filter(Boolean).join(" · ")));
     c.append(left,el("div","pay",v.pay||"по договорённости"));
     const tags=el("div","tags");
+    if(NR.isUrgent(v))tags.append(el("span","t t-urgent",NR.urgentText(v)));
     if(v.pinned)tags.append(el("span","t t-pin","📌 закреплена"));
     if(v.verified)tags.append(el("span","t t-ok","✓ работодатель проверен"));
+    {const r=state.ratings&&v.company&&state.ratings[v.company.toLowerCase()];if(r)tags.append(el("span","t t-ok","★ "+r.avg+" · "+r.n+" отз."+(r.verified?" ✓":"")))}
     tags.append(el("span","t t-age","с "+(v.age_min||14)+" лет"),el("span","t",v.type||"Подработка"));
     if(v.remote)tags.append(el("span","t t-remote","удалённо"));
     if(v.weekend)tags.append(el("span","t","в выходные"));
@@ -194,7 +196,8 @@
     const timer=setTimeout(()=>{if(!state.ready)refreshMeta("Не удаётся загрузить вакансии. Проверь интернет.")},10000);
     const base="id,created_at,title,company,city,type,age_min,pay,remote,description,contact";
     const q=cols=>sb.from("vacancies").select(cols).eq("status","approved").or("expires_at.is.null,expires_at.gte."+today()).order("created_at",{ascending:false}).limit(500);
-    let {data,error}=await q(base+",pinned,pinned_until,verified,expires_at,employer_id,weekend,split,adult");
+    let {data,error}=await q(base+",pinned,pinned_until,verified,expires_at,employer_id,weekend,split,adult,bonus,urgent_until");   // шаг 31
+    if(error)({data,error}=await q(base+",pinned,pinned_until,verified,expires_at,employer_id,weekend,split,adult"));
     if(error)({data,error}=await q(base+",pinned,pinned_until,verified,expires_at,employer_id,weekend,split"));   // база без migration-20
     if(error)({data,error}=await q(base+",pinned,pinned_until,verified,expires_at,employer_id"));
     if(error)({data,error}=await q(base+",pinned,pinned_until,verified,expires_at"));
@@ -204,6 +207,8 @@
     if(error){render();refreshMeta("Вакансии сейчас недоступны");return}
     // платное закрепление действует до pinned_until
     state.items=(data||[]).map(v=>{if(v.pinned&&v.pinned_until&&new Date(v.pinned_until)<new Date())v.pinned=false;return v});render();refreshMeta();
+    // шаг 31: рейтинг компаний по одобренным отзывам (база без шага 31 — просто без звёзд)
+    sb.rpc("company_ratings").then(({data:rs})=>{if(rs&&rs.length){state.ratings={};rs.forEach(r=>state.ratings[r.company]=r);render()}});
   }
 
   // ═════════ режимы: официальный / с Newi ═════════

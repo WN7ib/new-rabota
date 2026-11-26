@@ -841,6 +841,39 @@ async function chatBind(chat: number, code0: string) {
 }
 
 // переписка в приложении (шаги 26–27): сообщение соискателя → работодателю, ответ работодателя → соискателю (если подключил Telegram)
+// шаг 31 (Никита 26.11): «🔥 Срочно нужен человек» — работодатель включил в кабинете (с надбавкой сверху): рассказываю ВСЕМ
+// подписчикам бота один раз. Отметку ставлю атомарно до рассылки — второй обход (или телефон) не продублирует.
+async function urgentBroadcast(): Promise<number> {
+  const now = new Date().toISOString();
+  const rows: any[] = (await db("GET", `vacancies?select=*&status=eq.approved&urgent_sent_at=is.null&urgent_until=gt.${enc(now)}&order=urgent_last.asc&limit=5`)) ?? [];
+  let total = 0;
+  for (const v0 of rows) {
+    const got: any[] = (await db("PATCH", `vacancies?id=eq.${v0.id}&urgent_sent_at=is.null`, { urgent_sent_at: now }, "return=representation")) ?? [];
+    const v = got[0]; if (!v) continue;
+    const till = new Date(v.urgent_until);
+    const tillS = till.toLocaleString("ru-RU", { timeZone: "Europe/Saratov", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+    const bonus = Number(v.bonus ?? 0);
+    const text = "🔥 СРОЧНО нужен человек!\n" + card(v) + (bonus > 0 ? `\n💰 Сверху +${bonus} ₽ за срочный выход` : "") +
+      `\n⏰ Актуально до ${tillS}\n🔗 ${SITE}vacancy.html?id=${v.id}\n\nНе присылать: /stop`;
+    const c5 = (v.city ?? "").toLowerCase().slice(0, 5);
+    const toAll = (await cfg("broadcast_all")) !== "0";
+    const subs: any[] = (await db("GET", `bot_users?select=chat_id,city&or=(stopped.is.null,stopped.eq.false)&limit=3000`)) ?? [];
+    const own = Number(await cfg("owner_id")) || 0;
+    let n = 0;
+    for (const s of subs) {
+      if (Number(s.chat_id) === own) continue;
+      const sc = String(s.city ?? "").toLowerCase();
+      if (!(toAll || !sc || (c5 && sc.startsWith(c5)) || (v.remote && sc.startsWith("удал")))) continue;
+      await send(s.chat_id, text); n++;
+      if (n % 25 === 0) await new Promise((r) => setTimeout(r, 1100));
+      if (n >= 1500) break;
+    }
+    if (own) await send(own, `🔥 Разослала «срочно» по «${String(v.title ?? "").slice(0, 60)}»${bonus > 0 ? ` (+${bonus} ₽)` : ""}: ${n} подписчикам.`);
+    total += n;
+  }
+  return total;
+}
+
 async function newChatMessages(): Promise<number> {
   const ms: any[] = (await db("GET", "app_messages?select=id,body,created_at,from_emp,from_mod,held,application_id,applications(name,age,chat_tg,vacancies(title,company,employer_id))&notified=eq.false&order=id.asc&limit=50")) ?? [];
   let n = 0;
@@ -978,10 +1011,11 @@ async function tick() {
   }
   const apps = await newApplications(own);
   const chat = await newChatMessages().catch((e) => { console.error(e); return 0; });   // база без шага 26 — просто 0
+  const urg = await urgentBroadcast().catch((e) => { console.error(e); return 0; });   // база без шага 31 — 0
   const att = await attendanceNotes();
   const wk = await weeklyDigest();
   const shr = await shiftReminders().catch((e) => { console.error(e); return 0; });
-  return `ok posted=${posted}${apps ? " apps=" + apps : ""}${chat ? " chat=" + chat : ""}${att ? " att=" + att : ""}${wk ? " weekly=" + wk : ""}${shr ? " shifts=" + shr : ""}`;
+  return `ok posted=${posted}${apps ? " apps=" + apps : ""}${chat ? " chat=" + chat : ""}${urg ? " urgent=" + urg : ""}${att ? " att=" + att : ""}${wk ? " weekly=" + wk : ""}${shr ? " shifts=" + shr : ""}`;
 }
 
 async function moderate(cbq: any) {

@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#2F86F5">
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="stylesheet" href="style.css?v=13">
+<link rel="stylesheet" href="style.css?v=14">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
 html,body{height:100%}
@@ -50,7 +50,7 @@ main{flex:1;max-width:720px;width:100%;margin:0 auto;padding:12px 14px}
 <main id="main"></main>
 <script src="vendor/supabase.js?v=1"></script>
 <script src="config.js?v=2"></script>
-<script src="common.js?v=4"></script>
+<script src="common.js?v=5"></script>
 <script src="scam.js?v=1"></script>
 <script>
 (function(){
@@ -102,7 +102,7 @@ main{flex:1;max-width:720px;width:100%;margin:0 auto;padding:12px 14px}
       if(stick)scrollTo(0,document.body.scrollHeight);
     };
     await draw();scrollTo(0,document.body.scrollHeight);
-    tgBar(c);
+    tgBar(c);reviewBar(c);
     let s=document.querySelector(".send");if(s)s.remove();
     s=document.createElement("form");s.className="send";s.innerHTML='<textarea id="tx" rows="1" maxlength="1000" placeholder="Сообщение работодателю…"></textarea><button aria-label="Отправить">➤</button>';document.body.append(s);if(window.__lk)s.style.display="none";
     const tx=$("#tx");tx.oninput=()=>{tx.style.height="auto";tx.style.height=Math.min(120,tx.scrollHeight)+"px"};
@@ -112,6 +112,22 @@ main{flex:1;max-width:720px;width:100%;margin:0 auto;padding:12px 14px}
       try{tg&&tg.HapticFeedback.impactOccurred("light")}catch(_){}
       await draw();scrollTo(0,document.body.scrollHeight)};
     clearInterval(timer);timer=setInterval(draw,8000);
+  }
+  // шаг 31: отзыв «✓ работал(а) здесь» — только если тебя взяли (анкета «принят»); виден после проверки модератором
+  async function reviewBar(c){
+    const {data:r,error}=await sb.rpc("app_review_get",{tok:c.tok});if(error||!r||!r.can||!M)return;
+    const d=document.createElement("div");d.className="warn";d.style.cssText+="display:flex;flex-direction:column;gap:8px";
+    const done=r.rating?`Твой отзыв: ${"★".repeat(r.rating)}${"☆".repeat(5-r.rating)} — ${r.status==="approved"?"опубликован":r.status==="rejected"?"не прошёл проверку":"на проверке"}.`:"";
+    d.innerHTML=`<b>⭐ Оцени работодателя</b><span>${done||"Тебя взяли — расскажи другим ребятам, как всё прошло: платили ли вовремя, как относились. Отзыв будет с пометкой «✓ работал(а) здесь»."}</span>
+      <div class="stars" role="radiogroup" aria-label="Оценка" style="font-size:26px;letter-spacing:4px;cursor:pointer"></div>
+      <textarea rows="2" maxlength="1500" placeholder="Что понравилось, что нет, платили ли вовремя" style="width:100%"></textarea>
+      <button class="btn btn-primary btn-sm" type="button" style="align-self:flex-start">${r.rating?"Обновить отзыв":"Отправить отзыв"}</button>`;
+    let stars=r.rating||0;const st=d.querySelector(".stars"),ta=d.querySelector("textarea"),bt=d.querySelector("button");ta.value=r.body||"";
+    const paint=()=>{st.innerHTML="";for(let i=1;i<=5;i++){const x=document.createElement("span");x.textContent=i<=stars?"★":"☆";x.setAttribute("role","radio");x.setAttribute("aria-checked",String(i===stars));x.onclick=()=>{stars=i;paint()};st.append(x)}};paint();
+    bt.onclick=async()=>{if(!stars){NR.toast("Поставь звёзды");return}if(ta.value.trim().length<10){NR.toast("Напиши хотя бы пару слов");return}
+      bt.disabled=true;const {error:e}=await sb.rpc("app_review",{tok:c.tok,p_rating:stars,p_body:ta.value.trim()});bt.disabled=false;
+      NR.toast(e?(/too short/.test(e.message)?"Напиши чуть подробнее":"Не получилось, попробуй позже"):"Спасибо! Отзыв появится после проверки");if(!e){d.remove();reviewBar(c)}};
+    M.append(d);
   }
   // шаг 27: ответы работодателя — в Telegram (сам человек жмёт кнопку и подтверждает в боте)
   async function tgBar(c){

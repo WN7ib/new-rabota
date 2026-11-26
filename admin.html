@@ -661,7 +661,7 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
     if(!data.length){list.append(el("div","empty",rvtab==="pending"?"Новых отзывов нет.":"Пусто."));return}
     for(const r of data){
       const c=el("article","card open");const left=el("div");left.style.minWidth="0";
-      left.append(el("h3",null,"★".repeat(r.rating)+" "+r.company),el("div","where",r.author||"аноним"));
+      left.append(el("h3",null,"★".repeat(r.rating)+" "+r.company),el("div","where",(r.author||"аноним")+(r.verified?" · ✓ работал(а) здесь (отклик принят)":" · без подтверждения")));
       c.append(left,el("div","date",new Date(r.created_at).toLocaleString("ru-RU",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})),el("p","desc",r.body));
       const a=el("div","row-actions");const mk=(t,cls,fn)=>{const b=el("button","btn btn-sm "+cls,t);b.type="button";b.onclick=fn;a.append(b)};
       const set=async s=>{const {error}=await sb.from("reviews").update({status:s}).eq("id",r.id);toast(error?"Не сохранилось":s==="approved"?"Опубликован":"Отклонён");loadReviews();countBadges()};

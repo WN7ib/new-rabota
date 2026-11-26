@@ -123,6 +123,9 @@
   }
 
   function ageWord(n){ return "с "+n+" лет" }
+  // шаг 31: «🔥 Срочно» действует до urgent_until; надбавка — bonus ₽
+  function isUrgent(v){ return !!(v&&v.urgent_until&&new Date(v.urgent_until)>new Date()) }
+  function urgentText(v){ return isUrgent(v)?"🔥 Срочно"+(v.bonus?" · +"+Number(v.bonus).toLocaleString("ru-RU")+" ₽ сверху":""):"" }
   function expiryText(d){ if(!d) return ""; const t=new Date(d+"T23:59:59"); const days=Math.ceil((t-Date.now())/864e5); return days<=0?"последний день":days<=7?"ещё "+days+" дн.":"до "+t.toLocaleDateString("ru-RU",{day:"numeric",month:"long"}) }
 
   // ── синхронизация профиля между устройствами (по секретной ссылке, без регистрации)
@@ -165,5 +168,5 @@
     pdDialog(()=>{ try{f.requestSubmit()}catch(_){f.dispatchEvent(new Event("submit",{cancelable:true,bubbles:true}))} });
   },true);
 
-  window.NR = {sb, el, toast, today, settings, contactLink, respondButton, applyButton, reportDialog, botLink, copy, ageWord, expiryText, syncKey, syncPush, syncPull, syncBundle, pdOk};
+  window.NR = {sb, el, toast, today, settings, contactLink, respondButton, applyButton, reportDialog, botLink, copy, ageWord, expiryText, isUrgent, urgentText, syncKey, syncPush, syncPull, syncBundle, pdOk};
 })();
