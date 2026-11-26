@@ -452,6 +452,28 @@
         ],
         "verify_jwt": false
       }
+    },
+    {
+      "id": "2026-11-26-chat-mod-db",
+      "title": "База: модератор пишет в переписку и может её остановить",
+      "do": "sql",
+      "args": {
+        "files": [
+          "migration-29-chat-mod.sql"
+        ]
+      }
+    },
+    {
+      "id": "2026-11-26-bot-chat-mod",
+      "title": "Бот: сообщение модератора — обеим сторонам в Telegram",
+      "do": "fn_deploy",
+      "args": {
+        "slug": "tg-bot",
+        "files": [
+          "supabase/functions/tg-bot/index.ts"
+        ],
+        "verify_jwt": false
+      }
     }
   ]
 }

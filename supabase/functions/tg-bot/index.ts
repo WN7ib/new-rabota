@@ -842,7 +842,7 @@ async function chatBind(chat: number, code0: string) {
 
 // переписка в приложении (шаги 26–27): сообщение соискателя → работодателю, ответ работодателя → соискателю (если подключил Telegram)
 async function newChatMessages(): Promise<number> {
-  const ms: any[] = (await db("GET", "app_messages?select=id,body,created_at,from_emp,application_id,applications(name,chat_tg,vacancies(title,company,employer_id))&notified=eq.false&order=id.asc&limit=50")) ?? [];
+  const ms: any[] = (await db("GET", "app_messages?select=id,body,created_at,from_emp,from_mod,application_id,applications(name,chat_tg,vacancies(title,company,employer_id))&notified=eq.false&order=id.asc&limit=50")) ?? [];
   let n = 0;
   for (const m of ms) {
     // забираю сообщение себе атомарно: телефон обходит то же самое — дубля не будет
@@ -850,6 +850,13 @@ async function newChatMessages(): Promise<number> {
     if (!Array.isArray(got) || !got.length) continue;
     if (Date.now() - new Date(m.created_at).getTime() > 3 * 86400_000) continue;
     const ap = m.applications ?? {}, v = ap.vacancies ?? {};
+    if (m.from_mod) {   // шаг 29: модератор вмешался — пишу обеим сторонам
+      const to = Number(ap.chat_tg ?? 0), title = String(v.title ?? "вакансии").slice(0, 80), body = String(m.body ?? "").slice(0, 900);
+      if (to) await send(to, `${body}\n(переписка по «${title}»)`);
+      const ec0 = UUID.test(String(v.employer_id ?? "")) ? Number((await db("GET", `employers?select=tg_chat&id=eq.${v.employer_id}`))?.[0]?.tg_chat ?? 0) : 0;
+      if (ec0) await send(ec0, `${body}\n(переписка с ${String(ap.name ?? "соискателем").slice(0, 60)} по «${title}»)\n${SITE}cabinet.html`);
+      n++; continue;
+    }
     if (m.from_emp) {
       const to = Number(ap.chat_tg ?? 0);
       if (to) { await send(to, `💬 ${String(v.company || "Работодатель").slice(0, 60)} ответил по «${String(v.title ?? "вакансии").slice(0, 80)}»:\n${String(m.body ?? "").slice(0, 900)}\n\nОтветить — в приложении New.работа → 💬 Сообщения (там же, где отправлял анкету). Не плати за «оформление» и не присылай паспорт.`); n++; }

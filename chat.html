@@ -34,6 +34,7 @@ main{flex:1;max-width:720px;width:100%;margin:0 auto;padding:12px 14px}
 .m.me{align-self:flex-end;background:var(--accent);color:var(--accent-ink);border-bottom-right-radius:6px}
 .m.them{align-self:flex-start;background:var(--surface);border:1px solid var(--line);border-bottom-left-radius:6px}
 .m.flag{outline:2px solid var(--danger)}
+.m.mod{align-self:center;max-width:92%;background:color-mix(in srgb,var(--good) 14%,transparent);border:1px solid var(--good);color:var(--ink);text-align:center}
 .flagnote{align-self:flex-start;font-size:12px;color:var(--danger);margin:-2px 0 4px 4px}
 .send{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding:8px 12px calc(8px + env(safe-area-inset-bottom));display:flex;gap:8px;max-width:720px;margin:0 auto}
 .send textarea{flex:1;resize:none;min-height:42px;max-height:120px;border-radius:14px}
@@ -94,18 +95,20 @@ main{flex:1;max-width:720px;width:100%;margin:0 auto;padding:12px 14px}
       $("#ttl").innerHTML=esc(data.company||c.co||"Работодатель")+`<small>«${esc(data.title)}» · ${ST[data.status]||""}</small>`;
       const box=$("#msgs"),stick=box.scrollHeight-scrollY-innerHeight<120;
       box.innerHTML='<div class="warn">🛡 Не плати за «оформление», не присылай паспорт и коды из СМС. Если просят — <a href="#" id="rep">пожалуйся</a>.</div>'+
-        (data.messages||[]).map(m=>{const f=m.emp&&risky(m.body);return `<div class="m ${m.emp?"them":"me"}${f?" flag":""}">${esc(m.body)}<small>${time(m.at)}${!m.emp&&m.read?" · ✓✓":""}</small></div>`+(f?'<div class="flagnote">⚠ Похоже на обман: не плати и не отправляй данные</div>':"")}).join("");
+        (data.messages||[]).map(m=>{const mod=m.mod||/^🛡 Модератор/.test(m.body);const f=!mod&&m.emp&&risky(m.body);return `<div class="m ${mod?"mod":m.emp?"them":"me"}${f?" flag":""}">${esc(m.body)}<small>${time(m.at)}${!m.emp&&!mod&&m.read?" · ✓✓":""}</small></div>`+(f?'<div class="flagnote">⚠ Похоже на обман: не плати и не отправляй данные</div>':"")}).join("");
+      if(data.locked)box.insertAdjacentHTML("beforeend",'<div class="warn" style="text-align:center">⏸ Модератор остановил эту переписку. Если нужна помощь — напиши в бот поддержки.</div>');
+      window.__lk=!!data.locked;const sf=document.querySelector(".send");if(sf)sf.style.display=data.locked?"none":"flex";
       $("#rep").onclick=e=>{e.preventDefault();report(data)};
       if(stick)scrollTo(0,document.body.scrollHeight);
     };
     await draw();scrollTo(0,document.body.scrollHeight);
     tgBar(c);
     let s=document.querySelector(".send");if(s)s.remove();
-    s=document.createElement("form");s.className="send";s.innerHTML='<textarea id="tx" rows="1" maxlength="1000" placeholder="Сообщение работодателю…"></textarea><button aria-label="Отправить">➤</button>';document.body.append(s);
+    s=document.createElement("form");s.className="send";s.innerHTML='<textarea id="tx" rows="1" maxlength="1000" placeholder="Сообщение работодателю…"></textarea><button aria-label="Отправить">➤</button>';document.body.append(s);if(window.__lk)s.style.display="none";
     const tx=$("#tx");tx.oninput=()=>{tx.style.height="auto";tx.style.height=Math.min(120,tx.scrollHeight)+"px"};
     s.onsubmit=async e=>{e.preventDefault();const b=tx.value.trim();if(!b)return;tx.value="";tx.oninput();
       const {error}=await sb.rpc("app_chat_say",{tok:c.tok,p_body:b});
-      if(error){NR.toast(/too many/.test(error.message)?"Слишком часто — подожди пару минут":"Не отправилось, попробуй ещё раз");tx.value=b;return}
+      if(error){NR.toast(/locked/.test(error.message)?"Модератор остановил переписку":/too many/.test(error.message)?"Слишком часто — подожди пару минут":"Не отправилось, попробуй ещё раз");tx.value=b;return}
       try{tg&&tg.HapticFeedback.impactOccurred("light")}catch(_){}
       await draw();scrollTo(0,document.body.scrollHeight)};
     clearInterval(timer);timer=setInterval(draw,8000);
