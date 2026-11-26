@@ -518,6 +518,28 @@
         ],
         "verify_jwt": false
       }
+    },
+    {
+      "id": "2026-11-26-urgent-pay-db",
+      "title": "База: в «Срочно» — итоговая оплата за смену, а не надбавка",
+      "do": "sql",
+      "args": {
+        "files": [
+          "migration-32-urgent-pay.sql"
+        ]
+      }
+    },
+    {
+      "id": "2026-11-26-bot-urgent-pay",
+      "title": "Бот: «Срочно» пишет, сколько заплатят за смену",
+      "do": "fn_deploy",
+      "args": {
+        "slug": "tg-bot",
+        "files": [
+          "supabase/functions/tg-bot/index.ts"
+        ],
+        "verify_jwt": false
+      }
     }
   ]
 }

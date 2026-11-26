@@ -196,7 +196,7 @@
     const timer=setTimeout(()=>{if(!state.ready)refreshMeta("Не удаётся загрузить вакансии. Проверь интернет.")},10000);
     const base="id,created_at,title,company,city,type,age_min,pay,remote,description,contact";
     const q=cols=>sb.from("vacancies").select(cols).eq("status","approved").or("expires_at.is.null,expires_at.gte."+today()).order("created_at",{ascending:false}).limit(500);
-    let {data,error}=await q(base+",pinned,pinned_until,verified,expires_at,employer_id,weekend,split,adult,bonus,urgent_until");   // шаг 31
+    let {data,error}=await q(base+",pinned,pinned_until,verified,expires_at,employer_id,weekend,split,adult,urgent_pay,urgent_until");   // шаг 31
     if(error)({data,error}=await q(base+",pinned,pinned_until,verified,expires_at,employer_id,weekend,split,adult"));
     if(error)({data,error}=await q(base+",pinned,pinned_until,verified,expires_at,employer_id,weekend,split"));   // база без migration-20
     if(error)({data,error}=await q(base+",pinned,pinned_until,verified,expires_at,employer_id"));

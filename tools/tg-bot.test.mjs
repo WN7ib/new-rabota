@@ -327,11 +327,11 @@ assert.ok(to(900).some((t) => /Подозрительное сообщение[\
 await cb(900, "cmok:77"); assert.equal(T.app_messages[0].held, false, "Пропустить — видно соискателю");
 // шаг 31: «🔥 срочно» с надбавкой — всем подписчикам ровно один раз, нажавшему /stop — нет
 T.vacancies.push({ id: "ur1", title: "Бариста срочно", company: "Кофейня", city: "Саратов", age_min: 16, status: "approved", created_at: new Date().toISOString(), contact: "@k",
-  bonus: 500, urgent_until: new Date(Date.now() + 6 * 3600_000).toISOString(), urgent_sent_at: null, urgent_last: new Date().toISOString() });
+  urgent_pay: 2000, urgent_until: new Date(Date.now() + 6 * 3600_000).toISOString(), urgent_sent_at: null, urgent_last: new Date().toISOString() });
 {
   const u0 = to(950).length, u1 = to(951).length;
   await post({ tick: 1 });
-  assert.ok(to(950).slice(u0).some((t) => /СРОЧНО[\s\S]*Бариста срочно[\s\S]*\+500 ₽/.test(t)), "подписчику — срочно с надбавкой");
+  assert.ok(to(950).slice(u0).some((t) => /СРОЧНО[\s\S]*Бариста срочно[\s\S]*Заплатят за смену: 2\s000 ₽/.test(t)), "подписчику — срочно с оплатой за смену");
   assert.ok(to(951).slice(u1).some((t) => /СРОЧНО/.test(t)), "без города — тоже");
   assert.ok(!to(952).some((t) => /СРОЧНО/.test(t)), "нажавшему /stop — нет");
   assert.ok(T.vacancies.find((x) => x.id === "ur1").urgent_sent_at, "отметка «разослано»");

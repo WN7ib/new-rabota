@@ -125,7 +125,7 @@
   function ageWord(n){ return "с "+n+" лет" }
   // шаг 31: «🔥 Срочно» действует до urgent_until; надбавка — bonus ₽
   function isUrgent(v){ return !!(v&&v.urgent_until&&new Date(v.urgent_until)>new Date()) }
-  function urgentText(v){ return isUrgent(v)?"🔥 Срочно"+(v.bonus?" · +"+Number(v.bonus).toLocaleString("ru-RU")+" ₽ сверху":""):"" }
+  function urgentText(v){ const p=v&&(v.urgent_pay||0); return isUrgent(v)?"🔥 Срочно"+(p?" · "+Number(p).toLocaleString("ru-RU")+" ₽ за смену":""):"" }
   function expiryText(d){ if(!d) return ""; const t=new Date(d+"T23:59:59"); const days=Math.ceil((t-Date.now())/864e5); return days<=0?"последний день":days<=7?"ещё "+days+" дн.":"до "+t.toLocaleDateString("ru-RU",{day:"numeric",month:"long"}) }
 
   // ── синхронизация профиля между устройствами (по секретной ссылке, без регистрации)

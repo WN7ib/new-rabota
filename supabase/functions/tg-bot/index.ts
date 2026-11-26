@@ -841,7 +841,7 @@ async function chatBind(chat: number, code0: string) {
 }
 
 // переписка в приложении (шаги 26–27): сообщение соискателя → работодателю, ответ работодателя → соискателю (если подключил Telegram)
-// шаг 31 (Никита 26.11): «🔥 Срочно нужен человек» — работодатель включил в кабинете (с надбавкой сверху): рассказываю ВСЕМ
+// шаг 31 (Никита 26.11): «🔥 Срочно нужен человек» — работодатель включил в кабинете (с итоговой оплатой за смену, шаг 32): рассказываю ВСЕМ
 // подписчикам бота один раз. Отметку ставлю атомарно до рассылки — второй обход (или телефон) не продублирует.
 async function urgentBroadcast(): Promise<number> {
   const now = new Date().toISOString();
@@ -852,8 +852,8 @@ async function urgentBroadcast(): Promise<number> {
     const v = got[0]; if (!v) continue;
     const till = new Date(v.urgent_until);
     const tillS = till.toLocaleString("ru-RU", { timeZone: "Europe/Saratov", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
-    const bonus = Number(v.bonus ?? 0);
-    const text = "🔥 СРОЧНО нужен человек!\n" + card(v) + (bonus > 0 ? `\n💰 Сверху +${bonus} ₽ за срочный выход` : "") +
+    const pay = Number(v.urgent_pay ?? 0);   // шаг 32: итоговая оплата за смену
+    const text = "🔥 СРОЧНО нужен человек!\n" + card(v) + (pay > 0 ? `\n💰 Заплатят за смену: ${pay.toLocaleString("ru-RU")} ₽` : "") +
       `\n⏰ Актуально до ${tillS}\n🔗 ${SITE}vacancy.html?id=${v.id}\n\nНе присылать: /stop`;
     const c5 = (v.city ?? "").toLowerCase().slice(0, 5);
     const toAll = (await cfg("broadcast_all")) !== "0";
@@ -868,7 +868,7 @@ async function urgentBroadcast(): Promise<number> {
       if (n % 25 === 0) await new Promise((r) => setTimeout(r, 1100));
       if (n >= 1500) break;
     }
-    if (own) await send(own, `🔥 Разослала «срочно» по «${String(v.title ?? "").slice(0, 60)}»${bonus > 0 ? ` (+${bonus} ₽)` : ""}: ${n} подписчикам.`);
+    if (own) await send(own, `🔥 Разослала «срочно» по «${String(v.title ?? "").slice(0, 60)}»${pay > 0 ? ` (${pay} ₽ за смену)` : ""}: ${n} подписчикам.`);
     total += n;
   }
   return total;

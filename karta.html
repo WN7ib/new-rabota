@@ -146,7 +146,7 @@ a.btn{text-decoration:none}
 <script src="vendor/leaflet/leaflet.js"></script>
 <script src="vendor/supabase.js?v=1"></script>
 <script src="config.js?v=2"></script>
-<script src="common.js?v=5"></script>
+<script src="common.js?v=6"></script>
 <script src="geo.js"></script>
 <script src="mascot.js"></script>
 <script>
@@ -401,7 +401,7 @@ a.btn{text-decoration:none}
   (async()=>{
     if(!sb){C.innerHTML='<div class="sub">Сайт не подключён к базе.</div>';return}
     const today=NR.today();
-    let v=await sb.from("vacancies").select("id,title,company,city,type,age_min,pay,remote,verified,weekend,expires_at,bonus,urgent_until").eq("status","approved").order("created_at",{ascending:false}).limit(500);   // шаг 31
+    let v=await sb.from("vacancies").select("id,title,company,city,type,age_min,pay,remote,verified,weekend,expires_at,urgent_pay,urgent_until").eq("status","approved").order("created_at",{ascending:false}).limit(500);   // шаг 31
     if(v.error)v=await sb.from("vacancies").select("id,title,company,city,type,age_min,pay,remote,verified,weekend,expires_at").eq("status","approved").order("created_at",{ascending:false}).limit(500);
     if(v.error)v=await sb.from("vacancies").select("id,title,company,city,type,age_min,pay,remote").eq("status","approved").limit(500);
     const allV=(v.data||[]).filter(x=>!x.expires_at||x.expires_at>=today);

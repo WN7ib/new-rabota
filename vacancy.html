@@ -19,7 +19,7 @@
 <footer class="foot"><div class="wrap"><span>© 2026 New.работа<span id="support"></span></span><span><a href="guide.html" style="color:var(--muted)">Гид подростку</a> · <a href="about.html" style="color:var(--muted)">О проекте</a> · <a href="privacy.html" style="color:var(--muted)">Персональные данные</a></span></div></footer>
 <script src="vendor/supabase.js?v=1"></script>
 <script src="config.js?v=2"></script>
-<script src="common.js?v=5"></script>
+<script src="common.js?v=6"></script>
 <script>
 (async function(){
   const {sb, el} = NR; const page=document.getElementById("page");
@@ -27,7 +27,7 @@
   function fail(t){ page.textContent=""; const b=el("div","empty"); b.append(el("h3",null,t)); const a=el("a","btn btn-primary","Смотреть все вакансии"); a.href="./"; b.append(a); page.append(b) }
   if(!sb||!/^[0-9a-f-]{36}$/i.test(id)){fail("Вакансия не найдена");return}
   const base="id,created_at,title,company,city,type,age_min,pay,remote,description,contact";
-  let {data,error}=await sb.from("vacancies").select(base+",verified,expires_at,employer_id,adult,bonus,urgent_until").eq("id",id).eq("status","approved").maybeSingle();   // шаг 31
+  let {data,error}=await sb.from("vacancies").select(base+",verified,expires_at,employer_id,adult,urgent_pay,urgent_until").eq("id",id).eq("status","approved").maybeSingle();   // шаг 31
   if(error)({data,error}=await sb.from("vacancies").select(base+",verified,expires_at,employer_id,adult").eq("id",id).eq("status","approved").maybeSingle());
   if(error)({data,error}=await sb.from("vacancies").select(base+",verified,expires_at,employer_id").eq("id",id).eq("status","approved").maybeSingle());   // база без migration-20
   if(error)({data,error}=await sb.from("vacancies").select(base+",verified,expires_at").eq("id",id).eq("status","approved").maybeSingle());
