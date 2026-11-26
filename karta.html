@@ -171,7 +171,14 @@ a.btn{text-decoration:none}
   async function install(){
     if(installEv){installEv.prompt();const r=await installEv.userChoice;installEv=null;NR.toast(r.outcome==="accepted"?"Готово! Ищи New.работа на главном экране":"Можно установить позже");return}
     if(tg){try{tg.addToHomeScreen?tg.addToHomeScreen():tg.openLink(location.href.split("?")[0])}catch(_){tg.openLink(location.href.split("?")[0])}return}
-    NR.toast(/iPhone|iPad/.test(navigator.userAgent)?"Нажми «Поделиться» → «На экран Домой»":"Меню браузера ⋮ → «Добавить на главный экран»");
+    const ua=navigator.userAgent,box=document.getElementById("nb"),say=t=>{if(box){box.innerHTML=t;Mascot.flash("think",1200)}else NR.toast(t.replace(/<[^>]+>/g,""))};
+    if(/iPhone|iPad|iPod/.test(ua)){say(/CriOS|FxiOS|Telegram/.test(ua)?"На iPhone значок ставится только из <b>Safari</b>: открой эту страницу в Safari → кнопка «Поделиться» ⬆ → <b>«На экран Домой»</b>.":"Нажми внизу «Поделиться» ⬆ → <b>«На экран Домой»</b> → «Добавить». Значок New.работа появится на рабочем столе.");return}
+    if(/Android/.test(ua)){
+      // окно внутри Telegram/другого приложения установку не умеет — открываю ту же страницу в Chrome
+      const inApp=/wv\)|; wv|Telegram|Instagram|VKClient|FBAN|FBAV/.test(ua)||!/Chrome\/|SamsungBrowser/.test(ua);
+      if(inApp){location.href="intent://"+location.host+location.pathname+"#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url="+encodeURIComponent(location.href)+";end";return}
+      say(/SamsungBrowser/.test(ua)?"Нажми внизу меню ☰ → <b>«Добавить страницу на»</b> → <b>«Главный экран»</b>.":"Нажми ⋮ вверху справа → <b>«Добавить на главный экран»</b> (или «Установить приложение») → «Установить».");return}
+    say("В браузере на компьютере: значок ⊕ в адресной строке → «Установить».");
   }
 
   // ── прогресс (только на этом телефоне) ──
@@ -243,7 +250,7 @@ a.btn{text-decoration:none}
       <div class="note">Удалёнка для всей России — на <a href="./?remote=1">главной</a>.</div>`;
     bindRows();const a=$("#allVac");if(a)a.onclick=e=>{e.preventDefault();listVac()};
   }
-  function coRow(c){const r=companyRating(c.name);return `<div class="item" data-co="${esc(c.id)}"><div><b>${esc(c.name)}</b><span>${c.vac.length} ${word(c.vac.length,"вакансия","вакансии","вакансий")}${c.vac.some(v=>v.age_min<=14)?" · с 14 лет":""}</span></div><span class="star ${r==null?"none":r<3?"bad":""}">★ ${r==null?"—":r.toFixed(1)}</span></div>`}
+  function coRow(c){const r=companyRating(c.name);return `<div class="item" data-co="${esc(c.id)}"><div><b>${esc(c.name)}</b><span>${c.vac.length} ${word(c.vac.length,"вакансия","вакансии","вакансий")}${c.vac.some(v=>v.age_min<=14)?" · с 14 лет":""}${c.vac.some(v=>!isSar(v.city))?" · "+esc(c.vac[0].remote?"удалённо":(c.vac[0].city||"")):""}</span></div><span class="star ${r==null?"none":r<3?"bad":""}">★ ${r==null?"—":r.toFixed(1)}</span></div>`}
   function bindRows(){C.querySelectorAll("[data-ev]").forEach(x=>x.onclick=()=>open(EV.find(e=>e.id===x.dataset.ev)));C.querySelectorAll("[data-co]").forEach(x=>x.onclick=()=>open(companies().find(c=>c.id===x.dataset.co)))}
   function listVac(){
     sel=null;window.__sel="list";syncBack();setMin(false);const cos=companies().filter(pass);
@@ -389,7 +396,9 @@ a.btn{text-decoration:none}
     const today=NR.today();
     let v=await sb.from("vacancies").select("id,title,company,city,type,age_min,pay,remote,verified,weekend,expires_at").eq("status","approved").order("created_at",{ascending:false}).limit(500);
     if(v.error)v=await sb.from("vacancies").select("id,title,company,city,type,age_min,pay,remote").eq("status","approved").limit(500);
-    VAC=(v.data||[]).filter(x=>isSar(x.city)&&!x.remote&&(!x.expires_at||x.expires_at>=today));
+    const allV=(v.data||[]).filter(x=>!x.expires_at||x.expires_at>=today);
+    VAC=allV.filter(x=>isSar(x.city)&&!x.remote);
+    if(!VAC.length)VAC=allV;   // в Саратове пока пусто — не показываю «0», а все вакансии (с городом/удалёнкой в строке)
     let e=await sb.from("events").select("id,title,starts_at,place,city,kind,description,capacity,listed,lat,lng").gte("starts_at",new Date().toISOString()).order("starts_at").limit(300);
     EV=(e.data||[]).filter(x=>x.listed!==false&&x.lat!=null&&x.lng!=null).map(x=>({...x,evkind:x.kind,kind:"ev"}));
     const r=await sb.from("reviews").select("company,rating,body,author,created_at").eq("status","approved").order("created_at",{ascending:false}).limit(1000);
