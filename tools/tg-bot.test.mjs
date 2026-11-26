@@ -59,7 +59,7 @@ globalThis.fetch = async (url, o = {}) => {
   const qs = new URLSearchParams(u.search);
   if (o.method === "GET") return ok(rows(p, qs));
   if (o.method === "POST") { if (o.headers?.Prefer?.includes("ignore-duplicates") && T[p].some((x) => x.key === body.key)) return ok(undefined); if (p === "bot_config") { T.bot_config = T.bot_config.filter((x) => x.key !== body.key); } const row = { id: ++seq, ...body, created_at: seq }; T[p].push(row); return ok([row]); }
-  if (o.method === "PATCH") { for (const r of rows(p, qs)) Object.assign(r, body); return ok(undefined); }
+  if (o.method === "PATCH") { const hit = rows(p, qs); for (const r of hit) Object.assign(r, body); return ok(/representation/.test(o.headers?.Prefer ?? "") ? hit : undefined); }
   if (o.method === "DELETE") { const del = new Set(rows(p, qs)); T[p] = T[p].filter((x) => !del.has(x)); return ok(undefined); }
 };
 let handler; globalThis.Deno = { env: { get: (k) => ({ SUPABASE_URL: "https://sb.test", SUPABASE_SERVICE_ROLE_KEY: "k", TG_TOKEN: "tok", OWNER_ID: "900" })[k] }, serve: (h) => { handler = h; } };
@@ -320,4 +320,9 @@ await msg(900, "Никита", "/publish server"); assert.match(last(900).text, 
   }
   console.log("OK scamFlags", cases.length, "примеров");
 }
+// шаг 30: подозрительное сообщение работодателя задержано — владельцу с кнопками, «Пропустить» открывает его соискателю
+T.app_messages = [{ id: 77, held: true, notified: false, from_emp: true, from_mod: false, body: "оплати форму", application_id: VAPP, created_at: new Date().toISOString() }];
+await post({ tick: 1 });
+assert.ok(to(900).some((t) => /Подозрительное сообщение[\s\S]*оплати форму/.test(t)), "владельцу — задержанное сообщение");
+await cb(900, "cmok:77"); assert.equal(T.app_messages[0].held, false, "Пропустить — видно соискателю");
 console.log("OK", sent.length, "вызовов Telegram");

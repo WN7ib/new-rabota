@@ -190,7 +190,7 @@
     const draw=async()=>{const {data,error}=await sb.rpc("emp_chat_get",{t:T,aid:a.id});box.textContent="";
       if(error){box.append(el("p","hint","Переписка скоро заработает — модератор обновляет базу."));return}
       if(!data||!data.length)box.append(el("p","hint","Сообщений пока нет. Напиши первым — соискатель увидит в приложении New.работа."));
-      for(const m of (data||[])){const mod=m.mod||/^🛡 Модератор/.test(m.body);const d=el("div",null,m.body);d.style.cssText="max-width:85%;padding:8px 12px;border-radius:14px;white-space:pre-wrap;overflow-wrap:anywhere;"+(mod?"align-self:center;background:color-mix(in srgb,var(--good) 14%,transparent);border:1px solid var(--good)":m.emp?"align-self:flex-end;background:var(--accent);color:var(--accent-ink)":"align-self:flex-start;background:var(--bg);border:1px solid var(--line)");box.append(d)}
+      for(const m of (data||[])){const mod=m.mod||/^🛡 Модератор/.test(m.body);const d=el("div",null,m.body+(m.held?"\n⏳ на проверке у модератора — соискатель пока не видит":""));d.style.cssText="max-width:85%;padding:8px 12px;border-radius:14px;white-space:pre-wrap;overflow-wrap:anywhere;"+(mod?"align-self:center;background:color-mix(in srgb,var(--good) 14%,transparent);border:1px solid var(--good)":m.emp?"align-self:flex-end;background:var(--accent);color:var(--accent-ink)":"align-self:flex-start;background:var(--bg);border:1px solid var(--line)");box.append(d)}
       box.scrollTop=box.scrollHeight};
     const tm=setInterval(draw,10000);
     const bye=()=>{clearInterval(tm);sh.remove();render()};close.onclick=bye;sh.addEventListener("click",e=>{if(e.target===sh)bye()});

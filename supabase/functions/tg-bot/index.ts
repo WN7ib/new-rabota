@@ -842,7 +842,7 @@ async function chatBind(chat: number, code0: string) {
 
 // переписка в приложении (шаги 26–27): сообщение соискателя → работодателю, ответ работодателя → соискателю (если подключил Telegram)
 async function newChatMessages(): Promise<number> {
-  const ms: any[] = (await db("GET", "app_messages?select=id,body,created_at,from_emp,from_mod,application_id,applications(name,chat_tg,vacancies(title,company,employer_id))&notified=eq.false&order=id.asc&limit=50")) ?? [];
+  const ms: any[] = (await db("GET", "app_messages?select=id,body,created_at,from_emp,from_mod,held,application_id,applications(name,age,chat_tg,vacancies(title,company,employer_id))&notified=eq.false&order=id.asc&limit=50")) ?? [];
   let n = 0;
   for (const m of ms) {
     // забираю сообщение себе атомарно: телефон обходит то же самое — дубля не будет
@@ -850,6 +850,14 @@ async function newChatMessages(): Promise<number> {
     if (!Array.isArray(got) || !got.length) continue;
     if (Date.now() - new Date(m.created_at).getTime() > 3 * 86400_000) continue;
     const ap = m.applications ?? {}, v = ap.vacancies ?? {};
+    if (m.held) {   // шаг 30: подозрительное сообщение работодателя — соискатель его не видит, пока Никита не решит
+      const own = await ownerId();
+      if (own) await send(own, `⚠ Подозрительное сообщение в переписке — соискатель его пока НЕ видит.\n🏢 ${String(v.company || "Работодатель").slice(0, 60)} → 🧑 ${String(ap.name ?? "соискатель").slice(0, 40)}${ap.age ? ", " + ap.age + " лет" : ""} («${String(v.title ?? "вакансия").slice(0, 60)}»):\n«${String(m.body ?? "").slice(0, 700)}»`,
+        { inline_keyboard: [[{ text: "✅ Пропустить", callback_data: `cmok:${m.id}` }, { text: "🗑 Удалить", callback_data: `cmdel:${m.id}` }],
+          [{ text: "🛡 Удалить и предупредить", callback_data: `cmwarn:${m.id}` }, { text: "⏸ Остановить переписку", callback_data: `cmlock:${m.id}` }],
+          [{ text: "Открыть все переписки", url: `${SITE}admin.html` }]] });
+      n++; continue;
+    }
     if (m.from_mod) {   // шаг 29: модератор вмешался — пишу обеим сторонам
       const to = Number(ap.chat_tg ?? 0), title = String(v.title ?? "вакансии").slice(0, 80), body = String(m.body ?? "").slice(0, 900);
       if (to) await send(to, `${body}\n(переписка по «${title}»)`);
@@ -996,6 +1004,19 @@ async function moderate(cbq: any) {
     await db("PATCH", `vacancies?id=eq.${enc(id)}`, { status: "rejected" }, "return=minimal");
     await db("PATCH", `reports?vacancy_id=eq.${enc(id)}`, { status: "done" }, "return=minimal");
     await mark("🗑 Вакансия снята, жалобы закрыты"); return;
+  }
+  // шаг 30: решение по подозрительному сообщению в переписке
+  if (act === "cmok" || act === "cmdel" || act === "cmwarn" || act === "cmlock") {
+    const mm = (await db("GET", `app_messages?select=id,application_id,held&id=eq.${enc(id)}`))?.[0];
+    if (!mm) { await mark("Сообщение уже удалено."); return; }
+    if (act === "cmok") { await db("PATCH", `app_messages?id=eq.${enc(id)}`, { held: false, notified: false }, "return=minimal"); await mark("✅ Пропущено — соискатель увидит сообщение"); return; }
+    await db("DELETE", `app_messages?id=eq.${enc(id)}`, undefined, "return=minimal");
+    if (act === "cmwarn" || act === "cmlock")
+      await db("POST", "app_messages", { application_id: mm.application_id, from_emp: false, from_mod: true, notified: false,
+        body: "🛡 Модератор New.работа: сообщение работодателя удалено — там просили деньги или личные данные. Никогда не плати за «оформление» и не отправляй паспорт, карту или коды из СМС." }, "return=minimal");
+    if (act === "cmlock") await db("PATCH", `applications?id=eq.${mm.application_id}`, { chat_locked: true }, "return=minimal");
+    await mark(act === "cmdel" ? "🗑 Удалено" : act === "cmwarn" ? "🛡 Удалено, соискатель предупреждён" : "⏸ Удалено, переписка остановлена, соискатель предупреждён");
+    return;
   }
   const v = (await db("GET", `vacancies?select=*&id=eq.${enc(id)}`))?.[0];
   if (!v) { await mark("Вакансия уже удалена."); return; }

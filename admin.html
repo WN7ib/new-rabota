@@ -600,8 +600,8 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
   const dmRisk=(t,age)=>{if(/^🛡 Модератор/.test(t))return [];let f=[];try{f=window.nrScam?nrScam({description:t,age_min:age||14}):[]}catch(_){}
     if(/код из смс|данные карты|cvv|номер карты|фото паспорт|скинь паспорт|пришли паспорт|переведи (мне|деньги)|оплат\S* (за )?(оформлен|форм|обучен)|залог|в личку|whatsapp|ватсап|приходи один|никому не говори|ночью|к себе домой/i.test(t))f.push("опасная просьба");return f};
   async function dmData(){
-    const {data,error}=await sb.from("app_messages").select("id,created_at,from_emp,from_mod,body,application_id,applications(name,age,contact,status,chat_locked,vacancies(id,title,company,status))").order("id",{ascending:false}).limit(1000);
-    if(error&&/chat_locked/.test(error.message||""))return dmData0();   // база ещё без шага 29
+    const {data,error}=await sb.from("app_messages").select("id,created_at,from_emp,from_mod,held,body,application_id,applications(name,age,contact,status,chat_locked,vacancies(id,title,company,status))").order("id",{ascending:false}).limit(1000);
+    if(error&&/chat_locked|held|from_mod/.test(error.message||""))return dmData0();   // база ещё без шага 29
     if(error)return {error};
     const th={};for(const m of data){const k=m.application_id;(th[k]=th[k]||{id:k,ap:m.applications||{},msgs:[]}).msgs.push(m)}
     const all=Object.values(th).map(t=>{t.msgs.reverse();t.flags=[...new Set(t.msgs.filter(m=>m.from_emp&&!m.from_mod).flatMap(m=>dmRisk(m.body,t.ap.age)))];t.last=t.msgs[t.msgs.length-1];return t});
@@ -626,7 +626,7 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
       if(t.flags.length)left.append(el("p","err","Похоже на обман: "+t.flags.join("; ")));
       c.append(left,el("div","date",new Date(t.last.created_at).toLocaleString("ru-RU",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})));
       const box=el("div");box.style.cssText="grid-column:1/-1;display:flex;flex-direction:column;gap:6px;margin-top:8px;max-height:340px;overflow:auto";
-      for(const m of t.msgs){const mod=m.from_mod||/^🛡 Модератор/.test(m.body);const f=!mod&&m.from_emp&&dmRisk(m.body,t.ap.age).length;const d=el("div",null,mod?m.body:(m.from_emp?"🏢 ":"🧑 ")+m.body);
+      for(const m of t.msgs){const mod=m.from_mod||/^🛡 Модератор/.test(m.body);const f=!mod&&m.from_emp&&dmRisk(m.body,t.ap.age).length;const d=el("div",null,(mod?m.body:(m.from_emp?"🏢 ":"🧑 ")+m.body)+(m.held?"\n⏳ задержано — соискатель не видит, реши в боте":""));
         d.style.cssText="max-width:88%;padding:7px 11px;border-radius:12px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px;"+(mod?"align-self:center;background:color-mix(in srgb,var(--good) 14%,transparent);border:1px solid var(--good)":m.from_emp?"align-self:flex-start;background:var(--bg);border:1px solid "+(f?"var(--danger)":"var(--line)"):"align-self:flex-end;background:var(--chip)");box.append(d)}
       if(t.ap.chat_locked)box.append(el("p","err","⏸ Переписка остановлена модератором"));
       c.append(box);

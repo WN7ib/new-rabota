@@ -474,6 +474,28 @@
         ],
         "verify_jwt": false
       }
+    },
+    {
+      "id": "2026-11-26-chat-hold-db",
+      "title": "База: подозрительные сообщения работодателя ждут проверки владельца",
+      "do": "sql",
+      "args": {
+        "files": [
+          "migration-30-chat-hold.sql"
+        ]
+      }
+    },
+    {
+      "id": "2026-11-26-bot-chat-hold",
+      "title": "Бот: подозрительное сообщение — Никите с кнопками «Пропустить / Удалить / Предупредить / Остановить»",
+      "do": "fn_deploy",
+      "args": {
+        "slug": "tg-bot",
+        "files": [
+          "supabase/functions/tg-bot/index.ts"
+        ],
+        "verify_jwt": false
+      }
     }
   ]
 }
