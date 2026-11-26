@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<script>try{var t=localStorage.getItem("nr-theme");if(!t&&/SamsungBrowser/i.test(navigator.userAgent))t="dark";if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<title>Приложение New.работа</title>
+<meta name="description" content="Скачай приложение New.работа: карта Саратова со сменами и вакансиями для молодёжи от 14 лет, отзывы о работодателях и помощница Неви. Android, iPhone и Telegram.">
+<link rel="canonical" href="https://wn7ib.github.io/new-rabota/app.html">
+<meta property="og:image" content="https://wn7ib.github.io/new-rabota/app-icon-512.png">
+<meta name="theme-color" content="#2F86F5">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="style.css?v=13">
+<style>
+.hero-app{display:flex;gap:18px;align-items:center;margin:18px 0 8px}
+.hero-app img{width:96px;height:96px;border-radius:24px;box-shadow:0 8px 24px rgb(6 18 40 / .18);flex:none}
+.hero-app h1{margin:0}
+.ways{display:grid;gap:12px;margin-top:16px}
+.way{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px}
+.way h2{margin:0 0 6px;font-size:18px}
+.way ol{margin:8px 0 0;padding-left:20px;color:var(--muted)}
+.way .btn{margin-top:12px}
+.way.me{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 25%,transparent)}
+</style>
+</head>
+<body>
+<header class="mininav"><div class="wrap"><a class="home" href="./"><img src="logo.png?v=2" alt="">New.работа</a><a href="karta.html">Открыть карту →</a></div></header>
+<main class="wrap page">
+  <div class="hero-app"><img src="app-icon-512.png" alt="Значок New.работа"><div><h1>Приложение New.работа</h1><p class="lead" style="margin:6px 0 0">Карта Саратова: смены и вакансии с 14 лет, честные отзывы о работодателях, маршрут и помощница Неви.</p></div></div>
+  <div class="ways">
+    <section class="way" id="w-android">
+      <h2>🤖 Android</h2>
+      <p class="hint">Файл 1 МБ, бесплатно, без рекламы. Обновляется само — новые смены и функции приходят без переустановки.</p>
+      <a class="btn btn-primary" href="app/New.rabota.apk" download="New.rabota.apk">⬇ Скачать для Android</a>
+      <ol><li>Нажми «Скачать», затем открой файл.</li><li>Если телефон спросит — разреши установку из браузера (это разовая настройка).</li><li>Нажми «Установить» — значок New.работа появится на экране.</li></ol>
+    </section>
+    <section class="way" id="w-ios">
+      <h2>🍏 iPhone</h2>
+      <ol><li>Открой <a href="karta.html">карту New.работа</a> в <b>Safari</b>.</li><li>Нажми «Поделиться» ⬆ внизу экрана.</li><li>Выбери «На экран Домой» → «Добавить».</li></ol>
+    </section>
+    <section class="way" id="w-tg">
+      <h2>✈️ В Telegram</h2>
+      <p class="hint">Без установки: открой бота и нажми кнопку «New.работа» слева от поля ввода.</p>
+      <a class="btn btn-ghost" href="https://t.me/New_Net_rabota_bot" target="_blank" rel="noopener">Открыть бота</a>
+    </section>
+  </div>
+  <p class="hint" style="margin-top:16px">Приложению не нужны контакты и файлы. Местоположение спрашивается, только когда ты сам нажимаешь ➤ на карте. <a href="privacy.html">Персональные данные</a>.</p>
+</main>
+<footer class="foot"><div class="wrap"><span>© 2026 New.работа</span><span><a href="./" style="color:var(--muted)">Вакансии</a> · <a href="karta.html" style="color:var(--muted)">Карта</a></span></div></footer>
+<script>
+(function(){var ua=navigator.userAgent,id=/iPhone|iPad|iPod/.test(ua)?"w-ios":/Telegram/.test(ua)?"w-tg":/Android/.test(ua)?"w-android":"";
+ if(/NewRabotaApp/.test(ua)){document.querySelector(".ways").innerHTML='<section class="way me"><h2>✅ У тебя уже стоит приложение</h2></section>';return}
+ if(id){var e=document.getElementById(id);e.classList.add("me");e.parentNode.prepend(e)}})();
+</script>
+</body>
+</html>

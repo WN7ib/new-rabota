@@ -332,7 +332,7 @@ a.btn{text-decoration:none}
     openDr(`<div class="dh"><div class="who"><span data-mascot></span><div><h3>Неви</h3><div class="sub">Уровень ${lvl()} · ${P.pts} очк. · смен на неделе: ${P.shifts}/5</div></div></div><button class="pill" id="cx">✕</button></div>
       <div class="bubble" id="nb">${esc(s)}</div>
       <div class="cta" style="grid-template-columns:1fr 1fr"><button class="btn btn-primary" id="say">🔊 Прочитай вслух</button><button class="btn btn-ghost" id="pr">⭐ Прокачка</button></div>
-      ${standalone?"":'<button class="btn btn-ghost" id="inst" style="width:100%;justify-content:center;margin-bottom:6px">📲 Установить New.работа как приложение</button>'}
+      ${standalone?"":'<button class="btn btn-ghost" id="inst" style="width:100%;justify-content:center;margin-bottom:6px">📲 Установить New.работа как приложение</button>'+(/Android/.test(navigator.userAgent)?'<a class="btn btn-ghost" href="app.html" style="width:100%;justify-content:center;margin-bottom:6px">⬇ Скачать APK для Android</a>':'')}
       <div class="sec">Спроси Неви</div>
       <div class="klist">${TIPS.map((x,i)=>`<div class="item" data-tip="${i}"><b>${esc(x[0])}</b><span>›</span></div>`).join("")}</div>
       <div class="note">Полная Неви с голосом и памятью — в приложении Newi на телефоне Никиты; здесь — помощница по карте.</div>`);
