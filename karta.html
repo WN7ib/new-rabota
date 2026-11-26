@@ -10,6 +10,10 @@
 <link rel="canonical" href="https://wn7ib.github.io/new-rabota/karta.html">
 <meta name="theme-color" content="#2F86F5">
 <link rel="icon" type="image/png" href="favicon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="style.css?v=13">
 <style>
@@ -130,7 +134,7 @@ a.btn{text-decoration:none}
 </div>
 
 <section class="ksheet glass" id="sheet">
-  <div class="grip" id="grip"><span class="pill" id="minBtn">Свернуть</span><i></i><a class="pill r" href="./" style="text-decoration:none">Списком</a></div>
+  <div class="grip" id="grip"><span class="pill" id="minBtn">Свернуть</span><i></i><a class="pill r" id="listLink" href="./" style="text-decoration:none">Списком</a></div>
   <div id="content"><div class="sub">Загружаю Саратов…</div></div>
 </section>
 
@@ -151,6 +155,24 @@ a.btn{text-decoration:none}
   const SAR=[51.5331,46.0342];   // центр Саратова (Театральная площадь)
   const isSar=c=>/саратов/i.test(String(c||""));
   Mascot.mount();
+  // ── внутри Telegram (кнопка меню бота): во весь экран, тема Telegram, кнопка «назад» ──
+  const tg=window.Telegram&&Telegram.WebApp&&Telegram.WebApp.platform&&Telegram.WebApp.platform!=="unknown"?Telegram.WebApp:null;
+  const haptic=()=>{try{tg&&tg.HapticFeedback.selectionChanged()}catch(_){}};
+  if(tg){tg.ready();tg.expand();try{tg.disableVerticalSwipes&&tg.disableVerticalSwipes()}catch(_){}
+    if(!localStorage.getItem("nr-theme"))document.documentElement.setAttribute("data-theme",tg.colorScheme==="dark"?"dark":"light");
+    try{tg.setHeaderColor(tg.colorScheme==="dark"?"#0B1424":"#EEF4FC")}catch(_){}
+    tg.BackButton.onClick(()=>{if(document.getElementById("ov").classList.contains("on"))document.getElementById("ov").classList.remove("on");else{const h=window.__home;h&&h()}syncBack()});
+  }
+  function syncBack(){if(!tg)return;const busy=document.getElementById("ov").classList.contains("on")||window.__sel;busy?tg.BackButton.show():tg.BackButton.hide()}
+  // ── «как приложение»: установка на главный экран ──
+  let installEv=null;window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();installEv=e});
+  const standalone=matchMedia("(display-mode: standalone)").matches||navigator.standalone;
+  if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
+  async function install(){
+    if(installEv){installEv.prompt();const r=await installEv.userChoice;installEv=null;NR.toast(r.outcome==="accepted"?"Готово! Ищи New.работа на главном экране":"Можно установить позже");return}
+    if(tg){try{tg.addToHomeScreen?tg.addToHomeScreen():tg.openLink(location.href.split("?")[0])}catch(_){tg.openLink(location.href.split("?")[0])}return}
+    NR.toast(/iPhone|iPad/.test(navigator.userAgent)?"Нажми «Поделиться» → «На экран Домой»":"Меню браузера ⋮ → «Добавить на главный экран»");
+  }
 
   // ── прогресс (только на этом телефоне) ──
   const PK="nr-karta-prog";
@@ -211,8 +233,9 @@ a.btn{text-decoration:none}
   let ty=0;sheet.addEventListener("touchstart",e=>{ty=e.touches[0].clientY},{passive:true});
   sheet.addEventListener("touchend",e=>{const d=e.changedTouches[0].clientY-ty;if(sheet.scrollTop<=0&&d>50)setMin(true);else if(d<-50)setMin(false)},{passive:true});
 
+  window.__home=()=>home();
   function home(){
-    sel=null;closeRoute(false);
+    sel=null;window.__sel=null;syncBack();closeRoute(false);
     const cos=companies(),nv=VAC.length,ne=EV.length;
     C.innerHTML=`<div class="ttl"><div><h2>Саратов</h2><div class="sub">${ne} ${word(ne,"смена или событие","смены и события","смен и событий")} на карте · ${nv} ${word(nv,"вакансия","вакансии","вакансий")}</div></div></div>
       <div class="sec">Ближайшие смены и события</div><div class="klist">${EV.slice(0,4).map(e=>`<div class="item" data-ev="${e.id}"><div><b>${esc(e.title)}</b><span>${esc([e.evkind,fmt(e.starts_at)].join(" · "))}</span></div><span>›</span></div>`).join("")||'<div class="sub">Пока нет смен с точным адресом.</div>'}</div>
@@ -223,7 +246,7 @@ a.btn{text-decoration:none}
   function coRow(c){const r=companyRating(c.name);return `<div class="item" data-co="${esc(c.id)}"><div><b>${esc(c.name)}</b><span>${c.vac.length} ${word(c.vac.length,"вакансия","вакансии","вакансий")}${c.vac.some(v=>v.age_min<=14)?" · с 14 лет":""}</span></div><span class="star ${r==null?"none":r<3?"bad":""}">★ ${r==null?"—":r.toFixed(1)}</span></div>`}
   function bindRows(){C.querySelectorAll("[data-ev]").forEach(x=>x.onclick=()=>open(EV.find(e=>e.id===x.dataset.ev)));C.querySelectorAll("[data-co]").forEach(x=>x.onclick=()=>open(companies().find(c=>c.id===x.dataset.co)))}
   function listVac(){
-    sel=null;setMin(false);const cos=companies().filter(pass);
+    sel=null;window.__sel="list";syncBack();setMin(false);const cos=companies().filter(pass);
     C.innerHTML=`<div class="ttl"><div><h2>Вакансии Саратова</h2><div class="sub">Нажми на работодателя — вакансии и отзывы</div></div><button class="pill" id="back">‹ Назад</button></div><div class="klist" style="margin-top:10px">${cos.map(coRow).join("")||'<div class="sub">Ничего не нашлось.</div>'}</div>`;
     bindRows();$("#back").onclick=home;
   }
@@ -232,7 +255,7 @@ a.btn{text-decoration:none}
     const r=companyRating(o.name);return `${o.name}. ${o.vac.length} ${word(o.vac.length,"вакансия","вакансии","вакансий")}: ${o.vac.slice(0,3).map(v=>v.title+(v.pay?", "+v.pay:"")).join("; ")}. ${r==null?"Отзывов пока нет.":"Средняя оценка "+r.toFixed(1)+" из 5."}`;
   }
   function open(o){
-    if(!o)return;sel=o;P.opened[o.id]=1;save();closeRoute(false);setMin(false);draw();
+    if(!o)return;sel=o;window.__sel=o;haptic();P.opened[o.id]=1;save();closeRoute(false);setMin(false);draw();syncBack();
     if(o.kind==="ev"){
       map.setView([o.lat,o.lng],Math.max(map.getZoom(),15));
       C.innerHTML=`<div class="ttl"><div><h2>${esc(o.title)}</h2><div class="sub">${esc([o.place,"Саратов"].filter(Boolean).join(", "))}</div></div><span class="star" style="background:var(--good)">${esc(o.evkind)}</span></div>
@@ -292,8 +315,8 @@ a.btn{text-decoration:none}
   // ── выдвижные окна ──
   const ov=$("#ov"),dr=$("#dr");
   ov.onclick=e=>{if(e.target===ov)closeDr()};
-  function openDr(html){dr.innerHTML=html;ov.classList.add("on");Mascot.mount()}
-  function closeDr(){ov.classList.remove("on")}
+  function openDr(html){dr.innerHTML=html;ov.classList.add("on");Mascot.mount();haptic();syncBack()}
+  function closeDr(){ov.classList.remove("on");syncBack()}
   $("#neviBtn").onclick=nevi;$("#lvl").onclick=()=>progress("q");
 
   function nevi(){
@@ -301,10 +324,11 @@ a.btn{text-decoration:none}
     openDr(`<div class="dh"><div class="who"><span data-mascot></span><div><h3>Неви</h3><div class="sub">Уровень ${lvl()} · ${P.pts} очк. · смен на неделе: ${P.shifts}/5</div></div></div><button class="pill" id="cx">✕</button></div>
       <div class="bubble" id="nb">${esc(s)}</div>
       <div class="cta" style="grid-template-columns:1fr 1fr"><button class="btn btn-primary" id="say">🔊 Прочитай вслух</button><button class="btn btn-ghost" id="pr">⭐ Прокачка</button></div>
+      ${standalone?"":'<button class="btn btn-ghost" id="inst" style="width:100%;justify-content:center;margin-bottom:6px">📲 Установить New.работа как приложение</button>'}
       <div class="sec">Спроси Неви</div>
       <div class="klist">${TIPS.map((x,i)=>`<div class="item" data-tip="${i}"><b>${esc(x[0])}</b><span>›</span></div>`).join("")}</div>
       <div class="note">Полная Неви с голосом и памятью — в приложении Newi на телефоне Никиты; здесь — помощница по карте.</div>`);
-    $("#cx").onclick=closeDr;$("#say").onclick=()=>speak($("#nb").textContent);$("#pr").onclick=()=>progress("q");
+    $("#cx").onclick=closeDr;$("#say").onclick=()=>speak($("#nb").textContent);if($("#inst"))$("#inst").onclick=install;$("#pr").onclick=()=>progress("q");
     dr.querySelectorAll("[data-tip]").forEach(x=>x.onclick=()=>{const t=TIPS[+x.dataset.tip][1];$("#nb").textContent=t;Mascot.flash("think",900)});
   }
   const TIPS=[
@@ -359,6 +383,7 @@ a.btn{text-decoration:none}
 
   // ── загрузка ──
   hud();
+  if(tg)document.getElementById("listLink").href="tg.html";
   (async()=>{
     if(!sb){C.innerHTML='<div class="sub">Сайт не подключён к базе.</div>';return}
     const today=NR.today();

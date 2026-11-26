@@ -435,6 +435,18 @@
           "migration-25-novye.sql"
         ]
       }
+    },
+    {
+      "id": "2026-11-26-bot-menu-karta",
+      "title": "Бот New.работа: кнопка меню «New.работа» открывает приложение-карту",
+      "do": "fn_deploy",
+      "args": {
+        "slug": "tg-bot",
+        "files": [
+          "supabase/functions/tg-bot/index.ts"
+        ],
+        "verify_jwt": false
+      }
     }
   ]
 }

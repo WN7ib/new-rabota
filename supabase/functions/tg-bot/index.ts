@@ -151,10 +151,12 @@ const MENU = { resize_keyboard: true, keyboard: [
 // Mini App New.работа (сайт tg.html): кнопка «Вакансии» слева от поля ввода у всех + /app
 const APP = SITE + "tg.html";
 const appButton = (city = "") => ({ inline_keyboard: [[{ text: "📱 Открыть вакансии", web_app: { url: APP + (city ? "?city=" + encodeURIComponent(city) : "") } }]] });
+// кнопка меню (Никита 26.11) — приложение New.работа: карта Саратова со сменами, вакансиями, отзывами и Неви (оттуда «Списком» → tg.html)
+const MENU_APP = SITE + "karta.html";
 async function menuApp() {
-  if ((await cfg("menu_app")) === APP) return;
-  const r = await tg("setChatMenuButton", { menu_button: { type: "web_app", text: "Вакансии", web_app: { url: APP } } });
-  if (r?.ok) await setCfg("menu_app", APP);
+  if ((await cfg("menu_app")) === MENU_APP) return;
+  const r = await tg("setChatMenuButton", { menu_button: { type: "web_app", text: "New.работа", web_app: { url: MENU_APP } } });
+  if (r?.ok) await setCfg("menu_app", MENU_APP);
 }
 async function send(chat: number | string, text: string, markup?: unknown): Promise<number> {
   const r = await tg("sendMessage", { chat_id: chat, text: text.slice(0, 4000), disable_web_page_preview: true, ...(markup ? { reply_markup: markup } : {}) });
