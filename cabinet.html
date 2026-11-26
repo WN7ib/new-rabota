@@ -51,7 +51,7 @@
 <div class="toast" id="toast" hidden></div>
 <script src="vendor/supabase.js?v=1"></script>
 <script src="config.js?v=2"></script>
-<script src="common.js?v=3"></script>
+<script src="common.js?v=4"></script>
 <script src="geo.js"></script>
 <script>
 (function(){
@@ -161,6 +161,7 @@
     const {data,error}=await sb.rpc("emp_apps",{t:T});
     if(error){cab.append(el("div","empty","Анкеты скоро заработают — модератор обновляет базу."));return}
     if(!data||!data.length){const e=el("div","empty");e.append(el("h3",null,"Анкет пока нет"),el("p",null,"Когда соискатель нажмёт «📝 Отправить анкету» у твоей вакансии, она появится здесь, а уведомление придёт в Telegram."));cab.append(e);return}
+    let unr={};try{const u=await sb.rpc("emp_chat_unread",{t:T});(u.data||[]).forEach(x=>unr[x.application_id]=x.n)}catch(_){}
     for(const a of data){
       const box=el("article","vac app");
       box.append(el("span","st "+a.status,AST[a.status]||a.status),el("h3",null,a.name+(a.age?", "+a.age+" лет":"")),
@@ -173,8 +174,29 @@
       acts.append(cl);
       const st=(t,v)=>{const b=el("button","btn btn-sm btn-ghost",t);b.type="button";b.onclick=async()=>{await sb.rpc("emp_app_status",{t:T,aid:a.id,p_status:v});render()};acts.append(b)};
       if(a.status!=="accepted")st("✅ Принять","accepted");if(a.status!=="rejected")st("✖ Отказать","rejected");
+      const ch=el("button","btn btn-sm "+(unr[a.id]?"btn-primary":"btn-ghost"),"💬 Переписка"+(unr[a.id]?" ("+unr[a.id]+")":""));ch.type="button";ch.onclick=()=>chatWith(a);acts.append(ch);
       box.append(acts);cab.append(box);
     }
+  }
+
+  // ═════════ переписка с соискателем (шаг 26) ═════════
+  async function chatWith(a){
+    const sh=el("div","sheet"),f=el("div","form");f.style.maxHeight="88vh";f.style.display="flex";f.style.flexDirection="column";
+    f.append(el("h2",null,"💬 "+a.name+(a.age?", "+a.age+" лет":"")),el("p","hint full","«"+a.vacancy_title+"». Пиши по делу: время, адрес, что взять. "+(a.age&&a.age<18?"Ему(ей) меньше 18 — нужен договор и согласие родителя (ст. 63 ТК РФ). ":"")+"Модератор видит переписку."));
+    const box=el("div");box.style.cssText="flex:1;overflow:auto;display:flex;flex-direction:column;gap:6px;margin:8px 0;min-height:160px";
+    const tx=document.createElement("textarea");tx.maxLength=1000;tx.rows=2;tx.placeholder="Ответ соискателю…";
+    const row=el("div","row"),close=el("button","btn btn-ghost","Закрыть"),send=el("button","btn btn-primary","Отправить");close.type="button";send.type="button";row.append(close,send);
+    f.append(box,tx,row);sh.append(f);document.body.append(sh);
+    const draw=async()=>{const {data,error}=await sb.rpc("emp_chat_get",{t:T,aid:a.id});box.textContent="";
+      if(error){box.append(el("p","hint","Переписка скоро заработает — модератор обновляет базу."));return}
+      if(!data||!data.length)box.append(el("p","hint","Сообщений пока нет. Напиши первым — соискатель увидит в приложении New.работа."));
+      for(const m of (data||[])){const d=el("div",null,m.body);d.style.cssText="max-width:85%;padding:8px 12px;border-radius:14px;white-space:pre-wrap;overflow-wrap:anywhere;"+(m.emp?"align-self:flex-end;background:var(--accent);color:var(--accent-ink)":"align-self:flex-start;background:var(--bg);border:1px solid var(--line)");box.append(d)}
+      box.scrollTop=box.scrollHeight};
+    const tm=setInterval(draw,10000);
+    const bye=()=>{clearInterval(tm);sh.remove();render()};close.onclick=bye;sh.addEventListener("click",e=>{if(e.target===sh)bye()});
+    send.onclick=async()=>{const b=tx.value.trim();if(!b)return;send.disabled=true;const {error}=await sb.rpc("emp_chat_say",{t:T,aid:a.id,p_body:b});send.disabled=false;
+      if(error){NR.toast(/too many/.test(error.message)?"Слишком часто — подожди":"Не отправилось");return}tx.value="";draw()};
+    draw();
   }
 
   // ═════════ смены ═════════

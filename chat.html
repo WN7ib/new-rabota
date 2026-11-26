@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="robots" content="noindex">
+<script>try{var t=localStorage.getItem("nr-theme");if(!t&&/SamsungBrowser/i.test(navigator.userAgent))t="dark";if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<title>Сообщения · New.работа</title>
+<meta name="theme-color" content="#2F86F5">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="style.css?v=13">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+html,body{height:100%}
+body{display:flex;flex-direction:column;min-height:100dvh}
+.top{position:sticky;top:0;z-index:5;background:var(--surface);border-bottom:1px solid var(--line);padding:max(10px,env(safe-area-inset-top)) 14px 10px;display:flex;align-items:center;gap:10px}
+.top h1{font:800 17px "Unbounded",var(--f-body);margin:0;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top small{display:block;color:var(--muted);font:500 12px var(--f-body)}
+.ib{width:38px;height:38px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink);display:grid;place-items:center;cursor:pointer;font-size:18px;text-decoration:none;flex:none}
+main{flex:1;max-width:720px;width:100%;margin:0 auto;padding:12px 14px}
+.row{display:flex;gap:12px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:12px 14px;margin-bottom:8px;cursor:pointer}
+.av{width:44px;height:44px;border-radius:14px;background:var(--chip);color:var(--accent);display:grid;place-items:center;font:800 18px var(--f-body);flex:none}
+.row b{display:block}.row span{color:var(--muted);font-size:13px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .mid{flex:1;min-width:0}
+.row span.badge,.badge{background:var(--accent);color:var(--accent-ink);border-radius:99px;min-width:22px;height:22px;padding:0 6px;display:grid;place-items:center;font:800 12px var(--f-body)}
+.st{font:700 11px var(--f-body);border-radius:8px;padding:2px 7px;background:var(--chip);color:var(--muted)}
+.st.accepted{color:var(--good);background:color-mix(in srgb,var(--good) 14%,transparent)}.st.rejected{color:var(--danger);background:color-mix(in srgb,var(--danger) 14%,transparent)}
+.warn{border:1px dashed var(--line);border-radius:14px;padding:10px 12px;color:var(--muted);font-size:12.5px;margin-bottom:12px;background:var(--surface)}
+.msgs{display:flex;flex-direction:column;gap:6px;padding-bottom:90px}
+.m{max-width:82%;padding:8px 12px;border-radius:16px;font-size:14.5px;line-height:1.4;white-space:pre-wrap;overflow-wrap:anywhere}
+.m small{display:block;text-align:right;font-size:11px;opacity:.7;margin-top:2px}
+.m.me{align-self:flex-end;background:var(--accent);color:var(--accent-ink);border-bottom-right-radius:6px}
+.m.them{align-self:flex-start;background:var(--surface);border:1px solid var(--line);border-bottom-left-radius:6px}
+.m.flag{outline:2px solid var(--danger)}
+.flagnote{align-self:flex-start;font-size:12px;color:var(--danger);margin:-2px 0 4px 4px}
+.send{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding:8px 12px calc(8px + env(safe-area-inset-bottom));display:flex;gap:8px;max-width:720px;margin:0 auto}
+.send textarea{flex:1;resize:none;min-height:42px;max-height:120px;border-radius:14px}
+.send button{width:46px;border-radius:14px;border:0;background:var(--accent);color:var(--accent-ink);font-size:18px;cursor:pointer}
+.subs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
+.subs a{display:flex;align-items:center;justify-content:center;gap:6px;border-radius:14px;padding:12px;font-weight:700;text-decoration:none;color:#fff}
+.subs .tg{background:#2AABEE}.subs .vk{background:#0077FF}
+.empty-c{text-align:center;color:var(--muted);padding:30px 10px}
+</style>
+</head>
+<body>
+<div class="top"><a class="ib" id="back" href="karta.html" aria-label="Назад">‹</a><h1 id="ttl">Сообщения<small>переписка с работодателями</small></h1></div>
+<main id="main"></main>
+<script src="vendor/supabase.js?v=1"></script>
+<script src="config.js?v=2"></script>
+<script src="common.js?v=4"></script>
+<script src="scam.js?v=1"></script>
+<script>
+(function(){
+  const {sb}=NR,$=s=>document.querySelector(s),M=$("#main");
+  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const tg=window.Telegram&&Telegram.WebApp&&Telegram.WebApp.platform&&Telegram.WebApp.platform!=="unknown"?Telegram.WebApp:null;
+  if(tg){tg.ready();tg.expand()}
+  const chats=()=>{try{return JSON.parse(localStorage.getItem("nr-chats")||"[]")}catch(_){return []}};
+  const ST={new:"на рассмотрении",accepted:"приняли ✓",rejected:"отказ"};
+  const time=d=>new Date(d).toLocaleString("ru-RU",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
+  // подозрительное в сообщении работодателя (те же правила, что у жалоб на вакансии)
+  const risky=t=>{try{return (window.nrScam?nrScam({description:t,age_min:14}).length>0:false)||/код из смс|данные карты|cvv|фото паспорт|скинь паспорт|переведи (мне|деньги)|оплат\S* (за )?оформлен/i.test(t)}catch(_){return false}};
+  let timer=null;
+
+  const SUBS=`<div class="sec" style="margin-top:18px;color:var(--muted);font-weight:700;font-size:13px">Новые смены и вакансии — первыми</div>
+    <div class="subs"><a class="tg" href="https://t.me/NEWIrabota" target="_blank" rel="noopener">✈️ Telegram-канал</a><a class="vk" href="https://vk.ru/club243548676" target="_blank" rel="noopener">ВКонтакте</a></div>`;
+
+  async function list(){
+    clearInterval(timer);$("#ttl").innerHTML='Сообщения<small>переписка с работодателями</small>';$("#back").href=tg?"karta.html":"karta.html";$("#back").onclick=null;
+    const cs=chats();
+    if(!cs.length){M.innerHTML=`<div class="empty-c"><div style="font-size:42px">💬</div><p><b>Пока переписок нет</b></p><p>Отправь анкету на вакансию — и здесь появится чат с работодателем.</p><a class="btn btn-primary" href="karta.html" style="text-decoration:none">Найти смену</a></div>`+SUBS;return}
+    M.innerHTML='<div class="warn">🛡 Общайся здесь, а не в личке. Никогда не плати за «оформление» или «форму», не присылай фото паспорта и коды из СМС. Что-то не так — нажми «Пожаловаться».</div><div id="rows"></div>'+SUBS;
+    const R=$("#rows");
+    for(const c of cs){
+      const d=document.createElement("div");d.className="row";d.innerHTML=`<div class="av">${esc((c.co||c.t||"?").trim()[0]||"?")}</div><div class="mid"><b>${esc(c.co||c.t)}</b><span class="ln">${esc(c.t)} · загружаю…</span></div>`;
+      d.onclick=()=>thread(c);R.append(d);
+      sb.rpc("app_chat_get",{tok:c.tok}).then(({data})=>{
+        if(!data){d.querySelector(".ln").textContent=c.t+" · чат недоступен";return}
+        const ms=data.messages||[],last=ms[ms.length-1],un=ms.filter(m=>m.emp&&!m.read).length;
+        d.querySelector("b").innerHTML=esc(data.company||c.co||data.title)+` <span class="st ${data.status}" style="display:inline">${ST[data.status]||""}</span>`;
+        d.querySelector(".ln").textContent=last?(last.emp?"":"Ты: ")+last.body:data.title;
+        if(un){const b=document.createElement("span");b.className="badge";b.textContent=un;d.append(b)}
+      });
+    }
+  }
+  async function thread(c){
+    $("#back").href="#";$("#back").onclick=e=>{e.preventDefault();list()};
+    M.innerHTML='<div class="msgs" id="msgs"><div class="empty-c">Загружаю…</div></div>';
+    const draw=async()=>{
+      const {data,error}=await sb.rpc("app_chat_get",{tok:c.tok});
+      if(error||!data){$("#msgs").innerHTML='<div class="empty-c">Не получилось загрузить. Проверь интернет.</div>';return}
+      $("#ttl").innerHTML=esc(data.company||c.co||"Работодатель")+`<small>«${esc(data.title)}» · ${ST[data.status]||""}</small>`;
+      const box=$("#msgs"),stick=box.scrollHeight-scrollY-innerHeight<120;
+      box.innerHTML='<div class="warn">🛡 Не плати за «оформление», не присылай паспорт и коды из СМС. Если просят — <a href="#" id="rep">пожалуйся</a>.</div>'+
+        (data.messages||[]).map(m=>{const f=m.emp&&risky(m.body);return `<div class="m ${m.emp?"them":"me"}${f?" flag":""}">${esc(m.body)}<small>${time(m.at)}${!m.emp&&m.read?" · ✓✓":""}</small></div>`+(f?'<div class="flagnote">⚠ Похоже на обман: не плати и не отправляй данные</div>':"")}).join("");
+      $("#rep").onclick=e=>{e.preventDefault();report(data)};
+      if(stick)scrollTo(0,document.body.scrollHeight);
+    };
+    await draw();scrollTo(0,document.body.scrollHeight);
+    let s=document.querySelector(".send");if(s)s.remove();
+    s=document.createElement("form");s.className="send";s.innerHTML='<textarea id="tx" rows="1" maxlength="1000" placeholder="Сообщение работодателю…"></textarea><button aria-label="Отправить">➤</button>';document.body.append(s);
+    const tx=$("#tx");tx.oninput=()=>{tx.style.height="auto";tx.style.height=Math.min(120,tx.scrollHeight)+"px"};
+    s.onsubmit=async e=>{e.preventDefault();const b=tx.value.trim();if(!b)return;tx.value="";tx.oninput();
+      const {error}=await sb.rpc("app_chat_say",{tok:c.tok,p_body:b});
+      if(error){NR.toast(/too many/.test(error.message)?"Слишком часто — подожди пару минут":"Не отправилось, попробуй ещё раз");tx.value=b;return}
+      try{tg&&tg.HapticFeedback.impactOccurred("light")}catch(_){}
+      await draw();scrollTo(0,document.body.scrollHeight)};
+    clearInterval(timer);timer=setInterval(draw,8000);
+  }
+  async function report(d){
+    const why=prompt("Что не так? (просят деньги, данные, грубят…)");if(!why)return;
+    const {error}=await sb.from("reports").insert({vacancy_id:d.vacancy_id,reason:"Переписка: "+why.slice(0,300)});
+    NR.toast(error?"Не отправилось — напиши в бот поддержки":"Спасибо! Модератор проверит переписку.");
+  }
+  // уйти со страницы — убрать поле ввода из списка
+  const _list=list;list=async()=>{const s=document.querySelector(".send");if(s)s.remove();return _list()};
+  if(!sb){M.innerHTML='<div class="empty-c">Сайт не подключён к базе.</div>';return}
+  list();
+})();
+</script>
+</body>
+</html>

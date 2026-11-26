@@ -447,6 +447,28 @@
         ],
         "verify_jwt": false
       }
+    },
+    {
+      "id": "2026-11-26-chat-db",
+      "title": "База: переписка соискателя и работодателя в приложении New.работа",
+      "do": "sql",
+      "args": {
+        "files": [
+          "migration-26-chat.sql"
+        ]
+      }
+    },
+    {
+      "id": "2026-11-26-bot-chat",
+      "title": "Бот New.работа: новые сообщения соискателей → работодателю в Telegram",
+      "do": "fn_deploy",
+      "args": {
+        "slug": "tg-bot",
+        "files": [
+          "supabase/functions/tg-bot/index.ts"
+        ],
+        "verify_jwt": false
+      }
     }
   ]
 }

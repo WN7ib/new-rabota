@@ -824,6 +824,22 @@ async function newApplications(own: number): Promise<number> {
   return n;
 }
 
+// переписка в приложении (шаг 26): новое сообщение соискателя → работодателю в Telegram (текст + ссылка в кабинет)
+async function newChatMessages(): Promise<number> {
+  const ms: any[] = (await db("GET", "app_messages?select=id,body,created_at,application_id,applications(name,vacancies(title,employer_id))&notified=eq.false&from_emp=eq.false&order=id.asc&limit=50")) ?? [];
+  let n = 0;
+  for (const m of ms) {
+    await db("PATCH", `app_messages?id=eq.${m.id}`, { notified: true }, "return=minimal");
+    if (Date.now() - new Date(m.created_at).getTime() > 3 * 86400_000) continue;
+    const ap = m.applications ?? {}, v = ap.vacancies ?? {};
+    const ec = UUID.test(String(v.employer_id ?? "")) ? Number((await db("GET", `employers?select=tg_chat&id=eq.${v.employer_id}`))?.[0]?.tg_chat ?? 0) : 0;
+    if (!ec) continue;
+    await send(ec, `💬 ${String(ap.name ?? "Соискатель").slice(0, 60)} пишет по «${String(v.title ?? "вакансии").slice(0, 80)}»:\n${String(m.body ?? "").slice(0, 900)}\n\nОтветить: ${SITE}cabinet.html`);
+    n++;
+  }
+  return n;
+}
+
 // работодатель отметил в кабинете «пришёл / не пришёл» → человеку: мягко про неявку, значок «✓ Надёжный» — один раз
 async function attendanceNotes(): Promise<number> {
   const ss: any[] = (await db("GET", "event_signups?select=id,chat_id,contact,attended,events(title)&attended=not.is.null&att_notified=is.null&chat_id=not.is.null&limit=50")) ?? [];
@@ -923,10 +939,11 @@ async function tick() {
     await offerReserve(e);
   }
   const apps = await newApplications(own);
+  const chat = await newChatMessages().catch((e) => { console.error(e); return 0; });   // база без шага 26 — просто 0
   const att = await attendanceNotes();
   const wk = await weeklyDigest();
   const shr = await shiftReminders().catch((e) => { console.error(e); return 0; });
-  return `ok posted=${posted}${apps ? " apps=" + apps : ""}${att ? " att=" + att : ""}${wk ? " weekly=" + wk : ""}${shr ? " shifts=" + shr : ""}`;
+  return `ok posted=${posted}${apps ? " apps=" + apps : ""}${chat ? " chat=" + chat : ""}${att ? " att=" + att : ""}${wk ? " weekly=" + wk : ""}${shr ? " shifts=" + shr : ""}`;
 }
 
 async function moderate(cbq: any) {

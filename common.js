@@ -78,6 +78,8 @@
       try{pr.name=name.value.trim();if(a)pr.age=a;pr.contact=contact.value.trim();localStorage.setItem("nr-profile",JSON.stringify(pr))}catch(_){}
       try{const h=JSON.parse(localStorage.getItem("nr-applied")||"[]").filter(x=>x.id!==v.id);h.unshift({id:v.id,t:v.title,c:v.city||(v.remote?"удалённо":""),at:Date.now(),form:1});localStorage.setItem("nr-applied",JSON.stringify(h.slice(0,50)))}catch(_){}
       close(); toast("Анкета отправлена! Работодатель свяжется с тобой.");
+      // переписка с работодателем в приложении (шаг 26): ключ только у тебя в телефоне
+      if(vcode)try{const {data:tok}=await sb.rpc("app_chat_start",{p_vcode:vcode});if(tok){const c=JSON.parse(localStorage.getItem("nr-chats")||"[]");c.unshift({tok,t:v.title,co:v.company||"",at:Date.now()});localStorage.setItem("nr-chats",JSON.stringify(c.slice(0,50)));setTimeout(()=>toast("💬 Переписка с работодателем — в «Сообщениях»"),3200)}}catch(_){}
       if(vcode)settings().then(s=>{if(s.video_card)videoOffer(s.bot_username,vcode,v.title)}) });
   }
   /** После анкеты: по желанию кружок-визитка через бота — бот перешлёт его работодателю в Telegram. */

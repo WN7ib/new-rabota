@@ -52,6 +52,7 @@ body{margin:0;-webkit-tap-highlight-color:transparent}
 .grip i{width:40px;height:5px;border-radius:9px;background:var(--line);display:block}
 .grip .r{justify-self:end}
 .pill{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;padding:4px 10px;font:600 12px var(--f-body);cursor:pointer}
+.subs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0 4px}.subs a{display:flex;align-items:center;justify-content:center;gap:6px;border-radius:12px;padding:11px;font:700 13.5px var(--f-body);text-decoration:none;color:#fff}.subs .tg{background:#2AABEE}.subs .vk{background:#0077FF}
 .ttl{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
 .ttl h2{margin:0;font:800 18px/1.25 var(--f-head,var(--f-body));font-family:"Unbounded",var(--f-body);letter-spacing:-.01em}
 .sub{color:var(--muted);font-size:13px;margin-top:3px}
@@ -116,6 +117,7 @@ a.btn{text-decoration:none}
     <a href="./" title="На сайт New.работа"><img class="klogo" src="logo.png?v=2" alt="New.работа"></a>
     <input id="q" type="search" placeholder="Поиск по Саратову: кафе, промо, смена…" autocomplete="off" aria-label="Поиск">
     <button class="lvl" id="lvl" type="button">Ур. 1 · 0</button>
+    <a class="sq" id="msgBtn" href="chat.html" aria-label="Сообщения" style="position:relative;text-decoration:none">💬<i id="msgN" hidden style="position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;border-radius:9px;background:var(--danger);color:#fff;font:800 11px/18px var(--f-body);text-align:center;font-style:normal;padding:0 4px"></i></a>
     <button class="sq" id="themeBtn" type="button" aria-label="Тема">◐</button>
   </div>
   <div class="chips" id="chips">
@@ -144,7 +146,7 @@ a.btn{text-decoration:none}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="vendor/supabase.js?v=1"></script>
 <script src="config.js?v=2"></script>
-<script src="common.js?v=3"></script>
+<script src="common.js?v=4"></script>
 <script src="geo.js"></script>
 <script src="mascot.js"></script>
 <script>
@@ -248,6 +250,7 @@ a.btn{text-decoration:none}
     C.innerHTML=`<div class="ttl"><div><h2>Саратов</h2><div class="sub">${ne} ${word(ne,"смена или событие","смены и события","смен и событий")} на карте · ${nv} ${word(nv,"вакансия","вакансии","вакансий")}</div></div></div>
       <div class="sec">Ближайшие смены и события</div><div class="klist">${EV.slice(0,4).map(e=>`<div class="item" data-ev="${e.id}"><div><b>${esc(e.title)}</b><span>${esc([e.evkind,fmt(e.starts_at)].join(" · "))}</span></div><span>›</span></div>`).join("")||'<div class="sub">Пока нет смен с точным адресом.</div>'}</div>
       <div class="sec">Работодатели <a href="#" id="allVac" style="color:var(--accent)">все →</a></div><div class="klist">${cos.slice(0,4).map(coRow).join("")||'<div class="sub">Вакансий в Саратове пока нет.</div>'}</div>
+      <div class="sec">Новые смены — первыми</div>${SUBS}
       <div class="note">Удалёнка для всей России — на <a href="./?remote=1">главной</a>.</div>`;
     bindRows();const a=$("#allVac");if(a)a.onclick=e=>{e.preventDefault();listVac()};
   }
@@ -335,10 +338,11 @@ a.btn{text-decoration:none}
       ${standalone?"":'<button class="btn btn-ghost" id="inst" style="width:100%;justify-content:center;margin-bottom:6px">📲 Установить New.работа как приложение</button>'+(/Android/.test(navigator.userAgent)?'<a class="btn btn-ghost" href="app.html" style="width:100%;justify-content:center;margin-bottom:6px">⬇ Скачать APK для Android</a>':'')}
       <div class="sec">Спроси Неви</div>
       <div class="klist">${TIPS.map((x,i)=>`<div class="item" data-tip="${i}"><b>${esc(x[0])}</b><span>›</span></div>`).join("")}</div>
-      <div class="note">Полная Неви с голосом и памятью — в приложении Newi на телефоне Никиты; здесь — помощница по карте.</div>`);
+      <div class="sec">Подпишись — новые смены первыми</div>${SUBS}`);
     $("#cx").onclick=closeDr;$("#say").onclick=()=>speak($("#nb").textContent);if($("#inst"))$("#inst").onclick=install;$("#pr").onclick=()=>progress("q");
     dr.querySelectorAll("[data-tip]").forEach(x=>x.onclick=()=>{const t=TIPS[+x.dataset.tip][1];$("#nb").textContent=t;Mascot.flash("think",900)});
   }
+  const SUBS='<div class="subs"><a class="tg" href="https://t.me/NEWIrabota" target="_blank" rel="noopener">✈️ Наш Telegram</a><a class="vk" href="https://vk.ru/club243548676" target="_blank" rel="noopener">ВКонтакте</a></div>';
   const TIPS=[
     ["Как не нарваться на обман?","Никогда не плати за «оформление», «форму» или «обучение» — честный работодатель денег с тебя не берёт. Не отдавай данные карты и коды из СМС. Договорись об оплате заранее и лучше письменно. Видишь красный ★ — почитай отзывы."],
     ["Мне 14–15, можно работать?","Можно лёгкую работу: с 14 лет — с письменного согласия родителя, не больше 4 часов в день в каникулы и 2,5 часа в учебные дни (ст. 63 и 94 ТК РФ). Ночью и на вредной работе — нельзя. Согласие можно оформить на сайте: раздел «Согласие родителей»."],
@@ -391,6 +395,8 @@ a.btn{text-decoration:none}
 
   // ── загрузка ──
   hud();
+  async function unread(){try{const cs=JSON.parse(localStorage.getItem("nr-chats")||"[]").map(c=>c.tok);if(!cs.length||!sb)return;const {data}=await sb.rpc("app_chat_unread",{toks:cs});const n=$("#msgN");if(data>0){n.textContent=data;n.hidden=false}else n.hidden=true}catch(_){}}
+  unread();setInterval(unread,30000);
   if(tg)document.getElementById("listLink").href="tg.html";
   (async()=>{
     if(!sb){C.innerHTML='<div class="sub">Сайт не подключён к базе.</div>';return}
