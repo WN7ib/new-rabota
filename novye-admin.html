@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Админка «Новые»</title>
+<style>
+:root{--bg:#0d0b0c;--card:#181516;--line:#2b2829;--tx:#f2f0f0;--mut:#9a9798;--teal:#0ad1c9}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 system-ui,Arial,sans-serif}
+.wrap{max-width:720px;margin:0 auto;padding:14px 16px 80px}
+h1{font-size:20px;margin:6px 0 12px}h1 b{color:var(--teal)}
+.tabs{display:flex;gap:6px;overflow-x:auto;margin-bottom:12px}
+.tabs button{flex:none;background:var(--card);color:var(--tx);border:1px solid var(--line);border-radius:20px;padding:7px 14px;font:inherit}
+.tabs button.on{background:var(--teal);color:#000;border-color:var(--teal);font-weight:600}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px}
+label{display:block;font-size:12px;color:var(--mut);margin:8px 0 3px}
+input,textarea{width:100%;background:#0f0d0e;color:var(--tx);border:1px solid var(--line);border-radius:8px;padding:9px;font:inherit}
+textarea{min-height:70px}
+.row{display:flex;gap:8px}.row>*{flex:1}
+.btn{background:var(--teal);color:#000;border:0;border-radius:10px;padding:11px 16px;font:inherit;font-weight:600}
+.btn.g{background:transparent;color:var(--tx);border:1px solid var(--line)}.btn.r{background:#c0392b;color:#fff}
+.bar{position:fixed;left:0;right:0;bottom:0;background:#000c;padding:10px 16px;display:flex;gap:8px;justify-content:center;backdrop-filter:blur(6px)}
+.msg{color:var(--teal);font-size:13px;min-height:18px}.mut{color:var(--mut);font-size:13px}
+.ck{display:flex;align-items:center;gap:8px;margin:6px 0}.ck input{width:auto}
+img.pv{width:56px;height:56px;border-radius:8px;object-fit:cover;background:#222}
+a{color:var(--teal)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Админка сайта <b>«Новые»</b></h1>
+  <div id="login" class="card" style="display:none">
+    <div class="mut">Тот же вход, что в админке New.работа.</div>
+    <label>Почта</label><input id="em" type="email" autocomplete="username">
+    <label>Пароль</label><input id="pw" type="password" autocomplete="current-password">
+    <p><button class="btn" id="go">Войти</button></p><div class="msg" id="lmsg"></div>
+  </div>
+  <div id="app" style="display:none">
+    <div class="tabs" id="tabs"></div>
+    <div id="pane"></div>
+  </div>
+  <p class="mut"><a href="admin.html">← Админка New.работа</a> · <a href="https://wn7ib.github.io/new-rabota/novye/">Открыть сайт «Новые»</a></p>
+</div>
+<div class="bar" id="bar" style="display:none"><button class="btn" id="save">💾 Сохранить</button><span class="msg" id="smsg"></span></div>
+<script src="vendor/supabase.js?v=1"></script>
+<script src="config.js?v=2"></script>
+<script>
+(function(){
+  const cfg=window.NR_CONFIG, sb=window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseKey);
+  const $=s=>document.querySelector(s), esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const DEF={settings:{},team:[],events:[],news:[],site:{hidden:[]}};
+  const D={}; let tab="settings";
+  const SECTIONS={hero:"Главный экран",about:"О нас",impact:"Уже сделали",video:"Видео",vs:"Старое vs новое",districts:"Районы",directions:"Что мы делаем",steps:"4 шага",team:"Команда",testimonials:"Отзывы",gallery:"Галерея",events:"Мероприятия",news:"Новости",tg:"Telegram-посты",faq:"Вопросы",join:"Вступить"};
+  const SET=[["hero_title","Заголовок на главном"],["hero_subtitle","Подзаголовок"],["about_text","Текст «О нас»"],["participants","Участников (число)"],["projects","Проектов (число)"],["districts","Районов (число)"],["phone","Телефон (пусто — не показывать)"],["email","Почта"],["telegram","Telegram-ссылка"],["join_tg","Telegram для заявок (ник без @)"],["vk","ВКонтакте"],["address","Адрес"]];
+  const LISTS={
+    team:{title:"Команда (первый — лидер)",f:[["name","Имя"],["role","Роль"],["initials","Инициалы"],["image","Фото (ссылка или img/файл.jpg)"],["img_pos_y","Фото: сдвиг по высоте, % (0–100)"]]},
+    events:{title:"Мероприятия",f:[["day","День (20)"],["month","Месяц (июля)"],["title","Название"],["location","Место"],["time","Время"],["type","Тип (Форум, Акция…)"]]},
+    news:{title:"Новости",f:[["date","Дата (2026-11-26)"],["title","Заголовок"],["text","Текст","ta"],["image","Картинка (ссылка)"]]}
+  };
+  async function load(){
+    const {data,error}=await sb.from("novye_cms").select("type,data");
+    if(error){$("#pane").innerHTML='<div class="card">База ещё не готова: скажи Неви «выполни поручения Клода» (создаст таблицы сайта «Новые»).<br><span class="mut">'+esc(error.message)+'</span></div>';return false}
+    for(const k in DEF) D[k]=JSON.parse(JSON.stringify(DEF[k]));
+    const have={}; (data||[]).forEach(r=>{D[r.type]=r.data;have[r.type]=1});
+    // пусто в базе — берём то, что сейчас на сайте (novye/api/*.json)
+    for(const k in DEF) if(!have[k]) try{const r=await fetch("https://wn7ib.github.io/new-rabota/novye/api/"+k+".json?v="+Date.now()); if(r.ok) D[k]=await r.json()}catch(e){}
+    return true;
+  }
+  function tabs(){
+    const t=[["settings","Главное"],["team","Команда"],["events","Мероприятия"],["news","Новости"],["site","Разделы"],["join","Заявки"]];
+    $("#tabs").innerHTML=t.map(([k,n])=>`<button data-k="${k}" class="${k===tab?"on":""}">${n}</button>`).join("");
+    $("#tabs").querySelectorAll("button").forEach(b=>b.onclick=()=>{collect();tab=b.dataset.k;tabs();draw()});
+  }
+  function draw(){
+    $("#bar").style.display=tab==="join"?"none":"flex"; $("#smsg").textContent="";
+    const P=$("#pane");
+    if(tab==="settings"){P.innerHTML='<div class="card">'+SET.map(([k,n])=>`<label>${n}</label>`+(k.endsWith("text")?`<textarea data-s="${k}">${esc(D.settings[k])}</textarea>`:`<input data-s="${k}" value="${esc(D.settings[k])}">`)).join("")+"</div>";return}
+    if(tab==="site"){const h=D.site.hidden||[];P.innerHTML='<div class="card"><div class="mut">Отметь разделы, которые СКРЫТЬ на сайте.</div>'+Object.entries(SECTIONS).map(([k,n])=>`<label class="ck"><input type="checkbox" data-h="${k}" ${h.includes(k)?"checked":""}> ${n}</label>`).join("")+"</div>";return}
+    if(tab==="join"){joins();return}
+    const L=LISTS[tab], arr=D[tab]||[];
+    P.innerHTML=`<div class="mut">${L.title}</div>`+arr.map((it,i)=>`<div class="card" data-i="${i}">`+(it.image?`<img class="pv" src="${esc(it.image.startsWith("http")?it.image:"https://wn7ib.github.io/new-rabota/novye/"+it.image)}">`:"")+
+      L.f.map(([k,n,ta])=>`<label>${n}</label>`+(ta?`<textarea data-f="${k}">${esc(it[k])}</textarea>`:`<input data-f="${k}" value="${esc(it[k])}">`)).join("")+
+      `<p class="row"><button class="btn g" data-up="${i}">↑ Выше</button><button class="btn r" data-del="${i}">Удалить</button></p></div>`).join("")+
+      `<button class="btn g" id="add">＋ Добавить</button>`;
+    P.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{collect();if(confirm("Удалить?")){D[tab].splice(+b.dataset.del,1);draw()}});
+    P.querySelectorAll("[data-up]").forEach(b=>b.onclick=()=>{collect();const i=+b.dataset.up;if(i>0){const a=D[tab];[a[i-1],a[i]]=[a[i],a[i-1]];draw()}});
+    $("#add").onclick=()=>{collect();(D[tab]=D[tab]||[]).push({id:Date.now()});draw()};
+  }
+  function collect(){
+    if(tab==="settings") document.querySelectorAll("[data-s]").forEach(e=>D.settings[e.dataset.s]=e.value.trim());
+    else if(tab==="site") D.site.hidden=[...document.querySelectorAll("[data-h]:checked")].map(e=>e.dataset.h);
+    else if(LISTS[tab]) document.querySelectorAll("#pane .card[data-i]").forEach(c=>{const it=D[tab][+c.dataset.i];c.querySelectorAll("[data-f]").forEach(e=>{let v=e.value.trim();if(e.dataset.f==="img_pos_y")v=+v||50;it[e.dataset.f]=v})});
+  }
+  async function save(){
+    collect(); $("#smsg").textContent="Сохраняю…";
+    const {error}=await sb.from("novye_cms").upsert({type:tab,data:D[tab],updated_at:new Date().toISOString()});
+    $("#smsg").textContent=error?"Ошибка: "+error.message:"✅ Сохранено — на сайте сразу";
+  }
+  async function joins(){
+    const P=$("#pane"); P.innerHTML='<div class="mut">Загружаю…</div>';
+    const {data,error}=await sb.from("novye_join").select("*").order("id",{ascending:false}).limit(200);
+    if(error){P.innerHTML='<div class="card">'+esc(error.message)+"</div>";return}
+    P.innerHTML=(data.length?"":'<div class="card mut">Заявок пока нет.</div>')+data.map(r=>{const d=r.data||{};return `<div class="card"><b>${esc(d.name||d.fio||"Без имени")}</b> <span class="mut">${new Date(r.created_at).toLocaleString("ru")}</span><br>`+
+      Object.entries(d).filter(([k])=>k!=="name").map(([k,v])=>`<span class="mut">${esc(k)}:</span> ${esc(v)}`).join("<br>")+
+      (d.tg?`<p><a href="https://t.me/${esc(String(d.tg).replace(/^@/,""))}">Написать в Telegram</a></p>`:"")+`<p><button class="btn r" data-jd="${r.id}">Удалить</button></p></div>`}).join("");
+    P.querySelectorAll("[data-jd]").forEach(b=>b.onclick=async()=>{if(confirm("Удалить заявку?")){await sb.from("novye_join").delete().eq("id",+b.dataset.jd);joins()}});
+  }
+  async function start(){
+    const {data:{user}}=await sb.auth.getUser();
+    if(!user){$("#login").style.display="block";return}
+    const {data:adm}=await sb.rpc("is_admin");
+    if(!adm){$("#login").style.display="block";$("#lmsg").textContent="Этот аккаунт не админ.";return}
+    $("#login").style.display="none";$("#app").style.display="block";
+    if(await load()){tabs();draw()}
+  }
+  $("#go").onclick=async()=>{$("#lmsg").textContent="Вхожу…";const {error}=await sb.auth.signInWithPassword({email:$("#em").value.trim(),password:$("#pw").value});$("#lmsg").textContent=error?"Не вышло: "+error.message:"";if(!error)start()};
+  $("#save").onclick=save;
+  start();
+})();
+</script>
+</body>
+</html>
