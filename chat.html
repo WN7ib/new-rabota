@@ -61,7 +61,7 @@ main{flex:1;max-width:720px;width:100%;margin:0 auto;padding:12px 14px}
   const ST={new:"на рассмотрении",accepted:"приняли ✓",rejected:"отказ"};
   const time=d=>new Date(d).toLocaleString("ru-RU",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
   // подозрительное в сообщении работодателя (те же правила, что у жалоб на вакансии)
-  const risky=t=>{try{return (window.nrScam?nrScam({description:t,age_min:14}).length>0:false)||/код из смс|данные карты|cvv|фото паспорт|скинь паспорт|переведи (мне|деньги)|оплат\S* (за )?оформлен/i.test(t)}catch(_){return false}};
+  const risky=t=>{if(/^🛡 Модератор/.test(t))return false;try{return (window.nrScam?nrScam({description:t,age_min:14}).length>0:false)||/код из смс|данные карты|cvv|фото паспорт|скинь паспорт|переведи (мне|деньги)|оплат\S* (за )?оформлен/i.test(t)}catch(_){return false}};
   let timer=null;
 
   const SUBS=`<div class="sec" style="margin-top:18px;color:var(--muted);font-weight:700;font-size:13px">Новые смены и вакансии — первыми</div>

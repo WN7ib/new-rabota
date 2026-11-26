@@ -211,6 +211,7 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
       <button class="chip" type="button" data-v="vac" aria-pressed="false">Вакансии<span class="badge" id="pendBadge" hidden></span></button>
       <button class="chip" type="button" data-v="reports" aria-pressed="false">Жалобы<span class="badge" id="repBadge" hidden></span></button>
       <button class="chip" type="button" data-v="chat" aria-pressed="false">Вопросы к Newi<span class="badge" id="chatBadge" hidden></span></button>
+      <button class="chip" type="button" data-v="dm" aria-pressed="false">💬 Переписки<span class="badge" id="dmBadge" hidden></span></button>
       <button class="chip" type="button" data-v="reviews" aria-pressed="false">Отзывы<span class="badge" id="revBadge" hidden></span></button>
       <button class="chip" type="button" data-v="events" aria-pressed="false">Мероприятия</button>
       <button class="chip" type="button" data-v="orders" aria-pressed="false">Заказы<span class="badge" id="ordBadge" hidden></span></button>
@@ -255,6 +256,13 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
       <p class="help">Вопросы с сайта в режиме «С Newi». Отвечает Newi с телефона через мессенджер, а если она не знает ответа, вопрос остаётся здесь — можешь ответить сам.</p>
       <div class="tools"><div class="group" id="ctabs"><button class="chip" type="button" data-c="open" aria-pressed="true">без ответа</button><button class="chip" type="button" data-c="all" aria-pressed="false">все</button><button class="chip" type="button" data-c="threads" aria-pressed="false">💬 переписки</button></div><span class="status" id="cstatus"></span></div>
       <div class="list" id="clist"></div>
+    </section>
+
+    <!-- ПЕРЕПИСКИ СОИСКАТЕЛЕЙ С РАБОТОДАТЕЛЯМИ (шаг 26) -->
+    <section id="v-dm" hidden style="flex-direction:column;gap:12px;margin-top:14px">
+      <p class="help">Переписки из приложения New.работа: соискатель (часто подросток) ↔ работодатель. Красным — похоже на обман: просят деньги, карту, паспорт, «в личку», ночью. Можно предупредить человека от имени модератора или снять вакансию.</p>
+      <div class="tools"><div class="group" id="dmtabs"><button class="chip" type="button" data-d="bad" aria-pressed="true">⚠ подозрительные</button><button class="chip" type="button" data-d="all" aria-pressed="false">все</button></div><span class="status" id="dmstatus"></span></div>
+      <div class="list" id="dmlist"></div>
     </section>
 
     <!-- ОТЗЫВЫ -->
@@ -410,10 +418,11 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
   function go(v){
     st.view=v;
     $$("#nav .chip").forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===v));
-    ["overview","vac","reports","chat","reviews","events","orders","settings"].forEach(x=>{const e=$("#v-"+x);e.hidden=v!==x;if(x!=="overview"&&x!=="settings"&&v===x)e.style.display="flex"});
+    ["overview","vac","reports","chat","dm","reviews","events","orders","settings"].forEach(x=>{const e=$("#v-"+x);e.hidden=v!==x;if(x!=="overview"&&x!=="settings"&&v===x)e.style.display="flex"});
     if(v==="reports")loadReports();
     if(v==="chat")loadChat();
-    if(v==="overview")loadOverview();
+    if(v==="dm")loadDm();
+    if(v==="overview"){loadOverview();dmBadge()}
     if(v==="vac")loadList();
     if(v==="settings")fillSettings();
     if(v==="reviews")loadReviews();
@@ -583,6 +592,47 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
       b.onclick=async()=>{const t=inp.value.trim();if(!t)return;const {error}=await sb.from("site_chat").update({a:t,answered_at:new Date().toISOString()}).eq("id",m.id);toast(error?"Не сохранилось":"Ответ отправлен посетителю");loadChat();countBadges()};
       a.append(inp,b);c.append(a);list.append(c);
     }
+  }
+
+  // переписки соискатель ↔ работодатель (шаг 26): модератор видит всё, подозрительное — сверху
+  let dtab="bad";
+  $$("#dmtabs .chip").forEach(b=>b.onclick=()=>{dtab=b.dataset.d;$$("#dmtabs .chip").forEach(x=>x.setAttribute("aria-pressed",x===b));loadDm()});
+  const dmRisk=(t,age)=>{if(/^🛡 Модератор/.test(t))return [];let f=[];try{f=window.nrScam?nrScam({description:t,age_min:age||14}):[]}catch(_){}
+    if(/код из смс|данные карты|cvv|номер карты|фото паспорт|скинь паспорт|пришли паспорт|переведи (мне|деньги)|оплат\S* (за )?(оформлен|форм|обучен)|залог|в личку|whatsapp|ватсап|приходи один|никому не говори|ночью|к себе домой/i.test(t))f.push("опасная просьба");return f};
+  async function dmData(){
+    const {data,error}=await sb.from("app_messages").select("id,created_at,from_emp,body,application_id,applications(name,age,contact,status,vacancies(id,title,company,status))").order("id",{ascending:false}).limit(1000);
+    if(error)return {error};
+    const th={};for(const m of data){const k=m.application_id;(th[k]=th[k]||{id:k,ap:m.applications||{},msgs:[]}).msgs.push(m)}
+    const all=Object.values(th).map(t=>{t.msgs.reverse();t.flags=[...new Set(t.msgs.filter(m=>m.from_emp).flatMap(m=>dmRisk(m.body,t.ap.age)))];t.last=t.msgs[t.msgs.length-1];return t});
+    all.sort((a,b)=>(b.flags.length>0)-(a.flags.length>0)||b.last.id-a.last.id);return {all};
+  }
+  async function dmBadge(){try{const r=await dmData();const n=(r.all||[]).filter(t=>t.flags.length).length;const b=$("#dmBadge");b.textContent=n;b.hidden=!n}catch(_){}}
+  async function loadDm(){
+    $("#dmstatus").textContent="Загружаю…";const list=$("#dmlist");list.textContent="";
+    const r=await dmData();if(r.error){$("#dmstatus").textContent=/app_messages/.test(r.error.message||"")?"База ещё без переписок: скажи Неви «выполни поручения Клода».":"Не загрузилось: "+r.error.message;return}
+    const rows=dtab==="bad"?r.all.filter(t=>t.flags.length):r.all;
+    $("#dmstatus").textContent=rows.length+" переписок";
+    if(!rows.length){list.append(el("div","empty",dtab==="bad"?"Подозрительных переписок нет 👍":"Переписок пока нет."));return}
+    for(const t of rows){
+      const v=t.ap.vacancies||{},c=el("article","card"+(t.flags.length?" open":""));
+      const left=el("div");left.style.minWidth="0";
+      left.append(el("h3",null,(t.flags.length?"⚠ ":"")+(v.company||"Работодатель")+" ↔ "+(t.ap.name||"соискатель")+(t.ap.age?", "+t.ap.age+" лет":"")),
+        el("div","where","«"+(v.title||"вакансия")+"» · "+t.msgs.length+" сообщ. · анкета: "+({new:"новая",accepted:"принят",rejected:"отказ"}[t.ap.status]||"")+(v.status&&v.status!=="approved"?" · вакансия снята":"")));
+      if(t.flags.length)left.append(el("p","err","Похоже на обман: "+t.flags.join("; ")));
+      c.append(left,el("div","date",new Date(t.last.created_at).toLocaleString("ru-RU",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})));
+      const box=el("div");box.style.cssText="grid-column:1/-1;display:flex;flex-direction:column;gap:6px;margin-top:8px;max-height:340px;overflow:auto";
+      for(const m of t.msgs){const f=m.from_emp&&dmRisk(m.body,t.ap.age).length;const d=el("div",null,(m.from_emp?"🏢 ":"🧑 ")+m.body);
+        d.style.cssText="max-width:88%;padding:7px 11px;border-radius:12px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px;"+(m.from_emp?"align-self:flex-start;background:var(--bg);border:1px solid "+(f?"var(--danger)":"var(--line)"):"align-self:flex-end;background:var(--chip)");box.append(d)}
+      c.append(box);
+      const a=el("div","row-actions");const inp=document.createElement("input");inp.type="text";inp.style.flex="1 1 220px";
+      inp.value="Не плати работодателю и не отправляй паспорт, карту или коды из СМС. Если просят — напиши в поддержку New.работа.";
+      const w=el("button","btn btn-sm btn-primary","🛡 Предупредить");w.type="button";
+      w.onclick=async()=>{const b=inp.value.trim();if(!b)return;const {error}=await sb.from("app_messages").insert({application_id:t.id,from_emp:true,body:"🛡 Модератор New.работа: "+b,notified:false});toast(error?"Не отправилось: "+error.message:"Предупреждение отправлено в переписку");loadDm()};
+      a.append(inp,w);
+      if(v.id&&v.status==="approved"){const x=el("button","btn btn-sm","Снять вакансию");x.type="button";x.onclick=async()=>{if(!confirm("Снять вакансию «"+v.title+"»?"))return;await sb.from("vacancies").update({status:"rejected"}).eq("id",v.id);toast("Вакансия снята");loadDm()};a.append(x)}
+      c.append(a);list.append(c);
+    }
+    dmBadge();
   }
 
   // отзывы
