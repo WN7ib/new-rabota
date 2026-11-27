@@ -1428,42 +1428,24 @@ body { color: #ece8e9; }
     <div id="el-team">
       <div class="team-leader-row reveal d1">
         <div class="team-leader-photo">
-          <span class="team-leader-initials">АК</span>
+          <span class="team-leader-initials">НЯ</span>
         </div>
         <div class="team-leader-info">
-          <div class="team-leader-name">Алексей Козлов</div>
-          <div class="team-leader-role">Координатор движения</div>
+          <div class="team-leader-name">Никита Ягодин</div>
+          <div class="team-leader-role">Глава Молодёжки «Новых людей» Саратовской области</div>
           <p class="team-leader-quote">Сделаем Саратов городом, в котором хочется жить.</p>
           <span class="team-leader-attr">Никита Ягодин · Лидер движения «Новые» · Саратов</span>
         </div>
       </div>
-      <button class="btn-others" onclick="toggleTeamOthers(this)">Активисты движения · 3 ›</button>
+      <button class="btn-others" onclick="toggleTeamOthers(this)">Команда движения · 1 ›</button>
       <div class="team-others-grid">
         <div class="person-card reveal d2">
           <div class="person-photo" style="background:linear-gradient(160deg,#e8fffe 0%,#9ae8e5 40%,#06a8a2 100%);">
-            <span class="person-initials">МВ</span>
-          </div>
-          <div class="person-info">
-            <div class="person-name">Мария Власова</div>
-            <div class="person-role">Городские проекты</div>
-          </div>
-        </div>
-        <div class="person-card reveal d3">
-          <div class="person-photo" style="background:linear-gradient(160deg,#f0fffe 0%,#c2f0ee 40%,#0bb5ae 100%);">
-            <span class="person-initials">ДС</span>
-          </div>
-          <div class="person-info">
-            <div class="person-name">Дмитрий Смирнов</div>
-            <div class="person-role">Медиа и коммуникации</div>
-          </div>
-        </div>
-        <div class="person-card reveal d4">
-          <div class="person-photo" style="background:linear-gradient(160deg,#e0fffd 0%,#a8e9e7 40%,#08c0b8 100%);">
             <span class="person-initials">ЕП</span>
           </div>
           <div class="person-info">
-            <div class="person-name">Елена Петрова</div>
-            <div class="person-role">Волонтёрство</div>
+            <div class="person-name">Елизавета Проказова</div>
+            <div class="person-role">Куратор движения</div>
           </div>
         </div>
       </div>
@@ -1472,7 +1454,8 @@ body { color: #ece8e9; }
 </section>
 
 <!-- ── TESTIMONIALS ── -->
-<section class="testi-section" data-sec="testimonials">
+<!-- отзывы из шаблона (выдуманные имена) скрыты; появятся, когда в админке «Новые» будут настоящие -->
+<section class="testi-section" data-sec="testimonials" style="display:none">
   <div class="wrap" style="padding-left:0;padding-right:0;max-width:100%;">
     <div style="padding:0 clamp(1rem,4vw,3rem);">
       <div class="sh reveal">
@@ -2176,6 +2159,10 @@ function applySite(site) {
     if (window.ro) box.querySelectorAll('.reveal').forEach(function (el) { window.ro.observe(el); });
   };
 
+  /* настоящие отзывы из админки — показываю блок (по умолчанию он скрыт: в шаблоне были выдуманные) */
+  if (site.testimonials && site.testimonials.items && site.testimonials.items.length && (site.hidden || []).indexOf('testimonials') < 0) {
+    document.querySelectorAll(sec('testimonials')).forEach(function (el) { el.style.display = ''; });
+  }
   /* visibility */
   (site.hidden || []).forEach(function (k) {
     document.querySelectorAll(sec(k)).forEach(function (el) { el.style.display = 'none'; });
