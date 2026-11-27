@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Афиша Саратова</title>
+<style>
+:root{--bg:#0B1424;--card:#13213A;--line:#22385C;--tx:#E6EEFA;--mut:#8FA3C2;--acc:#3B8BEB;--chip:#1A2C4C}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]){--bg:#F4F7FB;--card:#fff;--line:#DCE4EF;--tx:#14213A;--mut:#5B6B85;--acc:#2F6FD1;--chip:#E8EEF6}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.35 system-ui,sans-serif;padding:14px 16px 32px}
+h1{font-size:20px;margin:4px 0 2px}.sub{color:var(--mut);font-size:13px;margin-bottom:12px}
+.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:10px}
+.chips button{flex:none;background:var(--chip);color:var(--tx);border:1px solid var(--line);border-radius:999px;padding:7px 13px;font-size:14px}
+.chips button.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.list{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.ev{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;display:flex;flex-direction:column}
+.pic{aspect-ratio:16/9;background:linear-gradient(135deg,#1E3A6B,#3B8BEB);display:flex;align-items:center;justify-content:center;font-size:44px;position:relative}
+.pic img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.when{position:absolute;left:10px;bottom:10px;background:rgba(0,0,0,.65);color:#fff;font-size:13px;font-weight:600;padding:4px 9px;border-radius:8px}
+.body{padding:11px 12px 12px;display:flex;flex-direction:column;gap:5px;flex:1}
+.body b{font-size:16px;line-height:1.25}.body small{color:var(--mut);font-size:13px}
+.tag{align-self:flex-start;background:var(--chip);color:var(--mut);font-size:12px;padding:2px 8px;border-radius:6px}
+.acts{display:flex;gap:6px;margin-top:auto;padding-top:6px}
+.acts a,.acts button{flex:1;text-align:center;text-decoration:none;font-size:14px;border-radius:10px;padding:8px 6px;border:1px solid var(--line);background:var(--chip);color:var(--tx)}
+.acts a.go{background:var(--acc);border-color:var(--acc);color:#fff}
+.acts button.x{flex:none;width:40px;color:var(--mut)}
+.msg{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}a{color:var(--acc)}
+</style></head><body>
+<h1>🗓 Афиша Саратова</h1><div class="sub" id="sub">Загружаю…</div>
+<div class="chips" id="chips"></div>
+<div class="list" id="app"></div>
+<script src="config.js"></script><script src="vendor/supabase.js"></script>
+<script>
+(async function(){
+  const app=document.getElementById("app"),sub=document.getElementById("sub"),chips=document.getElementById("chips");
+  const cfg=window.NR_CONFIG||window.CONFIG||{};
+  const sb=window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseKey);
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){sub.textContent="";app.innerHTML='<div class="msg">Сначала войди в админке — вкладка «New.работа». Как войдёшь — афиша появится здесь сама.</div>';
+    const t=setInterval(async()=>{const r=await sb.auth.getSession();if(r.data.session){clearInterval(t);location.reload()}},2000);return}
+  const r=await sb.from("afisha").select("*").gte("created_at",new Date(Date.now()-60*864e5).toISOString()).order("starts_at",{ascending:true,nullsFirst:false}).limit(300);
+  if(r.error){sub.textContent="";app.innerHTML='<div class="msg">Афиша ещё не подключена к базе. Скажи Неви: «выполни поручения Клода» — она добавит таблицу. Потом мероприятия будут появляться здесь сами.</div>';return}
+  const now=Date.now();
+  let rows=r.data.filter(e=>!e.starts_at||new Date(e.starts_at).getTime()>now-3*36e5);
+  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const safe=u=>/^https?:\/\//i.test(u||"")?u:"";
+  const TOP=[["all","Все"],["полит","🏛 Политика"],["предприн","💼 Бизнес"],["эконом","📈 Экономика"],["интерес","✨ Интересное"]];
+  const emo=t=>{t=(t||"").toLowerCase();return t.includes("полит")?"🏛":t.includes("предприн")||t.includes("бизнес")?"💼":t.includes("эконом")?"📈":"✨"};
+  let cur="all";
+  function cal(e){if(!e.starts_at)return"";const d=new Date(e.starts_at),f=x=>x.toISOString().replace(/[-:]|\.\d{3}/g,"");
+    return"https://calendar.google.com/calendar/render?action=TEMPLATE&text="+encodeURIComponent(e.title)+"&dates="+f(d)+"/"+f(new Date(d.getTime()+2*36e5))+"&location="+encodeURIComponent(e.place||"Саратов")+"&details="+encodeURIComponent(e.link||"")}
+  function when(e){if(!e.starts_at)return esc(e.date_text||"дата на сайте");const d=new Date(e.starts_at);
+    const s=d.toLocaleDateString("ru-RU",{weekday:"short",day:"numeric",month:"long"});const h=d.getHours()||d.getMinutes()?", "+d.toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"}):"";return s+h}
+  function draw(){
+    chips.innerHTML=TOP.map(([k,l])=>`<button data-k="${k}" class="${k===cur?"on":""}">${l}</button>`).join("");
+    const l=rows.filter(e=>cur==="all"||(e.topic||"").toLowerCase().includes(cur)||(cur==="предприн"&&(e.topic||"").toLowerCase().includes("бизнес")));
+    sub.textContent=l.length?`${l.length} мероприятий впереди · Неви ищет каждый день`:"";
+    if(!l.length){app.innerHTML='<div class="msg">Пока пусто. Неви ищет мероприятия каждый день (днём). Можно попросить сейчас: «Неви, куда интересно сходить».</div>';return}
+    app.innerHTML=l.map(e=>{const img=safe(e.image),lk=safe(e.link),c=cal(e);
+      return `<div class="ev"><div class="pic">${emo(e.topic)}${img?`<img src="${esc(img)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`:""}<span class="when">${when(e)}</span></div>
+      <div class="body"><b>${esc(e.title)}</b>${e.place&&e.place!=="нет"?`<small>📍 ${esc(e.place)}</small>`:""}${e.topic?`<span class="tag">${esc(e.topic)}</span>`:""}
+      <div class="acts">${lk?`<a class="go" href="${esc(lk)}" target="_blank" rel="noopener">Подробнее</a>`:""}${c?`<a href="${esc(c)}" target="_blank" rel="noopener">📅 В календарь</a>`:""}<button class="x" data-del="${esc(e.key)}" title="Не интересно">✕</button></div></div></div>`}).join("")}
+  chips.addEventListener("click",e=>{const k=e.target.dataset&&e.target.dataset.k;if(k){cur=k;draw()}});
+  app.addEventListener("click",async e=>{const k=e.target.dataset&&e.target.dataset.del;if(!k)return;
+    const x=await sb.from("afisha").delete().eq("key",k);if(!x.error){rows=rows.filter(r=>r.key!==k);draw()}});
+  draw();
+})().catch(e=>{document.getElementById("sub").textContent="Ошибка: "+e.message});
+</script>
+</body></html>
