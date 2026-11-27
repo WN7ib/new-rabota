@@ -76,6 +76,7 @@ a.btn{text-decoration:none}
 .rv p{margin:0;font-size:13.5px;line-height:1.4}
 .klist .item{display:flex;justify-content:space-between;gap:10px;align-items:center;cursor:pointer}
 .step{display:flex;gap:10px;align-items:flex-start}.step em{flex:none;font-style:normal;width:24px;height:24px;border-radius:8px;background:var(--chip);color:var(--accent);display:grid;place-items:center;font:800 12px var(--f-body)}
+.tro{display:block;width:100%;text-align:left;background:var(--card,#13213A);border:1px solid var(--line,#22385C);border-radius:14px;padding:10px 12px;margin:6px 0;color:inherit;font:inherit}.tro[aria-pressed=true]{border-color:var(--accent,#2F86F5);box-shadow:0 0 0 1px var(--accent,#2F86F5) inset}.tro .h{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}.tro small{display:block;margin-top:6px;opacity:.8;line-height:1.35}.trc{display:inline-block;color:#fff;border-radius:8px;padding:1px 7px;font-weight:700;font-size:13px}
 .kmodes{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:8px 0}
 .mode{border:1px solid var(--line);background:var(--bg);border-radius:12px;padding:8px;text-align:center;cursor:pointer;color:var(--ink)}
 .mode b{display:block;font-size:15px}.mode small{color:var(--muted)}
@@ -292,36 +293,65 @@ a.btn{text-decoration:none}
 
   // ── маршрут: от тебя (или от центра) — время примерное, точный путь — в Яндекс Картах ──
   function km(a,b){const r=Math.PI/180,d1=(b[0]-a[0])*r,d2=(b[1]-a[1])*r,x=Math.sin(d1/2)**2+Math.cos(a[0]*r)*Math.cos(b[0]*r)*Math.sin(d2/2)**2;return 6371*2*Math.asin(Math.sqrt(x))}
-  function closeRoute(redraw){if(line){map.removeLayer(line);line=null}if(redraw&&sel)open(sel)}
+  function closeRoute(redraw){trDraw(null);if(line){map.removeLayer(line);line=null}if(redraw&&sel)open(sel)}
   // ── какой транспорт (Никита 27.11: «на каких автобусах, маршрутках»): маршруты из OpenStreetMap через Overpass, без ключей.
   // Ищу номера, у которых есть остановка рядом с тобой И рядом с местом, и чтобы ехали в нужную сторону. Расписаний тут нет.
-  const TR_KIND={bus:"🚌 Автобус",trolleybus:"🚎 Троллейбус",tram:"🚋 Трамвай",share_taxi:"🚐 Маршрутка",minibus:"🚐 Маршрутка"};
+  const TR_KIND={bus:"🚌",trolleybus:"🚎",tram:"🚋",share_taxi:"🚐",minibus:"🚐"};
+  const TR_NAME={bus:"Автобус",trolleybus:"Троллейбус",tram:"Трамвай",share_taxi:"Маршрутка",minibus:"Маршрутка"};
+  const TR_COL={bus:"#3FB37F",trolleybus:"#2F86F5",tram:"#E5533D",share_taxi:"#B25BE0",minibus:"#B25BE0"};
   const trCache={};
+  // Чистая логика (проверяется в tools/transit-test.mjs): варианты без пересадки и с одной пересадкой (до 250 м пешком между остановками)
+  function transitPlan(j,from,to,R){
+    const nodes={};for(const e of j.elements)if(e.type==="node")nodes[e.id]=e;
+    const P=(n)=>[n.lat,n.lon],D=(a,b)=>km(a,b)*1000;
+    const rels=j.elements.filter(e=>e.type==="relation").map(r=>{const st=r.members.filter(m=>m.type==="node"&&nodes[m.ref]).map(m=>nodes[m.ref]).filter((n,i,a)=>i===0||n.id!==a[i-1].id);
+      const tg=r.tags||{};return {id:r.id,kind:tg.route,ref:String(tg.ref||tg.name||"?"),to:tg.to||"",st}}).filter(r=>r.st.length>1);
+    const nm=n=>(n.tags&&n.tags.name)||"остановка";
+    const leg=(r,i,k)=>({kind:r.kind,ref:r.ref,to:r.to,on:nm(r.st[i]),off:nm(r.st[k]),stops:k-i,path:r.st.slice(i,k+1).map(P)});
+    const out=[];
+    const board=(r,p)=>{let b=null;r.st.forEach((n,i)=>{const d=D(p,P(n));if(d<=R&&(!b||d<b.d))b={i,d}});return b};
+    for(const r of rels){
+      // без пересадки: садимся рядом с тобой, выходим рядом с местом, дальше по ходу движения
+      const a=board(r,from);if(!a)continue;
+      let best=null;r.st.forEach((n,k)=>{if(k<=a.i)return;const d=D(P(n),to);if(d<=R&&(!best||d<best.d))best={k,d}});
+      if(best)out.push({legs:[leg(r,a.i,best.k)],walk:Math.round(a.d+best.d)});
+    }
+    if(out.length<3){
+      const A=rels.map(r=>({r,b:board(r,from)})).filter(x=>x.b),B=[];
+      for(const r of rels){let b=null;r.st.forEach((n,k)=>{const d=D(P(n),to);if(d<=R&&(!b||d<b.d))b={k,d}});if(b)B.push({r,b})}
+      for(const x of A)for(const y of B){if(x.r.ref===y.r.ref&&x.r.kind===y.r.kind)continue;
+        let best=null;
+        for(let i=x.b.i+1;i<x.r.st.length;i++)for(let k=0;k<y.b.k;k++){const w=D(P(x.r.st[i]),P(y.r.st[k]));if(w<=250){const sc=w+(i-x.b.i)*120+(y.b.k-k)*120;if(!best||sc<best.sc)best={i,k,w,sc}}}
+        if(best)out.push({legs:[leg(x.r,x.b.i,best.i),leg(y.r,best.k,y.b.k)],walk:Math.round(x.b.d+best.w+y.b.d)})}
+    }
+    // время: пешком 80 м/мин, остановка ≈ 2 мин, ожидание 7 мин на каждую посадку
+    for(const o of out)o.min=Math.round(o.walk/80+o.legs.reduce((s,l)=>s+l.stops*2+7,0));
+    const seen=new Set();
+    return out.sort((x,y)=>x.min-y.min).filter(o=>{const k=o.legs.map(l=>l.kind+l.ref).join(">");if(seen.has(k))return false;seen.add(k);return true}).slice(0,5);
+  }
   function transit(from,to){
     const key=from.map(x=>x.toFixed(3))+"|"+to.map(x=>x.toFixed(3));if(trCache[key])return trCache[key];
-    const R=600,stop='["highway"="bus_stop"]',pl='["public_transport"="platform"]',tr='["railway"="tram_stop"]';
-    const near=(p,n)=>`(node(around:${R},${p[0]},${p[1]})${stop};node(around:${R},${p[0]},${p[1]})${pl};node(around:${R},${p[0]},${p[1]})${tr};node(around:${R},${p[0]},${p[1]})["public_transport"="stop_position"];)->.${n};`;
-    const q=`[out:json][timeout:25];${near(from,"a")}${near(to,"b")}rel(bn.a)["type"="route"]["route"~"^(bus|trolleybus|tram|share_taxi|minibus)$"]->.ra;rel(bn.b)["type"="route"]["route"~"^(bus|trolleybus|tram|share_taxi|minibus)$"]->.rb;rel.ra.rb->.r;.r out body;node.a out;node.b out;`;
+    const R=700,K='["route"~"^(bus|trolleybus|tram|share_taxi|minibus)$"]';
+    const near=(p,n)=>`(node(around:${R},${p[0]},${p[1]})["highway"="bus_stop"];node(around:${R},${p[0]},${p[1]})["public_transport"~"^(platform|stop_position)$"];node(around:${R},${p[0]},${p[1]})["railway"="tram_stop"];)->.${n};`;
+    const q=`[out:json][timeout:40];${near(from,"a")}${near(to,"b")}rel(bn.a)["type"="route"]${K}->.ra;rel(bn.b)["type"="route"]${K}->.rb;(.ra;.rb;)->.r;.r out body;node(r.r)->.n;.n out body;`;
     const ask=(u)=>fetch(u,{method:"POST",body:"data="+encodeURIComponent(q),headers:{"Content-Type":"application/x-www-form-urlencoded"}}).then(r=>r.ok?r.json():Promise.reject(r.status));
-    return trCache[key]=ask("https://overpass-api.de/api/interpreter").catch(()=>ask("https://overpass.kumi.systems/api/interpreter")).then(j=>{
-      const nodes={};for(const e of j.elements)if(e.type==="node")nodes[e.id]=e;
-      const A=new Set(),B=new Set();for(const e of j.elements)if(e.type==="node"){if(km(from,[e.lat,e.lon])*1000<=R+50)A.add(e.id);if(km(to,[e.lat,e.lon])*1000<=R+50)B.add(e.id)}
-      const out=[];
-      for(const r of j.elements.filter(e=>e.type==="relation")){
-        const ids=r.members.filter(m=>m.type==="node"&&nodes[m.ref]).map(m=>m.ref);
-        let best=null;
-        ids.forEach((id,i)=>{if(!A.has(id))return;ids.forEach((jd,k)=>{if(k<=i||!B.has(jd))return;
-          const w=km(from,[nodes[id].lat,nodes[id].lon])+km([nodes[jd].lat,nodes[jd].lon],to);if(!best||w<best.w)best={w,on:nodes[id],off:nodes[jd],n:k-i}})});
-        if(!best)continue;   // нет остановок в нужном порядке — едет в другую сторону
-        const tg=r.tags||{};
-        out.push({kind:TR_KIND[tg.route]||"🚌 Транспорт",ref:tg.ref||tg.name||"?",to:tg.to||"",on:best.on.tags&&best.on.tags.name||"остановка рядом",off:best.off.tags&&best.off.tags.name||"остановка у места",walk:Math.round(best.w*1000),stops:best.n})}
-      const seen=new Set();return out.sort((x,y)=>x.walk-y.walk||x.stops-y.stops).filter(x=>{const k=x.kind+x.ref;if(seen.has(k))return false;seen.add(k);return true}).slice(0,6)});
+    return trCache[key]=ask("https://overpass-api.de/api/interpreter").catch(()=>ask("https://overpass.kumi.systems/api/interpreter")).then(j=>transitPlan(j,from,to,R));
   }
+  let trLines=[];
+  function trDraw(o){trLines.forEach(l=>map.removeLayer(l));trLines=[];if(!o)return;
+    for(const l of o.legs){trLines.push(L.polyline(l.path,{color:TR_COL[l.kind]||"#3FB37F",weight:7,opacity:.95,lineCap:"round"}).addTo(map));
+      trLines.push(L.circleMarker(l.path[0],{radius:6,color:"#fff",weight:2,fillColor:TR_COL[l.kind]||"#3FB37F",fillOpacity:1}).addTo(map))}
+    map.fitBounds(L.featureGroup(trLines).getBounds(),{padding:[90,60]})}
   function transitBox(from,to,box){
-    box.innerHTML='<div class="sub">🔎 Ищу автобусы и маршрутки…</div>';
+    box.innerHTML='<div class="sub">🔎 Ищу автобусы, маршрутки и пересадки…</div>';
     transit(from,to).then(l=>{
-      if(!l.length){box.innerHTML='<div class="sub">Прямых автобусов и маршруток рядом не нашла — нужна пересадка. Нажми «🚌 Транспорт в Яндексе» ниже.</div>';return}
-      box.innerHTML=l.map(x=>`<div class="item step"><em>${esc(String(x.ref)).slice(0,4)}</em><span><b>${x.kind} ${esc(String(x.ref))}</b>${x.to?` → ${esc(x.to)}`:""}<br>Садись: «${esc(x.on)}» · выходи: «${esc(x.off)}» (${x.stops} ост.)<br><small>Пешком всего ≈ ${x.walk} м</small></span></div>`).join("")+'<div class="note">Номера — из открытой карты OpenStreetMap, расписание и пробки — в Яндексе.</div>';
+      if(!l.length){box.innerHTML='<div class="sub">Не нашла маршрута даже с одной пересадкой — открой «🚌 Транспорт в Яндексе» ниже.</div>';return}
+      const chip=x=>`<span class="trc" style="background:${TR_COL[x.kind]||"#3FB37F"}">${TR_KIND[x.kind]||"🚌"} ${esc(x.ref)}</span>`;
+      box.innerHTML=l.map((o,n)=>`<button class="tro" data-o="${n}" aria-pressed="${n===0}"><div class="h"><b>≈ ${o.min} мин</b><span>${o.legs.map(chip).join(" ▸ ")}</span></div>
+        <small>${o.legs.map((x,i)=>`${i?"пересадка → ":""}${TR_NAME[x.kind]||"Транспорт"} ${esc(x.ref)}: «${esc(x.on)}» → «${esc(x.off)}» (${x.stops} ост.)`).join("<br>")}<br>🚶 пешком ≈ ${o.walk} м</small></button>`).join("")+
+        '<div class="note">Номера и остановки — из открытой карты OpenStreetMap, время примерное. Расписание и «когда придёт» — в Яндексе.</div>';
+      box.querySelectorAll("[data-o]").forEach(b=>b.onclick=()=>{box.querySelectorAll("[data-o]").forEach(x=>x.setAttribute("aria-pressed","false"));b.setAttribute("aria-pressed","true");trDraw(l[+b.dataset.o])});
+      trDraw(l[0]);
     }).catch(()=>{box.innerHTML='<div class="sub">Не получилось загрузить маршруты транспорта — открой «🚌 Транспорт в Яндексе».</div>'});
   }
   function route(o){
@@ -349,7 +379,7 @@ a.btn{text-decoration:none}
       <div class="item step"><em>3</em><span>${esc(o.place||"Адрес")} — на месте спроси старшего смены.</span></div>
       <div class="cta" style="grid-template-columns:1.4fr 1fr"><a class="btn btn-primary" target="_blank" rel="noopener" href="${NRGeo.route(o.lat,o.lng,routeMode)}">${{foot:"🚶 Пешком",bus:"🚌 Транспорт",scooter:"🛴 Самокат",car:"🚕 Такси"}[routeMode]} в Яндексе ↗</a><button class="btn btn-ghost" id="vc">🔊 Озвучить</button></div>
       <div class="note">${exact?"Путь по дорогам; время автобуса и самоката — примерное.":"Время примерное (по прямой) — уточняю путь по дорогам…"} Остановки и пересадки — в Яндекс Картах.</div>`;
-      C.querySelectorAll("[data-m]").forEach(b=>b.onclick=()=>{routeMode=b.dataset.m;draw()});
+      C.querySelectorAll("[data-m]").forEach(b=>b.onclick=()=>{routeMode=b.dataset.m;trDraw(null);draw()});
       const tb=C.querySelector("#trbox");if(tb)transitBox(from,to,tb);
       $("#x").onclick=()=>closeRoute(true);$("#vc").onclick=()=>speak(`До «${o.title}» примерно ${t[routeMode]} минут, ${d.toFixed(1)} километра. Выходи заранее, удачной смены!`)};
     draw();
