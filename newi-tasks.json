@@ -530,6 +530,16 @@
         ],
         "verify_jwt": false
       }
+    },
+    {
+      "id": "2026-11-27-pay-secret-db",
+      "title": "База: номер для СБП — только тому, кто сделал заказ (не в открытых настройках)",
+      "do": "sql",
+      "args": {
+        "files": [
+          "migration-33-pay-secret.sql"
+        ]
+      }
     }
   ]
 }

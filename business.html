@@ -173,7 +173,6 @@
   const ls={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
   NR.settings().then(s=>{S=s||{};Object.assign(P,Object.fromEntries(Object.entries(S.prices||{}).filter(([,v])=>+v>=0)));
     $$("[data-price]").forEach(e=>e.textContent=(+P[e.dataset.price]).toLocaleString("ru-RU"));
-    if(S.pay_info)$("#payInfo").textContent=S.pay_info;
     if(S.paid_on!==true){const n=$("#freeNote");if(n)n.hidden=false}   // оплата ещё не включена (нет «Мой налог») — честно пишем «бесплатно»
     calc()});
 

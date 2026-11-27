@@ -155,7 +155,8 @@
         for(const o of un){const pr=el("div","acts");pr.style.marginTop="6px";pr.append(el("span","hint","Заказ "+o.id.slice(0,8)+": "+PROD[o.product]+" — "+Number(o.price).toLocaleString("ru-RU")+" ₽ "));
           const p1=el("button","btn btn-sm btn-primary","💳 Оплатить по СБП");p1.type="button";p1.onclick=()=>payNow(o,v.id,it.k,"sbp",p1);
           const p2=el("button","btn btn-sm btn-ghost","Картой");p2.type="button";p2.onclick=()=>payNow(o,v.id,it.k,"card",p2);pr.append(p1,p2);box.append(pr)}
-        if(un.length&&S.pay_info){const pi=el("p","hint");pi.style.whiteSpace="pre-line";pi.textContent="Или по реквизитам: "+S.pay_info+"\nНомер заказа: "+un[0].id.slice(0,8);box.append(pi)}}
+        if(un.length){const pi=el("p","hint");pi.style.whiteSpace="pre-line";box.append(pi);   // шаг 33: реквизиты только заказавшему
+          sb.rpc("my_pay_info",{vid:v.id,k:it.k}).then(({data:inf,error:pe})=>{const t=(!pe&&inf)||S.pay_info;if(t)pi.textContent="Как оплатить: "+t+"\nНомер заказа (укажи в комментарии к переводу): "+un[0].id.slice(0,8);else pi.remove()})}}
     }
   }
 
