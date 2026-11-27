@@ -86,6 +86,7 @@
   </div>
 
   <h2 id="plans">Тарифы</h2>
+  <p class="warn" id="freeNote" hidden style="padding:12px 14px;border-radius:12px;background:color-mix(in srgb,var(--good) 12%,transparent);border:1px solid var(--good)">🎁 <b>Сейчас, на запуске, всё бесплатно</b> — размещение, «🔥 Срочно» и подбор людей. Цены ниже начнут действовать позже, мы заранее предупредим.</p>
   <div class="plans">
     <div class="plan"><h3>Базовый</h3><div class="pp">0 ₽</div><p>Размещение вакансии после проверки, отклики приходят в кабинет по личной ссылке.</p><a class="btn btn-ghost" href="./#add">Разместить</a></div>
     <div class="plan"><h3>В топ 7 дней</h3><div class="pp"><span data-price="top7">500</span> ₽</div><p>Вакансия закреплена вверху списка на 7 дней.</p><div class="promo">🎁 Первым 10 компаниям — бесплатно за отзыв</div><a class="btn btn-ghost" href="cabinet.html">Заказать в кабинете</a></div>
@@ -172,7 +173,9 @@
   const ls={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
   NR.settings().then(s=>{S=s||{};Object.assign(P,Object.fromEntries(Object.entries(S.prices||{}).filter(([,v])=>+v>=0)));
     $$("[data-price]").forEach(e=>e.textContent=(+P[e.dataset.price]).toLocaleString("ru-RU"));
-    if(S.pay_info)$("#payInfo").textContent=S.pay_info; calc()});
+    if(S.pay_info)$("#payInfo").textContent=S.pay_info;
+    if(S.paid_on!==true){const n=$("#freeNote");if(n)n.hidden=false}   // оплата ещё не включена (нет «Мой налог») — честно пишем «бесплатно»
+    calc()});
 
   // ── формат смены
   let type="hourly",term="once";

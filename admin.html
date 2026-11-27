@@ -319,6 +319,7 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
           <label style="font-size:13px">Бизнес (месяц)<input id="pr-business" type="number" min="0" placeholder="2000"></label>
           <label style="font-size:13px">Смена под ключ (за 1 выход)<input id="pr-shift" type="number" min="0" placeholder="1000"></label>
           <label style="font-size:13px">Смена 18+ (взрослый, за выход)<input id="pr-shift_adult" type="number" min="0" placeholder="1500"></label></div></div>
+        <div class="field"><label><input type="checkbox" id="st-paid"> Платные услуги включены (продвижение за деньги). Включай только после регистрации в «Мой налог» — до этого всё бесплатно.</label></div>
         <div class="field"><label for="st-pay">Как оплатить (видит работодатель после заказа)</label><textarea id="st-pay" maxlength="500" placeholder="Перевод по СБП на номер +7…, получатель …. В комментарии укажи номер заказа. Чек пришлём из «Мой налог»."></textarea></div>
         <div class="field"><label for="st-about">Текст «О проекте» (пусто — стандартный)</label><textarea id="st-about" maxlength="600"></textarea></div>
         <div class="field"><label for="st-owner">Кто делает проект и обрабатывает данные</label><input id="st-owner" type="text" maxlength="120" placeholder="молодёжная команда New.работа, Саратов"></div>
@@ -885,14 +886,14 @@ code.k{font-family:var(--f-mono);background:var(--chip);padding:1px 6px;border-r
     $("#st-banner").value=s.banner||"";$("#st-support").value=s.support||"";$("#st-days").value=s.hide_after_days??60;$("#setErr").hidden=true;
     $("#st-chat").checked=s.chat_on!==false;$("#st-bot").value=s.bot_username||"";$("#st-metrika").value=s.metrika_id||"";
     $("#st-about").value=s.about_text||"";$("#st-owner").value=s.about_owner||"";$("#st-email").value=s.contact_email||"";
-    const p=s.prices||{};["top7","urgent","verify","business","shift","shift_adult"].forEach(k=>$("#pr-"+k).value=p[k]??"");$("#st-pay").value=s.pay_info||"";
+    const p=s.prices||{};["top7","urgent","verify","business","shift","shift_adult"].forEach(k=>$("#pr-"+k).value=p[k]??"");$("#st-pay").value=s.pay_info||"";$("#st-paid").checked=s.paid_on===true;
   }
   $("#setForm").addEventListener("submit",async e=>{
     e.preventDefault();
     const days=parseInt($("#st-days").value,10);
     const data={submissions_open:$("#st-open").checked,tagline:$("#st-tagline").value.trim(),banner_on:$("#st-banner-on").checked,banner:$("#st-banner").value.trim(),support:$("#st-support").value.trim(),hide_after_days:isNaN(days)||days<0?0:days,
       chat_on:$("#st-chat").checked,bot_username:$("#st-bot").value.trim().replace(/^@/,""),metrika_id:$("#st-metrika").value.replace(/\D/g,""),
-      about_text:$("#st-about").value.trim(),about_owner:$("#st-owner").value.trim(),contact_email:$("#st-email").value.trim(),pay_info:$("#st-pay").value.trim()};
+      about_text:$("#st-about").value.trim(),about_owner:$("#st-owner").value.trim(),contact_email:$("#st-email").value.trim(),pay_info:$("#st-pay").value.trim(),paid_on:$("#st-paid").checked};
     const prices={};["top7","urgent","verify","business","shift","shift_adult"].forEach(k=>{const v=parseInt($("#pr-"+k).value,10);if(v>=0)prices[k]=v});data.prices=prices;
     Object.keys(st.settings).forEach(k=>{if(!(k in data))data[k]=st.settings[k]});   // ключи, которые ставит Newi, не теряем
     const {error}=await sb.from("settings").update({data,updated_at:new Date().toISOString()}).eq("id",1);
