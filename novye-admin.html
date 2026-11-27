@@ -185,6 +185,23 @@ a{color:inherit;text-decoration:none;}button,input,textarea,select{font-family:v
 .ti{background:var(--surf3);border:1px solid var(--brd);color:var(--ink);padding:9px 15px;border-radius:8px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;box-shadow:0 4px 20px rgba(0,0,0,.4);animation:tin .22s ease;}
 .ti.ok::before{content:'✓';color:var(--teal);font-weight:900;}.ti.err::before{content:'✕';color:var(--red);font-weight:900;}
 @keyframes tin{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+
+/* ── Телефон (Никита 27.11: «адаптируй под телефон»): меню — лентой сверху, контент на всю ширину ── */
+@media(max-width:760px){
+  .layout{flex-direction:column;overflow:visible;}
+  .sidebar{width:100%;min-width:0;flex-direction:row;align-items:center;border-right:none;border-bottom:1px solid var(--brd);overflow-x:auto;overflow-y:hidden;position:sticky;top:0;z-index:20;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+  .sidebar::-webkit-scrollbar{display:none;}
+  .sb-logo,.nav-lbl{display:none;}
+  .sidebar nav{display:flex;flex-direction:row;}
+  .nav-grp{display:flex;padding:0;}
+  .nav-lnk{white-space:nowrap;padding:12px 14px;border-left:none;border-bottom:2px solid transparent;font-size:14px;}
+  .nav-lnk.active{border-left-color:transparent;border-bottom-color:var(--teal);}
+  .nav-bdg{margin-left:6px;}
+  .sb-foot{margin:0;padding:6px 10px;border-top:none;flex-shrink:0;}
+  .logout-btn{width:auto;white-space:nowrap;padding:8px 10px;}
+  .main{overflow:visible;min-width:0;}
+  .topbar{padding:10px 14px;}
+}
 </style>
 </head>
 <body>
