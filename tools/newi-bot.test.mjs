@@ -1,6 +1,6 @@
 // Проверка серверной Неви (supabase/functions/newi-bot) без Telegram и Supabase. Запуск: sh tools/newi-bot-test.sh
 import assert from "node:assert";
-const T = { newi_cfg: [], newi_rem: [], bot_config: [{ key: "tick_key", value: "t".repeat(40) }, { key: "gemini_key", value: "g" }], admins: [{ user_id: "u1" }] };
+const T = { newi_cfg: [], newi_rem: [], newi_log: [], bot_config: [{ key: "tick_key", value: "t".repeat(40) }, { key: "gemini_key", value: "g" }], admins: [{ user_id: "u1" }] };
 const sent = [], gem = [];
 function match(row, k, v) {
   if (v === "is.null") return row[k] == null;
@@ -26,7 +26,7 @@ globalThis.fetch = async (url, o = {}) => {
   if (u.pathname === "/auth/v1/user") return o.headers.Authorization === "Bearer good" ? ok({ id: "u1" }) : ok({}, 401);
   const tbl = u.pathname.replace("/rest/v1/", "");
   if (o.method === "GET") return ok(filt(tbl, u));
-  if (o.method === "POST") { for (const r of [].concat(body)) { const i = T[tbl].findIndex((x) => (x.key ?? x.id) === (r.key ?? r.id)); if (i >= 0) T[tbl][i] = { ...T[tbl][i], ...r }; else T[tbl].push({ ...r }); } return ok(undefined, 201); }
+  if (o.method === "POST") { for (const r0 of [].concat(body)) { const r = tbl === "newi_log" ? { id: T.newi_log.length + 1, ...r0 } : r0; const i = T[tbl].findIndex((x) => (x.key ?? x.id) === (r.key ?? r.id)); if (i >= 0) T[tbl][i] = { ...T[tbl][i], ...r }; else T[tbl].push({ ...r }); } return ok(undefined, 201); }
   if (o.method === "PATCH") { filt(tbl, u).forEach((x) => Object.assign(x, body)); return ok(undefined, 204); }
   if (o.method === "DELETE") { const del = new Set(filt(tbl, u)); T[tbl] = T[tbl].filter((x) => !del.has(x)); return ok(undefined, 204); }
   return ok({}, 404);
@@ -82,4 +82,6 @@ r = await (await req({ authorization: "Bearer good" }, { op: "sync", rems: [{ id
 assert.equal(r.back, true); assert.deepEqual(r.sent, ["b"]); assert.equal(cfg("mode"), "phone");
 assert.ok(sent.some((s) => s.m === "deleteWebhook"));
 assert.ok(!T.newi_rem.some((x) => x.id === "b" && x.sent_at == null), "уже напомненное не дублируется");
+assert.ok(r.learned.length >= 2 && r.learned.some((x) => /погода/.test(x.q)), "ответы без телефона — телефону в учёбу");
+assert.equal(T.newi_log.length, 0, "после передачи на сервере стёрто");
 console.log("newi-bot: все проверки прошли");

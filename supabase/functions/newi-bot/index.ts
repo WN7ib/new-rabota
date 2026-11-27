@@ -57,6 +57,9 @@ async function answer(q: string): Promise<string> {
   } catch { return "Нет связи с нейросетью — спроси ещё раз чуть позже."; }
 }
 
+// ответы без телефона — телефону в учёбу Неви (Никита 27.11 «план Б»); здесь лежат только до следующей связи, потом стираются
+async function logQA(q: string, a: string) { try { await db("POST", "newi_log", { q: q.slice(0, 1500), a: a.slice(0, 3000) }, "return=minimal"); } catch { /* без таблицы — просто не копим */ } }
+
 // ───────── переключение телефон ⇄ сервер ─────────
 async function takeOver() {
   const secret = await get("hook_secret") || crypto.randomUUID().replace(/-/g, "");
@@ -117,7 +120,9 @@ async function sync(b: any): Promise<Response> {
   const fresh = rems.filter((r: any) => r?.id && r?.at && r?.t && !done.includes(String(r.id)))
     .map((r: any) => ({ id: String(r.id).slice(0, 80), at: new Date(Number(r.at)).toISOString(), text: String(r.t).slice(0, 500) }));
   if (fresh.length) await db("POST", "newi_rem", fresh, "resolution=merge-duplicates,return=minimal");
-  return Response.json({ ok: true, back, sent: done });
+  const learned = (await db("GET", "newi_log?select=id,q,a&order=id.asc&limit=100")) ?? [];
+  if (learned.length) await db("DELETE", `newi_log?id=lte.${learned[learned.length - 1].id}`, undefined, "return=minimal");
+  return Response.json({ ok: true, back, sent: done, learned: learned.map((r: any) => ({ q: r.q, a: r.a })) });
 }
 
 // ───────── Telegram пишет сюда, пока бот на сервере ─────────
@@ -130,7 +135,9 @@ async function onUpdate(u: any) {
     if (!text) { await tg("sendMessage", { chat_id: m.chat.id, text: "Телефон не на связи — файлы и голосовые разберу, когда он включится." }); return; }
     if (text === "/status") { await tg("sendMessage", { chat_id: m.chat.id, text: "📴 Я на сервере: телефон не отмечался больше " + STALE_MIN + " мин. Отвечаю на вопросы и напоминаю. Включишь телефон — вернусь туда сама." }); return; }
     await tg("sendChatAction", { chat_id: m.chat.id, action: "typing" });
-    await tg("sendMessage", { chat_id: m.chat.id, text: (await answer(text)).slice(0, 4000) + "\n\n📴 с сервера — телефон не на связи", link_preview_options: { is_disabled: true } });
+    const ans = await answer(text);
+    await tg("sendMessage", { chat_id: m.chat.id, text: ans.slice(0, 4000) + "\n\n📴 с сервера — телефон не на связи", link_preview_options: { is_disabled: true } });
+    await logQA(text, ans);
   } else if (u.guest_message) {
     const m = u.guest_message, qid = m.guest_query_id; if (!qid) return;
     const art = (t: string) => ({ type: "article", id: String(qid).slice(-60), title: "Неви", input_message_content: { message_text: t.slice(0, 4000), link_preview_options: { is_disabled: true } } });
@@ -144,6 +151,7 @@ async function onUpdate(u: any) {
     const imid = s?.result?.inline_message_id;
     const a = await answer(q);
     if (imid) await tg("editMessageText", { inline_message_id: imid, text: a.slice(0, 3900), link_preview_options: { is_disabled: true } });
+    await logQA(q, a);
   } else if (u.callback_query) {
     await tg("answerCallbackQuery", { callback_query_id: u.callback_query.id, text: "Телефон не на связи — нажми, когда он включится.", show_alert: true });
   }
