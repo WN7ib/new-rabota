@@ -25,7 +25,8 @@
     return null;
   }
   /** Ссылка «как добраться» в Яндекс Картах (маршрут до точки). */
-  const routeLink=(lat,lng)=>"https://yandex.ru/maps/?rtext=~"+lat+","+lng+"&rtt=mt";
+  // rtt: mt — общественный транспорт, pd — пешком, taxi — такси, sc — самокат, auto — машина
+  const routeLink=(lat,lng,mode)=>"https://yandex.ru/maps/?rtext=~"+lat+","+lng+"&rtt="+({foot:"pd",bus:"mt",car:"taxi",scooter:"sc"}[mode]||"mt");
 
   window.NRGeo={addr:geoAddr,route:routeLink};
 })();
