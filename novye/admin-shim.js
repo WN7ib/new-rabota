@@ -59,6 +59,17 @@
   document.addEventListener("DOMContentLoaded",function(){
     // вход: почта + пароль (у Арсения был один пароль)
     var p=document.getElementById("pwd");if(p&&!document.getElementById("nv-email")){var d=document.createElement("div");d.innerHTML='<label>Почта</label><input type="email" id="nv-email" autocomplete="username" placeholder="Почта админа New.работа">';p.parentNode.parentNode.insertBefore(d,p.parentNode)}
+    // «Забыли пароль?» (Никита 27.11): по почте — письмо со ссылкой (новый пароль задаётся в админке New.работа, аккаунт общий);
+    // по телефону — в личном боте Неви «/newpass» (Telegram привязан к твоему номеру), номер нигде на сайте не хранится
+    if(p&&!document.getElementById("nv-forgot")){var f=document.createElement("div");f.id="nv-forgot";f.style.cssText="margin-top:12px;font-size:13px;line-height:1.5;color:#8a8a8a;text-align:center";
+      f.innerHTML='<a href="#" id="nv-fg" style="color:#14b8a6">Забыли пароль?</a><div id="nv-fgm" style="margin-top:6px"></div>';
+      var form=p.closest("form")||p.parentNode.parentNode;form.appendChild(f);
+      document.getElementById("nv-fg").onclick=async function(e){e.preventDefault();var m=document.getElementById("nv-fgm"),em=((document.getElementById("nv-email")||{}).value||"").trim();
+        if(!/.+@.+\..+/.test(em)){m.textContent="Впиши почту выше — пришлю на неё ссылку. Или по телефону: напиши боту Неви /newpass — новый пароль придёт в Telegram.";return}
+        m.textContent="Отправляю…";var r=await sb.auth.resetPasswordForEmail(em,{redirectTo:location.origin+location.pathname.replace(/novye-admin\.html.*$/,"admin.html")});
+        m.textContent=r.error?(/rate|limit|seconds/i.test(r.error.message)?"Слишком часто — подожди минуту.":"Не получилось: "+r.error.message):"Письмо отправлено на "+em+". Открой ссылку из письма и задай новый пароль. Или по телефону: боту Неви /newpass."}}
+    // уже вошёл в соседней вкладке (админка New.работа, аккаунт общий) — подхватываю вход сам
+    var tk=setInterval(async function(){try{var s2=(await sb.auth.getSession()).data.session;if(s2&&document.getElementById("pwd")&&document.getElementById("pwd").offsetParent&&await can()){clearInterval(tk);location.reload()}}catch(e){}},2500);
     // чата поддержки у нас нет (на сайте кнопка ведёт в Telegram)
     var ch=document.querySelector('.nav-lnk[data-s="chat"]');if(ch)ch.style.display="none";
   });
