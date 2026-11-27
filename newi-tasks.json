@@ -554,6 +554,8 @@
         "verify_jwt": false
       }
     },
-{"id": "2026-11-27-afisha-db", "title": "База: афиша мероприятий Саратова для приложения админки (с картинками)", "do": "sql", "args": {"files": ["migration-35-afisha.sql"]}}
+{"id": "2026-11-27-afisha-db", "title": "База: афиша мероприятий Саратова для приложения админки (с картинками)", "do": "sql", "args": {"files": ["migration-35-afisha.sql"]}},
+    {"id": "2026-11-27-newi-server-db", "title": "База: серверная Неви — отвечает и напоминает, когда телефон выключен", "do": "sql", "args": {"files": ["migration-36-newi-server.sql"]}},
+    {"id": "2026-11-27-fn-newi-bot", "title": "Сервер: функция серверной Неви (newi-bot)", "do": "fn_deploy", "args": {"slug": "newi-bot", "files": ["supabase/functions/newi-bot/index.ts"], "verify_jwt": false}}
   ]
 }
