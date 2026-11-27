@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Статистика</title>
+<style>
+:root{--bg:#0B1424;--card:#13213A;--line:#22385C;--tx:#E6EEFA;--mut:#8FA3C2;--bar:#3B8BEB;--grid:#1C2D4A;--good:#3FB37F;--warn:#E5A93B}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]){--bg:#F4F7FB;--card:#fff;--line:#DCE4EF;--tx:#14213A;--mut:#5B6B85;--bar:#2F6FD1;--grid:#E8EEF6}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.35 system-ui,sans-serif;padding:14px 16px 32px}
+h1{font-size:20px;margin:4px 0 2px}.sub{color:var(--mut);font-size:13px;margin-bottom:14px}
+h2{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);margin:22px 2px 8px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.t{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px}
+.t b{display:block;font-size:26px;font-variant-numeric:tabular-nums;line-height:1.1}.t span{color:var(--mut);font-size:13px}
+.t small{display:block;color:var(--mut);font-size:12px;margin-top:4px}.t.alert{border-color:var(--warn)}.t.alert small{color:var(--warn)}
+.ch{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 12px 6px;margin-bottom:8px}
+.ch .h{display:flex;justify-content:space-between;align-items:baseline}.ch .h b{font-size:15px}.ch .h span{color:var(--mut);font-size:13px}
+svg{display:block;width:100%;height:110px}rect.b{fill:var(--bar)}rect.hit{fill:transparent}rect.hit:hover+rect.b,rect.b:hover{opacity:.75}
+.ax{fill:var(--mut);font-size:10px}.gl{stroke:var(--grid);stroke-width:1}
+#tip{position:fixed;pointer-events:none;background:var(--tx);color:var(--bg);font-size:12px;padding:4px 8px;border-radius:6px;display:none;white-space:nowrap}
+.msg{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}a{color:var(--bar)}
+button{background:var(--bar);color:#fff;border:0;border-radius:10px;padding:8px 14px;font-size:14px}
+</style></head><body>
+<h1>📊 Статистика</h1><div class="sub" id="sub">Загружаю…</div>
+<div id="app"></div><div id="tip"></div>
+<script src="config.js"></script><script src="vendor/supabase.js"></script>
+<script>
+(async function(){
+  const app=document.getElementById("app"),sub=document.getElementById("sub"),tip=document.getElementById("tip");
+  const cfg=window.NR_CONFIG||window.CONFIG||{};
+  const sb=window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseKey);
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){sub.textContent="";app.innerHTML='<div class="msg">Сначала войди в админке — вкладка «New.работа» (или <a href="admin.html">admin.html</a>). Потом вернись сюда.</div>';return}
+  const {data:adm}=await sb.from("admins").select("user_id").eq("user_id",session.user.id).maybeSingle();
+  if(!adm){app.innerHTML='<div class="msg">Этот вход — не админ.</div>';sub.textContent="";return}
+  const DAY=864e5,now=Date.now(),d7=new Date(now-7*DAY).toISOString(),d30=new Date(now-30*DAY).toISOString();
+  async function cnt(t,f){try{let q=sb.from(t).select("*",{count:"exact",head:true});if(f)q=f(q);const r=await q;return r.error?null:r.count}catch(e){return null}}
+  async function days(t,col){try{const r=await sb.from(t).select(col||"created_at").gte(col||"created_at",d30).limit(5000);if(r.error)return null;
+    const a=new Array(30).fill(0);r.data.forEach(x=>{const i=29-Math.floor((now-new Date(x[col||"created_at"]).getTime())/DAY);if(i>=0&&i<30)a[i]++});return a}catch(e){return null}}
+  const [vA,vP,vR,vNew,ap,ap7,emp,bu,bu7,buAct,ev,es,rep,rev,ordN,ordP,chat,nj,nj7,clicks,sApp,sVac,sBot]=await Promise.all([
+    cnt("vacancies",q=>q.eq("status","approved")),cnt("vacancies",q=>q.eq("status","pending")),cnt("vacancies",q=>q.eq("status","rejected")),cnt("vacancies",q=>q.gte("created_at",d7)),
+    cnt("applications"),cnt("applications",q=>q.gte("created_at",d7)),cnt("employers"),
+    cnt("bot_users"),cnt("bot_users",q=>q.gte("created_at",d7)),cnt("bot_users",q=>q.gte("last_at",d7)),
+    cnt("events",q=>q.gte("starts_at",new Date().toISOString())),cnt("event_signups"),
+    cnt("reports",q=>q.eq("status","new")),cnt("reviews",q=>q.eq("status","pending")),cnt("orders",q=>q.eq("status","new")),cnt("orders",q=>q.eq("status","paid")),
+    cnt("site_chat",q=>q.is("a",null)),cnt("novye_join"),cnt("novye_join",q=>q.gte("created_at",d7)),
+    sb.from("vacancies").select("clicks").eq("status","approved").limit(5000).then(r=>r.error?null:r.data.reduce((s,x)=>s+(x.clicks||0),0)).catch(()=>null),
+    days("applications"),days("vacancies"),days("bot_users")]);
+  const n=v=>v==null?"—":v.toLocaleString("ru-RU");
+  const tile=(v,l,s,al)=>`<div class="t${al&&v>0?" alert":""}"><b>${n(v)}</b><span>${l}</span>${s?`<small>${s}</small>`:""}</div>`;
+  sub.textContent="Обновлено "+new Date().toLocaleString("ru-RU",{day:"numeric",month:"long",hour:"2-digit",minute:"2-digit"})+" · нажми вкладку ещё раз, чтобы обновить";
+  let h="";
+  h+="<h2>Ждут тебя</h2><div class='grid'>"+tile(vP,"вакансий на проверке","",1)+tile(rep,"новых жалоб","",1)+tile(rev,"отзывов на проверке","",1)+tile(chat,"вопросов в чате без ответа","",1)+tile(ordN,"новых заказов","",1)+"</div>";
+  h+="<h2>New.работа</h2><div class='grid'>"+tile(vA,"вакансий на сайте",vNew!=null?`+${vNew} за 7 дней`:"")+tile(ap,"откликов всего",ap7!=null?`+${ap7} за 7 дней`:"")+tile(clicks,"переходов по вакансиям")+tile(emp,"работодателей")+tile(vR,"вакансий отклонено")+tile(ordP,"заказов оплачено")+"</div>";
+  h+="<h2>Бот и люди</h2><div class='grid'>"+tile(bu,"людей в боте",bu7!=null?`+${bu7} за 7 дней`:"")+tile(buAct,"заходили за 7 дней")+tile(ev,"смен и событий впереди")+tile(es,"записей на смены")+"</div>";
+  h+="<h2>«Новые»</h2><div class='grid'>"+tile(nj,"заявок на вступление",nj7!=null?`+${nj7} за 7 дней`:"")+"</div>";
+  h+="<h2>За 30 дней</h2>";
+  function chart(a,title){if(!a)return"";const W=300,H=110,pb=16,max=Math.max(1,...a),bw=W/30,sum=a.reduce((x,y)=>x+y,0);
+    let s=`<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="${title}: ${sum} за 30 дней">`;
+    s+=`<line class="gl" x1="0" x2="${W}" y1="${H-pb}" y2="${H-pb}"/><line class="gl" x1="0" x2="${W}" y1="4" y2="4"/>`;
+    a.forEach((v,i)=>{const bh=v?Math.max(2,(H-pb-6)*v/max):0,x=i*bw+1,y=H-pb-bh,d=new Date(now-(29-i)*DAY).toLocaleDateString("ru-RU",{day:"numeric",month:"short"});
+      s+=`<rect class="hit" x="${i*bw}" y="0" width="${bw}" height="${H}" data-t="${d}: ${v}"/>`;
+      if(bh)s+=`<rect class="b" x="${x}" y="${y}" width="${bw-2}" height="${bh}" rx="2" data-t="${d}: ${v}"/>`});
+    s+=`<text class="ax" x="0" y="${H-3}">${new Date(now-29*DAY).toLocaleDateString("ru-RU",{day:"numeric",month:"short"})}</text><text class="ax" x="${W}" y="${H-3}" text-anchor="end">сегодня</text>`;
+    s+=`<text class="ax" x="2" y="14">макс ${max}</text></svg>`;
+    return `<div class="ch"><div class="h"><b>${title}</b><span>${sum} за 30 дней</span></div>${s}</div>`}
+  h+=chart(sApp,"Отклики по дням")+chart(sVac,"Новые вакансии по дням")+chart(sBot,"Новые люди в боте по дням");
+  app.innerHTML=h;
+  app.addEventListener("pointermove",e=>{const t=e.target.getAttribute&&e.target.getAttribute("data-t");if(t){tip.textContent=t;tip.style.display="block";tip.style.left=Math.min(e.clientX+10,innerWidth-110)+"px";tip.style.top=(e.clientY-30)+"px"}else tip.style.display="none"});
+  app.addEventListener("pointerleave",()=>tip.style.display="none");
+})().catch(e=>{document.getElementById("sub").textContent="Ошибка: "+e.message});
+</script>
+</body></html>
