@@ -10,6 +10,7 @@
 <meta name="theme-color" content="#2F86F5">
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="stylesheet" href="style.css?v=14">
+<link rel="canonical" href="https://wn7ib.github.io/new-rabota/vacancy.html">
 </head>
 <body>
 <header class="mininav"><div class="wrap"><a class="home" href="./"><img src="logo.png?v=2" alt="">New.работа</a><a href="./">← Все вакансии</a></div></header>
@@ -24,6 +25,8 @@
 (async function(){
   const {sb, el} = NR; const page=document.getElementById("page");
   const id=new URLSearchParams(location.search).get("id")||"";
+  // у каждой вакансии свой адрес: canonical с её id (иначе Google считает их копиями одной страницы)
+  try{const c=document.querySelector('link[rel="canonical"]');if(c&&id)c.href="https://wn7ib.github.io/new-rabota/vacancy.html?id="+encodeURIComponent(id)}catch(e){}
   function fail(t){ page.textContent=""; const b=el("div","empty"); b.append(el("h3",null,t)); const a=el("a","btn btn-primary","Смотреть все вакансии"); a.href="./"; b.append(a); page.append(b) }
   if(!sb||!/^[0-9a-f-]{36}$/i.test(id)){fail("Вакансия не найдена");return}
   const base="id,created_at,title,company,city,type,age_min,pay,remote,description,contact";
