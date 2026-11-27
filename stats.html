@@ -29,7 +29,10 @@ button{background:var(--bar);color:#fff;border:0;border-radius:10px;padding:8px 
   const cfg=window.NR_CONFIG||window.CONFIG||{};
   const sb=window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseKey);
   const {data:{session}}=await sb.auth.getSession();
-  if(!session){sub.textContent="";app.innerHTML='<div class="msg">Сначала войди в админке — вкладка «New.работа» (или <a href="admin.html">admin.html</a>). Потом вернись сюда.</div>';return}
+  if(!session){sub.textContent="";app.innerHTML='<div class="msg">Сначала войди в админке — вкладка «New.работа» (или <a href="admin.html">admin.html</a>). Как войдёшь — статистика появится здесь сама.</div>';
+    // вошёл в соседней вкладке — подхватываю сам (раньше страница так и висела с этим сообщением)
+    const t=setInterval(async()=>{const r=await sb.auth.getSession();if(r.data.session){clearInterval(t);location.reload()}},2000);
+    addEventListener("storage",()=>location.reload());return}
   const {data:adm}=await sb.from("admins").select("user_id").eq("user_id",session.user.id).maybeSingle();
   if(!adm){app.innerHTML='<div class="msg">Этот вход — не админ.</div>';sub.textContent="";return}
   const DAY=864e5,now=Date.now(),d7=new Date(now-7*DAY).toISOString(),d30=new Date(now-30*DAY).toISOString();
