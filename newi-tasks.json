@@ -540,6 +540,28 @@
           "migration-33-pay-secret.sql"
         ]
       }
+    },
+    {
+      "id": "2026-11-27-admin-recover-db",
+      "title": "База: проверка «это почта админа?» для восстановления входа кодом",
+      "do": "sql",
+      "args": {
+        "files": [
+          "migration-34-admin-recover.sql"
+        ]
+      }
+    },
+    {
+      "id": "2026-11-27-fn-admin-recover",
+      "title": "Сервер: код для входа в админку — в Telegram, ВК или SMS",
+      "do": "fn_deploy",
+      "args": {
+        "slug": "admin-recover",
+        "files": [
+          "supabase/functions/admin-recover/index.ts"
+        ],
+        "verify_jwt": false
+      }
     }
   ]
 }

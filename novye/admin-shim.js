@@ -65,9 +65,9 @@
       f.innerHTML='<a href="#" id="nv-fg" style="color:#14b8a6">Забыли пароль?</a><div id="nv-fgm" style="margin-top:6px"></div>';
       var form=p.closest("form")||p.parentNode.parentNode;form.appendChild(f);
       document.getElementById("nv-fg").onclick=async function(e){e.preventDefault();var m=document.getElementById("nv-fgm"),em=((document.getElementById("nv-email")||{}).value||"").trim();
-        if(!/.+@.+\..+/.test(em)){m.textContent="Впиши почту выше — пришлю на неё ссылку. Или по телефону: напиши боту Неви /newpass — новый пароль придёт в Telegram.";return}
+        if(!/.+@.+\..+/.test(em)){m.textContent="Впиши почту выше — пришлю на неё ссылку. Или код в Telegram, ВК или SMS — на вкладке «New.работа» (аккаунт общий).";return}
         m.textContent="Отправляю…";var r=await sb.auth.resetPasswordForEmail(em,{redirectTo:location.origin+location.pathname.replace(/novye-admin\.html.*$/,"admin.html")});
-        m.textContent=r.error?(/rate|limit|seconds/i.test(r.error.message)?"Слишком часто — подожди минуту.":"Не получилось: "+r.error.message):"Письмо отправлено на "+em+". Открой ссылку из письма и задай новый пароль. Или по телефону: боту Неви /newpass."}}
+        m.textContent=r.error?(/rate|limit|seconds/i.test(r.error.message)?"Слишком часто — подожди минуту.":"Не получилось: "+r.error.message):"Письмо отправлено на "+em+". Открой ссылку из письма и задай новый пароль. Или код в Telegram, ВК или SMS — на вкладке «New.работа»."}}
     // уже вошёл в соседней вкладке (админка New.работа, аккаунт общий) — подхватываю вход сам
     var tk=setInterval(async function(){try{var s2=(await sb.auth.getSession()).data.session;if(s2&&document.getElementById("pwd")&&document.getElementById("pwd").offsetParent&&await can()){clearInterval(tk);location.reload()}}catch(e){}},2500);
     // чата поддержки у нас нет (на сайте кнопка ведёт в Telegram)
