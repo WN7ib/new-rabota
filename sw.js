@@ -1,5 +1,5 @@
 // New.работа как приложение: всегда свежее из сети; без сети — последняя сохранённая копия страницы (данные из базы не кешируются).
-const C = "nr-shell-7";
+const C = "nr-shell-8";
 const SHELL = ["karta.html", "style.css?v=14", "mascot.js", "common.js?v=6", "geo.js", "config.js?v=2", "vendor/supabase.js?v=1", "logo.png?v=2", "app-icon-512.png", "vendor/leaflet/leaflet.js", "vendor/leaflet/leaflet.css"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(C).then(c => c.addAll(SHELL)).catch(() => {})); self.skipWaiting(); });
 self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== C).map(k => caches.delete(k))))); self.clients.claim(); });
