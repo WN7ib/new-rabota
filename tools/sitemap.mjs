@@ -2,8 +2,8 @@
 import { readFileSync, writeFileSync } from "node:fs";
 const cfg = readFileSync("config.js", "utf8");
 const url = cfg.match(/supabaseUrl\s*:\s*"([^"]+)"/)[1], key = cfg.match(/supabaseKey\s*:\s*"([^"]+)"/)[1];
-// домен new-rabota.ru заблокирован (26.11) — пока сайт на github.io; вернуть домен — поменять тут и в robots.txt
-const SITE = "https://wn7ib.github.io/new-rabota/";
+// домен newrabota.site (27.11; new-rabota.ru заблокирован РКН) — менять тут и в robots.txt
+const SITE = "https://newrabota.site/";
 async function q(path) {
   try { const r = await fetch(`${url}/rest/v1/${path}`, { headers: { apikey: key, Authorization: `Bearer ${key}` } }); return r.ok ? await r.json() : []; }
   catch { return []; }

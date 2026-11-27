@@ -6,7 +6,7 @@
 const SB = Deno.env.get("SUPABASE_URL")!;
 const KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const TG = Deno.env.get("TG_TOKEN") ?? "";
-const SITE = Deno.env.get("SITE_URL") ?? "https://new-rabota.ru/";
+const SITE = Deno.env.get("SITE_URL") ?? "https://newrabota.site/";
 
 // ───────── база ─────────
 async function db(method: string, path: string, body?: unknown, prefer?: string): Promise<any> {
@@ -715,7 +715,7 @@ async function smartAnswer(q: string): Promise<{ a: string; esc: boolean } | nul
   if (!a) return null;
   const esc = /ESCALATE/.test(a);
   const clean = a.replace(/ESCALATE/g, "").replace(/[*_#`]+/g, "").trim()
-    .replace(/https?:\/\/(?!new-rabota\.ru)\S+/gi, "").slice(0, 1500);   // чужие ссылки не пропускаю
+    .replace(/https?:\/\/(?!(?:new-rabota\.ru|newrabota\.site))\S+/gi, "").slice(0, 1500);   // чужие ссылки не пропускаю
   return { a: clean, esc };
 }
 // картинка к вакансии: рисует Gemini (модель картинок), стиль — как баннер New.работа. Нет ключа/доступа — пост без картинки.

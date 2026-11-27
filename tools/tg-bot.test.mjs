@@ -98,7 +98,7 @@ await cb(105, "evy:" + EID); // нет записи
 await msg(106, "Егор", "/app"); assert.match(last(106).reply_markup.inline_keyboard[0][0].web_app.url, /tg\.html$/);
 T.bot_config.push({ key: "tick_init", value: "1" }); T.vacancies = []; T.reports = []; T.orders = [];
 await post({ tick: 1 }); await post({ tick: 1 });
-assert.equal(sent.filter((s) => s.m === "setChatMenuButton").length, 1); assert.equal(sent.find((s) => s.m === "setChatMenuButton").menu_button.web_app.url, "https://new-rabota.ru/karta.html"); assert.equal(sent.find((s) => s.m === "setChatMenuButton").menu_button.text, "New.работа");
+assert.equal(sent.filter((s) => s.m === "setChatMenuButton").length, 1); assert.equal(sent.find((s) => s.m === "setChatMenuButton").menu_button.web_app.url, "https://newrabota.site/karta.html"); assert.equal(sent.find((s) => s.m === "setChatMenuButton").menu_button.text, "New.работа");
 // чужое нажатие кнопки владельца не проходит
 await post({ callback_query: { id: "q", from: { id: 777 }, data: "ok:x", message: { message_id: 1, chat: { id: 777, type: "private" }, text: "x" } } });
 // ───── ВК ─────

@@ -9,7 +9,7 @@ const KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const TG = Deno.env.get("TG_TOKEN") ?? "";
 const H = { apikey: KEY, Authorization: `Bearer ${KEY}`, "Content-Type": "application/json" };
 const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "content-type, apikey, authorization", "Access-Control-Allow-Methods": "POST, OPTIONS" };
-const ALLOWED = [/^https:\/\/wn7ib\.github\.io\/new-rabota\//, /^https:\/\/(?:www\.)?new-rabota\.ru\//];
+const ALLOWED = [/^https:\/\/wn7ib\.github\.io\/new-rabota\//, /^https:\/\/(?:www\.)?new-rabota\.ru\//, /^https:\/\/(?:www\.)?newrabota\.site\//];
 
 async function db(method: string, path: string, body?: unknown, prefer?: string): Promise<any> {
   const r = await fetch(`${SB}/rest/v1/${path}`, { method, headers: { ...H, ...(prefer ? { Prefer: prefer } : {}) }, body: body === undefined ? undefined : JSON.stringify(body) });
@@ -57,7 +57,7 @@ Deno.serve(async (req) => {
     if (!st.h || now > st.exp || (st.tries ?? 0) >= 5) return out({ ok: false, error: "Код устарел — запроси новый." });
     if (await sha(String(b.code).trim() + st.salt) !== st.h) { st.tries = (st.tries ?? 0) + 1; await setCfg("recover", JSON.stringify(st)); return out({ ok: false, error: `Неверный код (осталось попыток: ${5 - st.tries}).` }) }
     await setCfg("recover", "{}");
-    const redirect = ALLOWED.some(r => r.test(String(b.redirect ?? ""))) ? String(b.redirect) : "https://wn7ib.github.io/new-rabota/admin.html";
+    const redirect = ALLOWED.some(r => r.test(String(b.redirect ?? ""))) ? String(b.redirect) : "https://newrabota.site/admin.html";
     const g = await fetch(`${SB}/auth/v1/admin/generate_link`, { method: "POST", headers: H, body: JSON.stringify({ type: "recovery", email: st.email, redirect_to: redirect }) }).then(r => r.json()).catch(() => null);
     const link = g?.action_link ?? g?.properties?.action_link;
     return link ? out({ ok: true, link }) : out({ ok: false, error: "Не получилось сделать ссылку: " + JSON.stringify(g).slice(0, 120) });
